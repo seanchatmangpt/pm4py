@@ -3,7 +3,15 @@ from typing import Optional, Dict, Any, Tuple, Set
 from pm4py.objects.ocel.obj import OCEL
 
 
-def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]]:
+def apply(ocel: OCEL,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Tuple[Set[str],
+                                                           Set[str],
+                                                           Set[Tuple[str,
+                                                                     str]],
+                                                           Dict[Tuple[str,
+                                                                      str],
+                                                                int]]:
     """
     Discovers the ET-OT graph from an OCEL
 

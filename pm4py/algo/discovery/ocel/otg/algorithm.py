@@ -9,7 +9,14 @@ class Variants(Enum):
     CLASSIC = classic
 
 
-def apply(ocel: OCEL, variant=Variants.CLASSIC, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[Set[str], Dict[Tuple[str, str, str], int]]:
+def apply(ocel: OCEL,
+          variant=Variants.CLASSIC,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Tuple[Set[str],
+                                                           Dict[Tuple[str,
+                                                                str,
+                                                                str],
+                                                                int]]:
     """
     Discovers an OTG (object-type-graph) from the provided OCEL
 

@@ -9,7 +9,21 @@ class Variants(Enum):
     GRAPH_COMPARISON = graph_comparison
 
 
-def apply(real: Union[OCEL, Tuple[Set[str], Dict[Tuple[str, str, str], int]]], normative: Tuple[Set[str], Dict[Tuple[str, str, str], int]], variant=Variants.GRAPH_COMPARISON, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL,
+                      Tuple[Set[str],
+                            Dict[Tuple[str,
+                                       str,
+                                       str],
+                                 int]]],
+          normative: Tuple[Set[str],
+                           Dict[Tuple[str,
+                                str,
+                                str],
+                                int]],
+          variant=Variants.GRAPH_COMPARISON,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Dict[str,
+                                                          Any]:
     """
     Applies OTG-based conformance checking between a 'real' object (OCEL or OTG) and a 'normative' OTG.
 

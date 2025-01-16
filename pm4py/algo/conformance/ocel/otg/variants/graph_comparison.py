@@ -11,7 +11,20 @@ class Parameters(Enum):
     GAMMA = "gamma"
 
 
-def apply(real: Union[OCEL, Tuple[Set[str], Dict[Tuple[str, str, str], int]]], normative: Tuple[Set[str], Dict[Tuple[str, str, str], int]], parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL,
+                      Tuple[Set[str],
+                            Dict[Tuple[str,
+                                       str,
+                                       str],
+                                 int]]],
+          normative: Tuple[Set[str],
+                           Dict[Tuple[str,
+                                str,
+                                str],
+                                int]],
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Dict[str,
+                                                          Any]:
     """
     Applies OTG-based conformance checking between a 'real' object (OCEL or OTG) and a 'normative' OTG.
 
@@ -45,9 +58,22 @@ def apply(real: Union[OCEL, Tuple[Set[str], Dict[Tuple[str, str, str], int]]], n
         from pm4py.algo.discovery.ocel.otg import algorithm as otg_discovery
         real = otg_discovery.apply(real, parameters=parameters)
 
-    return conformance_checking_multigraph(real, normative, theta=theta, alpha=alpha, beta=beta, gamma=gamma)
+    return conformance_checking_multigraph(
+        real,
+        normative,
+        theta=theta,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma)
 
-def conformance_checking_multigraph(discovered_otg, normative_otg, theta=None, alpha=1, beta=1, gamma=1):
+
+def conformance_checking_multigraph(
+        discovered_otg,
+        normative_otg,
+        theta=None,
+        alpha=1,
+        beta=1,
+        gamma=1):
     object_types_L, edges_L = discovered_otg
     object_types_M, edges_M = normative_otg
 
@@ -85,9 +111,9 @@ def conformance_checking_multigraph(discovered_otg, normative_otg, theta=None, a
     total_edge_checks = len(edges_M)
     N = alpha * total_object_types + beta * total_edges + gamma * total_edge_checks
     fitness = 1 - (
-            alpha * len(missing_object_types) +
-            beta * len(missing_edges) +
-            gamma * len(non_conforming_edges)
+        alpha * len(missing_object_types) +
+        beta * len(missing_edges) +
+        gamma * len(non_conforming_edges)
     ) / N
 
     # Prepare the result

@@ -13,7 +13,8 @@ class Parameters(Enum):
     DELTA = "delta"
 
 
-def apply(real: Union[OCEL, Dict[str, Any]], normative: Dict[str, Any], parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL, Dict[str, Any]], normative: Dict[str, Any],
+          parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
     """
     Applies object-centric conformance checking between the given real object (object-centric event log or DFG)
     and a normative OC-DFG.
@@ -42,7 +43,8 @@ def apply(real: Union[OCEL, Dict[str, Any]], normative: Dict[str, Any], paramete
         parameters = {}
 
     theta_act = exec_utils.get_param_value(Parameters.THETA_ACT, parameters, 0)
-    theta_flow = exec_utils.get_param_value(Parameters.THETA_FLOW, parameters, 0)
+    theta_flow = exec_utils.get_param_value(
+        Parameters.THETA_FLOW, parameters, 0)
     alpha = exec_utils.get_param_value(Parameters.ALPHA, parameters, 1)
     beta = exec_utils.get_param_value(Parameters.BETA, parameters, 1)
     gamma = exec_utils.get_param_value(Parameters.GAMMA, parameters, 1)
@@ -52,10 +54,26 @@ def apply(real: Union[OCEL, Dict[str, Any]], normative: Dict[str, Any], paramete
         import pm4py
         real = pm4py.discover_ocdfg(real)
 
-    return compare_ocdfgs(real, normative, theta_act, theta_flow, alpha, beta, gamma, delta)
+    return compare_ocdfgs(
+        real,
+        normative,
+        theta_act,
+        theta_flow,
+        alpha,
+        beta,
+        gamma,
+        delta)
 
 
-def compare_ocdfgs(ocdfg1, ocdfg2, theta_act=0, theta_flow=0, alpha=1, beta=1, gamma=1, delta=1):
+def compare_ocdfgs(
+        ocdfg1,
+        ocdfg2,
+        theta_act=0,
+        theta_flow=0,
+        alpha=1,
+        beta=1,
+        gamma=1,
+        delta=1):
     """
     Compare two Object-Centric Directly-Follows Graphs (OCDFGs) and perform conformance checking.
 
@@ -142,8 +160,14 @@ def compare_ocdfgs(ocdfg1, ocdfg2, theta_act=0, theta_flow=0, alpha=1, beta=1, g
         gamma * len(all_activities) + delta * len(all_flows)
 
     # Calculate numerator components
-    fitness_numerator = (alpha * len(A_missing) + beta * len(F_missing) +
-                         gamma * sum(delta_act.values()) + delta * sum(delta_flow.values()))
+    fitness_numerator = (alpha *
+                         len(A_missing) +
+                         beta *
+                         len(F_missing) +
+                         gamma *
+                         sum(delta_act.values()) +
+                         delta *
+                         sum(delta_flow.values()))
 
     # To avoid division by zero
     if N == 0:
@@ -159,11 +183,11 @@ def compare_ocdfgs(ocdfg1, ocdfg2, theta_act=0, theta_flow=0, alpha=1, beta=1, g
         'missing_flows': F_missing,
         'additional_flows': F_additional,
         'activity_measure_differences': Delta_act,
-        'non_conforming_activities_in_measure': {a for a in Delta_act if Delta_act[a] > theta_act},
+        'non_conforming_activities_in_measure': {
+            a for a in Delta_act if Delta_act[a] > theta_act},
         'flow_measure_differences': Delta_flow,
-        'non_conforming_flows_in_measure': {f for f in Delta_flow if Delta_flow[f] > theta_flow},
-        'fitness': fitness
-    }
+        'non_conforming_flows_in_measure': {
+            f for f in Delta_flow if Delta_flow[f] > theta_flow},
+        'fitness': fitness}
 
     return result
-

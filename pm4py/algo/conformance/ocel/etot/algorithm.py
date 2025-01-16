@@ -9,7 +9,25 @@ class Variants(Enum):
     GRAPH_COMPARISON = graph_comparison
 
 
-def apply(real: Union[OCEL, Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]]], normative: Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]], variant=Variants.GRAPH_COMPARISON, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL,
+                      Tuple[Set[str],
+                            Set[str],
+                            Set[Tuple[str,
+                                      str]],
+                            Dict[Tuple[str,
+                                       str],
+                                 int]]],
+          normative: Tuple[Set[str],
+                           Set[str],
+                           Set[Tuple[str,
+                                     str]],
+                           Dict[Tuple[str,
+                                      str],
+                                int]],
+          variant=Variants.GRAPH_COMPARISON,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Dict[str,
+                                                          Any]:
     """
     Applies ET-OT-based conformance checking between a 'real' object (either an OCEL or an ET-OT graph),
     and a normative ET-OT graph.

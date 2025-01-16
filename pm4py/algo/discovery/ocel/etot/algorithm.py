@@ -10,7 +10,16 @@ class Variants(Enum):
     CLASSIC = classic
 
 
-def apply(ocel: OCEL, variant=Variants.CLASSIC, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]]:
+def apply(ocel: OCEL,
+          variant=Variants.CLASSIC,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Tuple[Set[str],
+                                                           Set[str],
+                                                           Set[Tuple[str,
+                                                                     str]],
+                                                           Dict[Tuple[str,
+                                                                      str],
+                                                                int]]:
     """
     Discovers the ET-OT graph from an OCEL
 

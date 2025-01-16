@@ -11,7 +11,24 @@ class Parameters(Enum):
     THETA_REL = "theta_real"
 
 
-def apply(real: Union[OCEL, Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]]], normative: Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict[Tuple[str, str], int]], parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL,
+                      Tuple[Set[str],
+                            Set[str],
+                            Set[Tuple[str,
+                                      str]],
+                            Dict[Tuple[str,
+                                       str],
+                                 int]]],
+          normative: Tuple[Set[str],
+                           Set[str],
+                           Set[Tuple[str,
+                                     str]],
+                           Dict[Tuple[str,
+                                      str],
+                                int]],
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Dict[str,
+                                                          Any]:
     """
     Applies ET-OT-based conformance checking between a 'real' object (either an OCEL or an ET-OT graph),
     and a normative ET-OT graph.
@@ -40,13 +57,20 @@ def apply(real: Union[OCEL, Tuple[Set[str], Set[str], Set[Tuple[str, str]], Dict
     alpha = exec_utils.get_param_value(Parameters.ALPHA, parameters, 1)
     beta = exec_utils.get_param_value(Parameters.BETA, parameters, 1)
     gamma = exec_utils.get_param_value(Parameters.GAMMA, parameters, 1)
-    theta_rel = exec_utils.get_param_value(Parameters.THETA_REL, parameters, 0.1)
+    theta_rel = exec_utils.get_param_value(
+        Parameters.THETA_REL, parameters, 0.1)
 
     if isinstance(real, OCEL):
         from pm4py.algo.discovery.ocel.etot import algorithm as etot_discovery
         real = etot_discovery.apply(real, parameters=parameters)
 
-    return compute_conformance(real, normative, alpha=alpha, beta=beta, gamma=gamma, theta_rel=theta_rel)
+    return compute_conformance(
+        real,
+        normative,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        theta_rel=theta_rel)
 
 
 def compute_conformance(G_L, G_M, alpha=1, beta=1, gamma=1, theta_rel=0.1):
@@ -78,7 +102,8 @@ def compute_conformance(G_L, G_M, alpha=1, beta=1, gamma=1, theta_rel=0.1):
     N = alpha * (len(A_M) + len(OT_M)) + beta * len(R_M) + gamma * len(R_M)
 
     # Compute numerator
-    numerator = alpha * (len(A_missing) + len(OT_missing)) + beta * len(R_missing) + gamma * delta_rel_total
+    numerator = alpha * (len(A_missing) + len(OT_missing)) + \
+        beta * len(R_missing) + gamma * delta_rel_total
 
     # Fitness value
     phi = 1 - (numerator / N)

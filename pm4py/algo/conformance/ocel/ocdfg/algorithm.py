@@ -9,7 +9,15 @@ class Variants(Enum):
     GRAPH_COMPARISON = graph_comparison
 
 
-def apply(real: Union[OCEL, Dict[str, Any]], normative: Dict[str, Any], variant=Variants.GRAPH_COMPARISON, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(real: Union[OCEL,
+                      Dict[str,
+                           Any]],
+          normative: Dict[str,
+                          Any],
+          variant=Variants.GRAPH_COMPARISON,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Dict[str,
+                                                          Any]:
     """
     Applies object-centric conformance checking between the given real object (object-centric event log or DFG)
     and a normative OC-DFG.

@@ -3,7 +3,13 @@ from pm4py.objects.ocel.obj import OCEL
 from typing import Optional, Dict, Any, Tuple, Set
 
 
-def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[Set[str], Dict[Tuple[str, str, str], int]]:
+def apply(ocel: OCEL,
+          parameters: Optional[Dict[Any,
+                                    Any]] = None) -> Tuple[Set[str],
+                                                           Dict[Tuple[str,
+                                                                str,
+                                                                str],
+                                                                int]]:
     if parameters is None:
         parameters = {}
 
