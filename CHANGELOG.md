@@ -1,6 +1,25 @@
 # Changelog of pm4py
 
 
+## pm4py 2.7.16 (2025.02.XX)
+
+### Added
+* c3400ac1f3cc3bc23ff66980f39c7c5c6458d2b7
+  * added linting to pipelines
+
+### Changed
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
+### Other
+
+---
+
+
 ## pm4py 2.7.15 (2025.01.10)
 
 ### Added
