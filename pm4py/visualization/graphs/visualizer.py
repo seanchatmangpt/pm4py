@@ -1,5 +1,15 @@
-from pm4py.visualization.graphs.variants import cases, attributes, dates, barplot
-from pm4py.visualization.graphs.util.common import save, view, matplotlib_view, serialize
+from pm4py.visualization.graphs.variants import (
+    cases,
+    attributes,
+    dates,
+    barplot,
+)
+from pm4py.visualization.graphs.util.common import (
+    save,
+    view,
+    matplotlib_view,
+    serialize,
+)
 from enum import Enum
 from pm4py.util import exec_utils
 from typing import Optional, Dict, Any, List
@@ -15,7 +25,12 @@ class Variants(Enum):
 DEFAULT_VARIANT = Variants.CASES
 
 
-def apply(x: List[float], y: List[float], parameters: Optional[Dict[Any, Any]] = None, variant=DEFAULT_VARIANT) -> str:
+def apply(
+    x: List[float],
+    y: List[float],
+    parameters: Optional[Dict[Any, Any]] = None,
+    variant=DEFAULT_VARIANT,
+) -> str:
     """
     Method to plot (non-logarithmic way) the graph with axis values contained in x and y
 
@@ -41,10 +56,17 @@ def apply(x: List[float], y: List[float], parameters: Optional[Dict[Any, Any]] =
     temp_file_name
         Representation temporary file name
     """
-    return exec_utils.get_variant(variant).apply_plot(x, y, parameters=parameters)
+    return exec_utils.get_variant(variant).apply_plot(
+        x, y, parameters=parameters
+    )
 
 
-def apply_plot(x: List[float], y: List[float], parameters: Optional[Dict[Any, Any]] = None, variant=DEFAULT_VARIANT) -> str:
+def apply_plot(
+    x: List[float],
+    y: List[float],
+    parameters: Optional[Dict[Any, Any]] = None,
+    variant=DEFAULT_VARIANT,
+) -> str:
     """
     Method to plot (non-logarithmic way) the graph with axis values contained in x and y
 
@@ -70,10 +92,17 @@ def apply_plot(x: List[float], y: List[float], parameters: Optional[Dict[Any, An
     temp_file_name
         Representation temporary file name
     """
-    return exec_utils.get_variant(variant).apply_plot(x, y, parameters=parameters)
+    return exec_utils.get_variant(variant).apply_plot(
+        x, y, parameters=parameters
+    )
 
 
-def apply_semilogx(x: List[float], y: List[float], parameters: Optional[Dict[Any, Any]] = None, variant=DEFAULT_VARIANT) -> str:
+def apply_semilogx(
+    x: List[float],
+    y: List[float],
+    parameters: Optional[Dict[Any, Any]] = None,
+    variant=DEFAULT_VARIANT,
+) -> str:
     """
     Method to plot (semi-logarithmic way) the graph with axis values contained in x and y
 
@@ -99,4 +128,6 @@ def apply_semilogx(x: List[float], y: List[float], parameters: Optional[Dict[Any
     temp_file_name
         Representation temporary file name
     """
-    return exec_utils.get_variant(variant).apply_semilogx(x, y, parameters=parameters)
+    return exec_utils.get_variant(variant).apply_semilogx(
+        x, y, parameters=parameters
+    )

@@ -1,1 +1,3 @@
-from pm4py.algo.filtering.pandas.timestamp_case_grouping import timestamp_case_grouping_filter
+from pm4py.algo.filtering.pandas.timestamp_case_grouping import (
+    timestamp_case_grouping_filter,
+)

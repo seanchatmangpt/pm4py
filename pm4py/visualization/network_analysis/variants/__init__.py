@@ -1,1 +1,4 @@
-from pm4py.visualization.network_analysis.variants import frequency, performance
+from pm4py.visualization.network_analysis.variants import (
+    frequency,
+    performance,
+)

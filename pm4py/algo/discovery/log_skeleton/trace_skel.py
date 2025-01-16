@@ -39,7 +39,12 @@ def after(trace):
     rel
         After- inside the trace
     """
-    return list((trace[i], trace[j]) for i in range(len(trace)) for j in range(len(trace)) if j > i)
+    return list(
+        (trace[i], trace[j])
+        for i in range(len(trace))
+        for j in range(len(trace))
+        if j > i
+    )
 
 
 def before(trace):
@@ -56,7 +61,12 @@ def before(trace):
     rel
         Before- inside the trace
     """
-    return list((trace[i], trace[j]) for i in range(len(trace)) for j in range(len(trace)) if j < i)
+    return list(
+        (trace[i], trace[j])
+        for i in range(len(trace))
+        for j in range(len(trace))
+        if j < i
+    )
 
 
 def combos(trace):
@@ -90,7 +100,7 @@ def directly_follows(trace):
     rel
         Directly-follows relations inside the trace
     """
-    return list((trace[i], trace[i+1]) for i in range(len(trace)-1))
+    return list((trace[i], trace[i + 1]) for i in range(len(trace) - 1))
 
 
 def activ_freq(trace):
@@ -114,4 +124,11 @@ def get_trace_info(trace):
     """
     Technical method for conformance checking
     """
-    return (equivalence(trace), after(trace), before(trace), combos(trace), directly_follows(trace), activ_freq(trace))
+    return (
+        equivalence(trace),
+        after(trace),
+        before(trace),
+        combos(trace),
+        directly_follows(trace),
+        activ_freq(trace),
+    )

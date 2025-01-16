@@ -26,25 +26,49 @@ def parse_list(value):
     return []
 
 
-def get_ocel_from_extended_table(df: pd.DataFrame, objects_df: Optional[Dict[Any, Any]] = None,
-                                 parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def get_ocel_from_extended_table(
+    df: pd.DataFrame,
+    objects_df: Optional[Dict[Any, Any]] = None,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> OCEL:
     if parameters is None:
         parameters = {}
 
-    object_type_prefix = exec_utils.get_param_value(Parameters.OBJECT_TYPE_PREFIX, parameters,
-                                                    constants.DEFAULT_OBJECT_TYPE_PREFIX_EXTENDED)
-    event_activity = exec_utils.get_param_value(Parameters.EVENT_ACTIVITY, parameters,
-                                                constants.DEFAULT_EVENT_ACTIVITY)
-    event_id = exec_utils.get_param_value(Parameters.EVENT_ID, parameters, constants.DEFAULT_EVENT_ID)
-    event_timestamp = exec_utils.get_param_value(Parameters.EVENT_TIMESTAMP, parameters,
-                                                 constants.DEFAULT_EVENT_TIMESTAMP)
-    object_id_column = exec_utils.get_param_value(Parameters.OBJECT_ID, parameters, constants.DEFAULT_OBJECT_ID)
-    object_type_column = exec_utils.get_param_value(Parameters.OBJECT_TYPE, parameters, constants.DEFAULT_OBJECT_TYPE)
+    object_type_prefix = exec_utils.get_param_value(
+        Parameters.OBJECT_TYPE_PREFIX,
+        parameters,
+        constants.DEFAULT_OBJECT_TYPE_PREFIX_EXTENDED,
+    )
+    event_activity = exec_utils.get_param_value(
+        Parameters.EVENT_ACTIVITY, parameters, constants.DEFAULT_EVENT_ACTIVITY
+    )
+    event_id = exec_utils.get_param_value(
+        Parameters.EVENT_ID, parameters, constants.DEFAULT_EVENT_ID
+    )
+    event_timestamp = exec_utils.get_param_value(
+        Parameters.EVENT_TIMESTAMP,
+        parameters,
+        constants.DEFAULT_EVENT_TIMESTAMP,
+    )
+    object_id_column = exec_utils.get_param_value(
+        Parameters.OBJECT_ID, parameters, constants.DEFAULT_OBJECT_ID
+    )
+    object_type_column = exec_utils.get_param_value(
+        Parameters.OBJECT_TYPE, parameters, constants.DEFAULT_OBJECT_TYPE
+    )
 
-    non_object_type_columns = set(x for x in df.columns if not x.startswith(object_type_prefix))
-    object_type_columns = set(x for x in df.columns if x.startswith(object_type_prefix))
-    meaningful_columns = object_type_columns.union({event_activity, event_id, event_timestamp})
-    internal_index = exec_utils.get_param_value(Parameters.INTERNAL_INDEX, parameters, constants.DEFAULT_INTERNAL_INDEX)
+    non_object_type_columns = set(
+        x for x in df.columns if not x.startswith(object_type_prefix)
+    )
+    object_type_columns = set(
+        x for x in df.columns if x.startswith(object_type_prefix)
+    )
+    meaningful_columns = object_type_columns.union(
+        {event_activity, event_id, event_timestamp}
+    )
+    internal_index = exec_utils.get_param_value(
+        Parameters.INTERNAL_INDEX, parameters, constants.DEFAULT_INTERNAL_INDEX
+    )
 
     df_red = df[list(meaningful_columns)]
 
@@ -63,27 +87,50 @@ def get_ocel_from_extended_table(df: pd.DataFrame, objects_df: Optional[Dict[Any
             for obj in ev[ot]:
                 oot.add(obj)
                 relations.append(
-                    {event_id: ev[event_id], event_activity: ev[event_activity],
-                     event_timestamp: ev[event_timestamp],
-                     object_id_column: obj, object_type_column: ot_stri})
+                    {
+                        event_id: ev[event_id],
+                        event_activity: ev[event_activity],
+                        event_timestamp: ev[event_timestamp],
+                        object_id_column: obj,
+                        object_type_column: ot_stri,
+                    }
+                )
         i = i + 1
 
     relations = pandas_utils.instantiate_dataframe(relations)
 
     if objects_df is None:
-        objects = [{object_type_column: x.split(object_type_prefix)[1], object_id_column: y} for x in objects for y in
-                   objects[x]]
+        objects = [
+            {
+                object_type_column: x.split(object_type_prefix)[1],
+                object_id_column: y,
+            }
+            for x in objects
+            for y in objects[x]
+        ]
         objects_df = pandas_utils.instantiate_dataframe(objects)
 
     del objects
 
     df = df[list(non_object_type_columns)]
-    df = dataframe_utils.convert_timestamp_columns_in_df(df, timest_format=pm4_constants.DEFAULT_TIMESTAMP_PARSE_FORMAT, timest_columns=[event_timestamp])
+    df = dataframe_utils.convert_timestamp_columns_in_df(
+        df,
+        timest_format=pm4_constants.DEFAULT_TIMESTAMP_PARSE_FORMAT,
+        timest_columns=[event_timestamp],
+    )
 
-    df = pandas_utils.insert_index(df, internal_index, copy_dataframe=False, reset_index=False)
-    relations = pandas_utils.insert_index(relations, internal_index, reset_index=False, copy_dataframe=False)
+    df = pandas_utils.insert_index(
+        df, internal_index, copy_dataframe=False, reset_index=False
+    )
+    relations = pandas_utils.insert_index(
+        relations, internal_index, reset_index=False, copy_dataframe=False
+    )
 
-    relations = dataframe_utils.convert_timestamp_columns_in_df(relations, timest_format=pm4_constants.DEFAULT_TIMESTAMP_PARSE_FORMAT, timest_columns=[event_timestamp])
+    relations = dataframe_utils.convert_timestamp_columns_in_df(
+        relations,
+        timest_format=pm4_constants.DEFAULT_TIMESTAMP_PARSE_FORMAT,
+        timest_columns=[event_timestamp],
+    )
 
     df = df.sort_values([event_timestamp, internal_index])
     relations = relations.sort_values([event_timestamp, internal_index])
@@ -91,4 +138,9 @@ def get_ocel_from_extended_table(df: pd.DataFrame, objects_df: Optional[Dict[Any
     del df[internal_index]
     del relations[internal_index]
 
-    return OCEL(events=df, objects=objects_df, relations=relations, parameters=parameters)
+    return OCEL(
+        events=df,
+        objects=objects_df,
+        relations=relations,
+        parameters=parameters,
+    )

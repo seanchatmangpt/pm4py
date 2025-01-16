@@ -1,7 +1,10 @@
 from pm4py.visualization.common import gview
 from pm4py.visualization.common import save as gsave
 from enum import Enum
-from pm4py.visualization.network_analysis.variants import frequency, performance
+from pm4py.visualization.network_analysis.variants import (
+    frequency,
+    performance,
+)
 from pm4py.util import exec_utils
 from graphviz import Digraph
 from typing import Dict, Optional, Any, Tuple
@@ -12,7 +15,11 @@ class Variants(Enum):
     PERFORMANCE = performance
 
 
-def apply(network_analysis_edges: Dict[Tuple[str, str], Dict[str, Any]], variant=Variants.FREQUENCY, parameters: Optional[Dict[Any, Any]] = None) -> Digraph:
+def apply(
+    network_analysis_edges: Dict[Tuple[str, str], Dict[str, Any]],
+    variant=Variants.FREQUENCY,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Digraph:
     """
     Creates a visualization of the network analysis
 
@@ -28,7 +35,9 @@ def apply(network_analysis_edges: Dict[Tuple[str, str], Dict[str, Any]], variant
     digraph
         Graphviz graph
     """
-    return exec_utils.get_variant(variant).apply(network_analysis_edges, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        network_analysis_edges, parameters=parameters
+    )
 
 
 def save(gviz: Digraph, output_file_path: str, parameters=None):

@@ -35,3 +35,19 @@ example_scripts:
     - cd examples
     - python execute_everything.py
   # If execute_everything.py returns non-zero, job fails.
+
+linting_scripts:
+  stage: test
+  image: python:3.12
+  variables:
+    PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
+  before_script:
+    - apt-get update -y
+    - apt-get install -y graphviz
+    - pip install -r requirements_stable.txt
+    - pip install .
+    - pip install flake8
+  script:
+    - cd files
+    - python flake8_score.py
+  # If flake8_score.py returns non-zero, job fails.

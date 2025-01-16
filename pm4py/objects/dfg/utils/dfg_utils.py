@@ -92,7 +92,9 @@ def infer_end_activities(dfg):
     return end_activities
 
 
-def infer_start_activities_from_prev_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=True):
+def infer_start_activities_from_prev_connections_and_current_dfg(
+    initial_dfg, dfg, activities, include_self=True
+):
     """
     Infer the start activities from the previous connections
 
@@ -111,11 +113,14 @@ def infer_start_activities_from_prev_connections_and_current_dfg(initial_dfg, df
             start_activities.add(el[0][1])
     if include_self:
         start_activities = start_activities.union(
-            set(infer_start_activities(dfg)))
+            set(infer_start_activities(dfg))
+        )
     return start_activities
 
 
-def infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg, activities, include_self=True):
+def infer_end_activities_from_succ_connections_and_current_dfg(
+    initial_dfg, dfg, activities, include_self=True
+):
     """
     Infer the end activities from the previous connections
 
@@ -137,7 +142,9 @@ def infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg,
     return end_activities
 
 
-def get_outputs_of_outside_activities_going_to_start_activities(initial_dfg, dfg, activities):
+def get_outputs_of_outside_activities_going_to_start_activities(
+    initial_dfg, dfg, activities
+):
     """
     Get outputs of outside activities going to start activities
 
@@ -151,20 +158,28 @@ def get_outputs_of_outside_activities_going_to_start_activities(initial_dfg, dfg
         Activities contained in the DFG
     """
     outputs = set()
-    start_activities = infer_start_activities_from_prev_connections_and_current_dfg(initial_dfg, dfg, activities,
-                                                                                    include_self=False)
+    start_activities = (
+        infer_start_activities_from_prev_connections_and_current_dfg(
+            initial_dfg, dfg, activities, include_self=False
+        )
+    )
     outside_activities_going_to_start_activities = set()
     for el in initial_dfg:
         if el[0][0] not in activities and el[0][1] in start_activities:
             outside_activities_going_to_start_activities.add(el[0][0])
     for el in initial_dfg:
-        if el[0][0] in outside_activities_going_to_start_activities and not el[0][1] in activities:
+        if (
+            el[0][0] in outside_activities_going_to_start_activities
+            and not el[0][1] in activities
+        ):
             outputs.add(el[0][1])
     outputs = outputs - outside_activities_going_to_start_activities
     return outputs
 
 
-def get_inputs_of_outside_activities_reached_by_end_activities(initial_dfg, dfg, activities):
+def get_inputs_of_outside_activities_reached_by_end_activities(
+    initial_dfg, dfg, activities
+):
     """
     Get inputs of outside activities going to start activities
 
@@ -178,14 +193,20 @@ def get_inputs_of_outside_activities_reached_by_end_activities(initial_dfg, dfg,
         Activities contained in the DFG
     """
     inputs = set()
-    end_activities = infer_end_activities_from_succ_connections_and_current_dfg(initial_dfg, dfg, activities,
-                                                                                include_self=False)
+    end_activities = (
+        infer_end_activities_from_succ_connections_and_current_dfg(
+            initial_dfg, dfg, activities, include_self=False
+        )
+    )
     input_activities_reached_by_end_activities = set()
     for el in initial_dfg:
         if el[0][1] not in activities and el[0][0] in end_activities:
             input_activities_reached_by_end_activities.add(el[0][1])
     for el in initial_dfg:
-        if el[0][1] in input_activities_reached_by_end_activities and not el[0][0] in activities:
+        if (
+            el[0][1] in input_activities_reached_by_end_activities
+            and not el[0][0] in activities
+        ):
             inputs.add(el[0][0])
     inputs = inputs - input_activities_reached_by_end_activities
 
@@ -529,7 +550,9 @@ def get_activities_self_loop(dfg):
     return self_loop_act
 
 
-def get_connected_components(ingoing, outgoing, activities, force_insert_missing_acti=True):
+def get_connected_components(
+    ingoing, outgoing, activities, force_insert_missing_acti=True
+):
     """
     Get connected components in the DFG graph
 
@@ -558,7 +581,8 @@ def get_connected_components(ingoing, outgoing, activities, force_insert_missing
         if ingoing_act not in connected_components:
             connected_components.append(ingoing_act)
             activities_considered = activities_considered.union(
-                set(ingoing_act))
+                set(ingoing_act)
+            )
 
     for act in outgoing:
         if act not in ingoing:
@@ -567,7 +591,8 @@ def get_connected_components(ingoing, outgoing, activities, force_insert_missing
             if outgoing_act not in connected_components:
                 connected_components.append(outgoing_act)
             activities_considered = activities_considered.union(
-                set(outgoing_act))
+                set(outgoing_act)
+            )
 
     if force_insert_missing_acti:
         for activ in activities:
@@ -766,10 +791,14 @@ def get_dfg_sa_ea_act_from_variants(variants, parameters=None):
     """
     if parameters is None:
         parameters = {}
-    variants = set(variants_util.get_activities_from_variant(v)
-                   for v in variants)
-    dfg = dict(Counter(list((x[i], x[i + 1])
-               for x in variants for i in range(len(x) - 1))))
+    variants = set(
+        variants_util.get_activities_from_variant(v) for v in variants
+    )
+    dfg = dict(
+        Counter(
+            list((x[i], x[i + 1]) for x in variants for i in range(len(x) - 1))
+        )
+    )
     list_act = list(set(y for x in variants for y in x))
     start_activities = dict(Counter(x[0] for x in variants if x))
     end_activities = dict(Counter(x[-1] for x in variants if x))
@@ -887,7 +916,7 @@ def get_predecessors(dfg, activities_model=None):
 
 
 def get_transitive_relations(dfg, alphabet):
-    '''
+    """
 
     Parameters
     ----------
@@ -900,7 +929,7 @@ def get_transitive_relations(dfg, alphabet):
         first argument maps an activit on all other activities that are able to reach the activity ('transitive pre set')
         second argument maps an activity on all other activities that it can reach (transitively) ('transitive post set')
 
-    '''
+    """
     pre = {a: set() for a in alphabet}
     post = {a: set() for a in alphabet}
     if len(dfg) > 0:

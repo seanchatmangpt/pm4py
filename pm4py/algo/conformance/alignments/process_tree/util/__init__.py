@@ -1,1 +1,4 @@
-from pm4py.algo.conformance.alignments.process_tree.util import search_graph_pt_replay_semantics, search_graph_pt_frequency_annotation
+from pm4py.algo.conformance.alignments.process_tree.util import (
+    search_graph_pt_replay_semantics,
+    search_graph_pt_frequency_annotation,
+)

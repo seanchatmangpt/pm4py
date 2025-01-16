@@ -1,5 +1,8 @@
 from pm4py.algo.simulation.playout.process_tree.variants import basic_playout
-from pm4py.algo.simulation.playout.process_tree.variants import extensive, topbottom
+from pm4py.algo.simulation.playout.process_tree.variants import (
+    extensive,
+    topbottom,
+)
 from enum import Enum
 from pm4py.util import exec_utils
 from pm4py.objects.process_tree.obj import ProcessTree
@@ -16,7 +19,11 @@ class Variants(Enum):
 DEFAULT_VARIANT = Variants.TOPBOTTOM
 
 
-def apply(tree: ProcessTree, variant=DEFAULT_VARIANT, parameters: Optional[Dict[Any, Any]] = None) -> EventLog:
+def apply(
+    tree: ProcessTree,
+    variant=DEFAULT_VARIANT,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> EventLog:
     """
     Performs a playout of a process tree
 

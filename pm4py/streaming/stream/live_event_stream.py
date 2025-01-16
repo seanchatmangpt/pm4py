@@ -24,7 +24,11 @@ class LiveEventStream:
         self._cond = threading.Condition(self._lock)
         self._observers = set()
         self._mail_man = None
-        self._tp = ThreadPoolExecutor(exec_utils.get_param_value(Parameters.THREAD_POOL_SIZE, parameters, 6))
+        self._tp = ThreadPoolExecutor(
+            exec_utils.get_param_value(
+                Parameters.THREAD_POOL_SIZE, parameters, 6
+            )
+        )
 
     def append(self, event):
         self._cond.acquire()
@@ -79,5 +83,3 @@ class LiveEventStream:
         return self._state
 
     state = property(_get_state)
-
-

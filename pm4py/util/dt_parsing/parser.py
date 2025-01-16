@@ -1,3 +1,4 @@
+from pm4py.util.dt_parsing.variants import dummy
 import sys
 import importlib.util
 import warnings
@@ -11,7 +12,6 @@ DUMMY = "dummy"
 VERSIONS = {}
 
 
-from pm4py.util.dt_parsing.variants import dummy
 VERSIONS[DUMMY] = dummy
 # this option should never be used, except in particular situations
 # (problematic Python <= 3.4,3.5,3.6 environments)
@@ -59,7 +59,8 @@ def get(variant=DEFAULT_VARIANT):
             if sys.version_info < (3, 11):
                 if constants.SHOW_INTERNAL_WARNINGS:
                     warnings.warn(
-                        "ISO8601 strings are not fully supported with strpfromiso for Python versions below 3.11")
+                        "ISO8601 strings are not fully supported with strpfromiso for Python versions below 3.11"
+                    )
                 constants.TRIGGERED_DT_PARSING_WARNING = True
 
     return VERSIONS[variant]

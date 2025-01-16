@@ -25,10 +25,15 @@ def get_encoded_trace(trace, mapping, parameters=None):
     if parameters is None:
         parameters = {}
 
-    activity_key = parameters[
-        PARAMETER_CONSTANT_ACTIVITY_KEY] if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters else xes.DEFAULT_NAME_KEY
+    activity_key = (
+        parameters[PARAMETER_CONSTANT_ACTIVITY_KEY]
+        if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters
+        else xes.DEFAULT_NAME_KEY
+    )
 
-    trace_str = "".join([mapping[x[activity_key]] for x in trace if x[activity_key] in mapping])
+    trace_str = "".join(
+        [mapping[x[activity_key]] for x in trace if x[activity_key] in mapping]
+    )
 
     return trace_str
 
@@ -55,7 +60,9 @@ def get_encoded_log(log, mapping, parameters=None):
     list_str = list()
 
     for trace in log:
-        list_str.append(get_encoded_trace(trace, mapping, parameters=parameters))
+        list_str.append(
+            get_encoded_trace(trace, mapping, parameters=parameters)
+        )
 
     return list_str
 
@@ -81,12 +88,17 @@ def form_encoding_dictio_from_log(log, parameters=None):
     if parameters is None:
         parameters = {}
 
-    activity_key = parameters[
-        PARAMETER_CONSTANT_ACTIVITY_KEY] if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters else xes.DEFAULT_NAME_KEY
+    activity_key = (
+        parameters[PARAMETER_CONSTANT_ACTIVITY_KEY]
+        if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters
+        else xes.DEFAULT_NAME_KEY
+    )
 
     shared_obj = SharedObj()
 
-    activities = attributes_get.get_attribute_values(log, activity_key, parameters=parameters)
+    activities = attributes_get.get_attribute_values(
+        log, activity_key, parameters=parameters
+    )
 
     mapping = {}
 
@@ -97,8 +109,9 @@ def form_encoding_dictio_from_log(log, parameters=None):
     return mapping
 
 
-def form_encoding_dictio_from_two_logs(log1: EventLog, log2: EventLog, parameters=None) -> \
-Dict[str, str]:
+def form_encoding_dictio_from_two_logs(
+    log1: EventLog, log2: EventLog, parameters=None
+) -> Dict[str, str]:
     """
     Forms the encoding dictionary from a couple of logs
 
@@ -121,13 +134,20 @@ Dict[str, str]:
     if parameters is None:
         parameters = {}
 
-    activity_key = parameters[
-        PARAMETER_CONSTANT_ACTIVITY_KEY] if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters else xes.DEFAULT_NAME_KEY
+    activity_key = (
+        parameters[PARAMETER_CONSTANT_ACTIVITY_KEY]
+        if PARAMETER_CONSTANT_ACTIVITY_KEY in parameters
+        else xes.DEFAULT_NAME_KEY
+    )
 
     shared_obj = SharedObj()
 
-    activities_log_1 = attributes_get.get_attribute_values(log1, activity_key, parameters=parameters)
-    activities_log_2 = attributes_get.get_attribute_values(log2, activity_key, parameters=parameters)
+    activities_log_1 = attributes_get.get_attribute_values(
+        log1, activity_key, parameters=parameters
+    )
+    activities_log_2 = attributes_get.get_attribute_values(
+        log2, activity_key, parameters=parameters
+    )
 
     mapping = {}
 

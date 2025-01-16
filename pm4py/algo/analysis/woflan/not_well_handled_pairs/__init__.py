@@ -1,1 +1,3 @@
-from pm4py.algo.analysis.woflan.not_well_handled_pairs import not_well_handled_pairs
+from pm4py.algo.analysis.woflan.not_well_handled_pairs import (
+    not_well_handled_pairs,
+)

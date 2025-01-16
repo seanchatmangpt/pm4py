@@ -11,7 +11,11 @@ class Variants(Enum):
     CLASSIC = classic
 
 
-def apply(log: Union[EventLog, EventStream, pd.DataFrame], variant = Variants.CLASSIC, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[PetriNet, Marking, Marking]:
+def apply(
+    log: Union[EventLog, EventStream, pd.DataFrame],
+    variant=Variants.CLASSIC,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Tuple[PetriNet, Marking, Marking]:
     """
     Discovers a Petri net using the ILP miner.
 

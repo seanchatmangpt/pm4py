@@ -4,7 +4,7 @@ from pm4py.objects.petri_net.sem_interface import Semantics
 import re
 
 
-security_pattern = re.compile(r'[.]|\\x[0-9a-fA-F]+')
+security_pattern = re.compile(r"[.]|\\x[0-9a-fA-F]+")
 
 
 class DataPetriNetSemantics(Semantics):
@@ -114,7 +114,12 @@ def evaluate_guard(guard, read_variables, data):
     boolean
         Boolean value
     """
-    guard = guard.replace("&&", " and ").replace("||", " or ").replace("true", "True").replace("false", "False")
+    guard = (
+        guard.replace("&&", " and ")
+        .replace("||", " or ")
+        .replace("true", "True")
+        .replace("false", "False")
+    )
     try:
         dct = {}
         for k in read_variables:
@@ -125,10 +130,9 @@ def evaluate_guard(guard, read_variables, data):
             ret = eval(guard, dct)
             return ret
         return False
-    except:
+    except BaseException:
         # the guard could not be evaluated (for example, given missing data)
         return False
-
 
 
 # 29/08/2021: the following methods have been incapsulated in the DataPetriNetSemantics class.
@@ -145,7 +149,11 @@ def is_enabled(t, pn, m, e):
 
     if petri_properties.TRANS_GUARD in t.properties:
         guard = t.properties[petri_properties.TRANS_GUARD]
-        read_variables = t.properties[petri_properties.READ_VARIABLE] if petri_properties.READ_VARIABLE in t.properties else []
+        read_variables = (
+            t.properties[petri_properties.READ_VARIABLE]
+            if petri_properties.READ_VARIABLE in t.properties
+            else []
+        )
         data = copy.copy(m.data_dict)
         data.update(e)
         evaluate_guard(guard, read_variables, data)

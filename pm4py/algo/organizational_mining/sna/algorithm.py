@@ -1,7 +1,15 @@
-from pm4py.algo.organizational_mining.sna.variants.log import working_together as log_workingtogether, \
-    handover as log_handover, jointactivities as log_jointactivities, subcontracting as log_subcontracting
-from pm4py.algo.organizational_mining.sna.variants.pandas import jointactivities as pd_jointactivities, \
-    handover as pd_handover, subcontracting as pd_subcontracting, working_together as pd_workingtogether
+from pm4py.algo.organizational_mining.sna.variants.log import (
+    working_together as log_workingtogether,
+    handover as log_handover,
+    jointactivities as log_jointactivities,
+    subcontracting as log_subcontracting,
+)
+from pm4py.algo.organizational_mining.sna.variants.pandas import (
+    jointactivities as pd_jointactivities,
+    handover as pd_handover,
+    subcontracting as pd_subcontracting,
+    working_together as pd_workingtogether,
+)
 from pm4py.objects.conversion.log import converter as log_conversion
 from pm4py.util import exec_utils
 import numpy as np
@@ -32,7 +40,11 @@ class Variants(Enum):
     JOINTACTIVITIES_PANDAS = pd_jointactivities
 
 
-def apply(log: Union[EventLog, pd.DataFrame], parameters: Optional[Dict[Union[str, Parameters], Any]] = None, variant=Variants.HANDOVER_LOG) -> SNA:
+def apply(
+    log: Union[EventLog, pd.DataFrame],
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+    variant=Variants.HANDOVER_LOG,
+) -> SNA:
     """
     Calculates a SNA metric
 
@@ -61,11 +73,21 @@ def apply(log: Union[EventLog, pd.DataFrame], parameters: Optional[Dict[Union[st
     if parameters is None:
         parameters = {}
 
-    enable_metric_normalization = exec_utils.get_param_value(Parameters.METRIC_NORMALIZATION, parameters, False)
+    enable_metric_normalization = exec_utils.get_param_value(
+        Parameters.METRIC_NORMALIZATION, parameters, False
+    )
 
-    if variant in [Variants.HANDOVER_LOG, Variants.WORKING_TOGETHER_LOG, Variants.JOINTACTIVITIES_LOG,
-                   Variants.SUBCONTRACTING_LOG]:
-        log = log_conversion.apply(log, variant=log_conversion.Variants.TO_EVENT_LOG, parameters=parameters)
+    if variant in [
+        Variants.HANDOVER_LOG,
+        Variants.WORKING_TOGETHER_LOG,
+        Variants.JOINTACTIVITIES_LOG,
+        Variants.SUBCONTRACTING_LOG,
+    ]:
+        log = log_conversion.apply(
+            log,
+            variant=log_conversion.Variants.TO_EVENT_LOG,
+            parameters=parameters,
+        )
     sna = exec_utils.get_variant(variant).apply(log, parameters=parameters)
     abs_max = np.max(np.abs(list(sna.connections.values())))
     if enable_metric_normalization and abs_max > 0:

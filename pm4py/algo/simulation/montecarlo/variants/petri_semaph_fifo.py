@@ -72,15 +72,34 @@ class SimulationDiagnostics(Thread):
                 if place.semaphore._value == 0:
                     pd[place] = place.semaphore._value
             if pd:
-                logger.info(str(time()) + " diagnostics for thread " + str(
-                    self.sim_thread.id) + ": blocked places by semaphore: " + str(pd))
+                logger.info(
+                    str(time())
+                    + " diagnostics for thread "
+                    + str(self.sim_thread.id)
+                    + ": blocked places by semaphore: "
+                    + str(pd)
+                )
             sleep(self.sim_thread.diagn_interval)
 
 
 class SimulationThread(Thread):
-    def __init__(self, id, net, im, fm, map, start_time, places_interval_trees, transitions_interval_trees,
-                 cases_ex_time, list_cases, enable_diagnostics, diagn_interval, small_scale_factor,
-                 max_thread_exec_time):
+    def __init__(
+        self,
+        id,
+        net,
+        im,
+        fm,
+        map,
+        start_time,
+        places_interval_trees,
+        transitions_interval_trees,
+        cases_ex_time,
+        list_cases,
+        enable_diagnostics,
+        diagn_interval,
+        small_scale_factor,
+        max_thread_exec_time,
+    ):
         """
         Instantiates the object of the simulation
 
@@ -132,7 +151,11 @@ class SimulationThread(Thread):
         Thread.__init__(self)
 
     def get_rem_time(self):
-        return max(0, self.max_thread_exec_time - (time() - self.internal_thread_start_time))
+        return max(
+            0,
+            self.max_thread_exec_time
+            - (time() - self.internal_thread_start_time),
+        )
 
     def run(self):
         """
@@ -148,7 +171,15 @@ class SimulationThread(Thread):
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
 
-        net, im, fm, smap, source, sink, start_time = self.net, self.im, self.fm, self.map, self.source, self.sink, self.start_time
+        net, im, fm, smap, source, sink, start_time = (
+            self.net,
+            self.im,
+            self.fm,
+            self.map,
+            self.source,
+            self.sink,
+            self.start_time,
+        )
         places_interval_trees = self.places_interval_trees
         transitions_interval_trees = self.transitions_interval_trees
         cases_ex_time = self.cases_ex_time
@@ -176,7 +207,9 @@ class SimulationThread(Thread):
 
             simulated_execution_plus_waiting_time = -1
             while simulated_execution_plus_waiting_time < 0:
-                simulated_execution_plus_waiting_time = smap[ct].get_value() if ct in smap else 0.0
+                simulated_execution_plus_waiting_time = (
+                    smap[ct].get_value() if ct in smap else 0.0
+                )
 
             # establish how much time we need to wait before firing the transition
             # (it depends on the input places tokens)
@@ -192,9 +225,14 @@ class SimulationThread(Thread):
                 if rem_time == 0:
                     break
                 if sem_value == 0:
-                    waiting_time = max(waiting_time,
-                                       place.assigned_time.pop(
-                                           0) - current_time) if place.assigned_time else waiting_time
+                    waiting_time = (
+                        max(
+                            waiting_time,
+                            place.assigned_time.pop(0) - current_time,
+                        )
+                        if place.assigned_time
+                        else waiting_time
+                    )
 
             if rem_time == 0:
                 for place in acquired_places:
@@ -204,13 +242,18 @@ class SimulationThread(Thread):
             # if the waiting time is greater than 0, add an interval to the interval tree denoting
             # the waiting times for the given transition
             if waiting_time > 0:
-                transitions_interval_trees[ct].add(Interval(current_time, current_time + waiting_time))
+                transitions_interval_trees[ct].add(
+                    Interval(current_time, current_time + waiting_time)
+                )
 
             # get the actual execution time of the transition as a difference between simulated_execution_plus_waiting_time
             # and the waiting time
-            execution_time = max(simulated_execution_plus_waiting_time - waiting_time, 0)
+            execution_time = max(
+                simulated_execution_plus_waiting_time - waiting_time, 0
+            )
 
-            # increase the timing based on the waiting time and the execution time of the transition
+            # increase the timing based on the waiting time and the execution
+            # time of the transition
             current_time = current_time + waiting_time + execution_time
 
             for arc in ct.out_arcs:
@@ -221,8 +264,12 @@ class SimulationThread(Thread):
             current_marking = weak_execute(ct, current_marking)
 
             if ct.label is not None:
-                eve = Event({xes_constants.DEFAULT_NAME_KEY: ct.label,
-                             xes_constants.DEFAULT_TIMESTAMP_KEY: strpfromiso.fix_naivety(datetime.datetime.fromtimestamp(current_time))})
+                eve = Event(
+                    {
+                        xes_constants.DEFAULT_NAME_KEY: ct.label,
+                        xes_constants.DEFAULT_TIMESTAMP_KEY: strpfromiso.fix_naivety(
+                            datetime.datetime.fromtimestamp(current_time)),
+                    })
                 last_event = eve
                 if first_event is None:
                     first_event = last_event
@@ -232,7 +279,9 @@ class SimulationThread(Thread):
                 place = arc.source
                 p_ex_time = place.assigned_time.pop(0)
                 if current_time - p_ex_time > 0:
-                    places_interval_trees[place].add(Interval(p_ex_time, current_time))
+                    places_interval_trees[place].add(
+                        Interval(p_ex_time, current_time)
+                    )
                 place.assigned_time.append(current_time)
                 place.assigned_time = sorted(place.assigned_time)
                 place.semaphore.release()
@@ -241,8 +290,10 @@ class SimulationThread(Thread):
             sleep((waiting_time + execution_time) / self.small_scale_factor)
 
         if first_event is not None and last_event is not None:
-            cases_ex_time.append(last_event[xes_constants.DEFAULT_TIMESTAMP_KEY].timestamp() - first_event[
-                xes_constants.DEFAULT_TIMESTAMP_KEY].timestamp())
+            cases_ex_time.append(
+                last_event[xes_constants.DEFAULT_TIMESTAMP_KEY].timestamp()
+                - first_event[xes_constants.DEFAULT_TIMESTAMP_KEY].timestamp()
+            )
         else:
             cases_ex_time.append(0)
 
@@ -255,18 +306,32 @@ class SimulationThread(Thread):
         if rem_time > 0:
             self.terminated_correctly = True
             if self.enable_diagnostics:
-                logger.info(str(time()) + " terminated successfully thread ID " + str(self.id))
+                logger.info(
+                    str(time())
+                    + " terminated successfully thread ID "
+                    + str(self.id)
+                )
 
         if self.enable_diagnostics:
             if rem_time == 0:
                 if self.enable_diagnostics:
-                    logger.info(str(time()) + " terminated for timeout thread ID " + str(self.id))
+                    logger.info(
+                        str(time())
+                        + " terminated for timeout thread ID "
+                        + str(self.id)
+                    )
 
         if self.enable_diagnostics:
             diagnostics.diagn_open = False
 
 
-def apply(log: EventLog, net: PetriNet, im: Marking, fm: Marking, parameters: Optional[Dict[Union[str, Parameters], Any]] = None) -> Tuple[EventLog, Dict[str, Any]]:
+def apply(
+    log: EventLog,
+    net: PetriNet,
+    im: Marking,
+    fm: Marking,
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> Tuple[EventLog, Dict[str, Any]]:
     """
     Performs a Monte Carlo simulation of an accepting Petri net without duplicate transitions and where the preset is always
     distinct from the postset (FIFO variant; the semaphores pile up if waiting is needed, and the first in is the first to win
@@ -319,31 +384,46 @@ def apply(log: EventLog, net: PetriNet, im: Marking, fm: Marking, parameters: Op
     from intervaltree import IntervalTree
     from statistics import median
 
-    timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters,
-                                               xes_constants.DEFAULT_TIMESTAMP_KEY)
-    no_simulations = exec_utils.get_param_value(Parameters.PARAM_NUM_SIMULATIONS, parameters,
-                                                100)
-    force_distribution = exec_utils.get_param_value(Parameters.PARAM_FORCE_DISTRIBUTION, parameters,
-                                                    None)
-    enable_diagnostics = exec_utils.get_param_value(Parameters.PARAM_ENABLE_DIAGNOSTICS, parameters,
-                                                    True)
-    diagn_interval = exec_utils.get_param_value(Parameters.PARAM_DIAGN_INTERVAL, parameters,
-                                                32.0)
-    case_arrival_ratio = exec_utils.get_param_value(Parameters.PARAM_CASE_ARRIVAL_RATIO, parameters,
-                                                    None)
-    smap = exec_utils.get_param_value(Parameters.PARAM_PROVIDED_SMAP, parameters,
-                                      None)
-    resources_per_places = exec_utils.get_param_value(Parameters.PARAM_MAP_RESOURCES_PER_PLACE, parameters,
-                                                      None)
-    default_num_resources_per_places = exec_utils.get_param_value(Parameters.PARAM_DEFAULT_NUM_RESOURCES_PER_PLACE,
-                                                                  parameters, 1)
-    small_scale_factor = exec_utils.get_param_value(Parameters.PARAM_SMALL_SCALE_FACTOR, parameters,
-                                                    864000)
-    max_thread_exec_time = exec_utils.get_param_value(Parameters.PARAM_MAX_THREAD_EXECUTION_TIME, parameters,
-                                                      60.0)
+    timestamp_key = exec_utils.get_param_value(
+        Parameters.TIMESTAMP_KEY,
+        parameters,
+        xes_constants.DEFAULT_TIMESTAMP_KEY,
+    )
+    no_simulations = exec_utils.get_param_value(
+        Parameters.PARAM_NUM_SIMULATIONS, parameters, 100
+    )
+    force_distribution = exec_utils.get_param_value(
+        Parameters.PARAM_FORCE_DISTRIBUTION, parameters, None
+    )
+    enable_diagnostics = exec_utils.get_param_value(
+        Parameters.PARAM_ENABLE_DIAGNOSTICS, parameters, True
+    )
+    diagn_interval = exec_utils.get_param_value(
+        Parameters.PARAM_DIAGN_INTERVAL, parameters, 32.0
+    )
+    case_arrival_ratio = exec_utils.get_param_value(
+        Parameters.PARAM_CASE_ARRIVAL_RATIO, parameters, None
+    )
+    smap = exec_utils.get_param_value(
+        Parameters.PARAM_PROVIDED_SMAP, parameters, None
+    )
+    resources_per_places = exec_utils.get_param_value(
+        Parameters.PARAM_MAP_RESOURCES_PER_PLACE, parameters, None
+    )
+    default_num_resources_per_places = exec_utils.get_param_value(
+        Parameters.PARAM_DEFAULT_NUM_RESOURCES_PER_PLACE, parameters, 1
+    )
+    small_scale_factor = exec_utils.get_param_value(
+        Parameters.PARAM_SMALL_SCALE_FACTOR, parameters, 864000
+    )
+    max_thread_exec_time = exec_utils.get_param_value(
+        Parameters.PARAM_MAX_THREAD_EXECUTION_TIME, parameters, 60.0
+    )
 
     if case_arrival_ratio is None:
-        case_arrival_ratio = case_arrival.get_case_arrival_avg(log, parameters=parameters)
+        case_arrival_ratio = case_arrival.get_case_arrival_avg(
+            log, parameters=parameters
+        )
     if resources_per_places is None:
         resources_per_places = {}
 
@@ -375,21 +455,43 @@ def apply(log: EventLog, net: PetriNet, im: Marking, fm: Marking, parameters: Op
         if enable_diagnostics:
             logger.info(str(time()) + " started the replay operation.")
         if force_distribution is not None:
-            smap = replay.get_map_from_log_and_net(log, net, im, fm, force_distribution=force_distribution,
-                                                   parameters=parameters)
+            smap = replay.get_map_from_log_and_net(
+                log,
+                net,
+                im,
+                fm,
+                force_distribution=force_distribution,
+                parameters=parameters,
+            )
         else:
-            smap = replay.get_map_from_log_and_net(log, net, im, fm, parameters=parameters)
+            smap = replay.get_map_from_log_and_net(
+                log, net, im, fm, parameters=parameters
+            )
         if enable_diagnostics:
             logger.info(str(time()) + " ended the replay operation.")
 
-    # the start timestamp is set to 1000000 instead of 0 to avoid problems with 32 bit machines
+    # the start timestamp is set to 1000000 instead of 0 to avoid problems
+    # with 32 bit machines
     start_time = 1000000
     threads = []
     for i in range(no_simulations):
         list_cases[i] = Trace()
-        t = SimulationThread(i, net, im, fm, smap, start_time, places_interval_trees, transitions_interval_trees,
-                             cases_ex_time, list_cases, enable_diagnostics, diagn_interval, small_scale_factor,
-                             max_thread_exec_time)
+        t = SimulationThread(
+            i,
+            net,
+            im,
+            fm,
+            smap,
+            start_time,
+            places_interval_trees,
+            transitions_interval_trees,
+            cases_ex_time,
+            list_cases,
+            enable_diagnostics,
+            diagn_interval,
+            small_scale_factor,
+            max_thread_exec_time,
+        )
         t.start()
         threads.append(t)
         start_time = start_time + case_arrival_ratio
@@ -415,11 +517,15 @@ def apply(log: EventLog, net: PetriNet, im: Marking, fm: Marking, parameters: Op
     min_timestamp = log[0][0][timestamp_key].timestamp()
     max_timestamp = max(y[timestamp_key].timestamp() for x in log for y in x)
 
-    transitions_interval_trees = {t.name: y for t, y in transitions_interval_trees.items()}
+    transitions_interval_trees = {
+        t.name: y for t, y in transitions_interval_trees.items()
+    }
 
-    return log, {Outputs.OUTPUT_PLACES_INTERVAL_TREES.value: places_interval_trees,
-                 Outputs.OUTPUT_TRANSITIONS_INTERVAL_TREES.value: transitions_interval_trees,
-                 Outputs.OUTPUT_CASES_EX_TIME.value: cases_ex_time,
-                 Outputs.OUTPUT_MEDIAN_CASES_EX_TIME.value: median(cases_ex_time),
-                 Outputs.OUTPUT_CASE_ARRIVAL_RATIO.value: case_arrival_ratio,
-                 Outputs.OUTPUT_TOTAL_CASES_TIME.value: max_timestamp - min_timestamp}
+    return log, {
+        Outputs.OUTPUT_PLACES_INTERVAL_TREES.value: places_interval_trees,
+        Outputs.OUTPUT_TRANSITIONS_INTERVAL_TREES.value: transitions_interval_trees,
+        Outputs.OUTPUT_CASES_EX_TIME.value: cases_ex_time,
+        Outputs.OUTPUT_MEDIAN_CASES_EX_TIME.value: median(cases_ex_time),
+        Outputs.OUTPUT_CASE_ARRIVAL_RATIO.value: case_arrival_ratio,
+        Outputs.OUTPUT_TOTAL_CASES_TIME.value: max_timestamp - min_timestamp,
+    }

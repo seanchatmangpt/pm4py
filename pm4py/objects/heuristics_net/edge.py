@@ -1,6 +1,16 @@
 class Edge:
-    def __init__(self, start_node, end_node, dependency_value, dfg_value, repr_value, label="", repr_color="#000000",
-                 edge_type="frequency", net_name=""):
+    def __init__(
+        self,
+        start_node,
+        end_node,
+        dependency_value,
+        dfg_value,
+        repr_value,
+        label="",
+        repr_color="#000000",
+        edge_type="frequency",
+        net_name="",
+    ):
         """
         Constructor
 

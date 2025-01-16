@@ -33,7 +33,9 @@ def apply(metric_values: SNA, parameters=None, variant=DEFAULT_VARIANT):
     temp_file_name
         Name of a temporary file where the visualization is placed
     """
-    return exec_utils.get_variant(variant).apply(metric_values, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        metric_values, parameters=parameters
+    )
 
 
 def view(temp_file_name, parameters=None, variant=DEFAULT_VARIANT):
@@ -47,7 +49,9 @@ def view(temp_file_name, parameters=None, variant=DEFAULT_VARIANT):
     parameters
         Possible parameters of the algorithm
     """
-    return exec_utils.get_variant(variant).view(temp_file_name, parameters=parameters)
+    return exec_utils.get_variant(variant).view(
+        temp_file_name, parameters=parameters
+    )
 
 
 def save(temp_file_name, dest_file, parameters=None, variant=DEFAULT_VARIANT):
@@ -63,4 +67,6 @@ def save(temp_file_name, dest_file, parameters=None, variant=DEFAULT_VARIANT):
     parameters
         Possible parameters of the algorithm
     """
-    return exec_utils.get_variant(variant).save(temp_file_name, dest_file, parameters=parameters)
+    return exec_utils.get_variant(variant).save(
+        temp_file_name, dest_file, parameters=parameters
+    )

@@ -73,6 +73,7 @@ def read_xes(
         v = xes_importer.Variants.RUSTXES
 
     from copy import copy
+
     parameters = copy(kwargs)
     parameters["encoding"] = encoding
     parameters["return_legacy_log_object"] = return_legacy_log_object
@@ -81,7 +82,10 @@ def read_xes(
 
     if type(log) is EventLog and not return_legacy_log_object:
         from pm4py.objects.conversion.log import converter as log_converter
-        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME)
+
+        log = log_converter.apply(
+            log, variant=log_converter.Variants.TO_DATA_FRAME
+        )
 
     return log
 
@@ -89,12 +93,12 @@ def read_xes(
 def read_pnml(
     file_path: str,
     auto_guess_final_marking: bool = False,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
     Reads a Petri net object from a `.pnml` file.
     The returned Petri net object is a tuple containing:
-    
+
     1. PetriNet object (`PetriNet`)
     2. Initial Marking (`Marking`)
     3. Final Marking (`Marking`)
@@ -113,17 +117,20 @@ def read_pnml(
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
     from pm4py.objects.petri_net.importer import importer as pnml_importer
+
     net, im, fm = pnml_importer.apply(
         file_path,
         parameters={
             "auto_guess_final_marking": auto_guess_final_marking,
-            "encoding": encoding
-        }
+            "encoding": encoding,
+        },
     )
     return net, im, fm
 
 
-def read_ptml(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> ProcessTree:
+def read_ptml(
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> ProcessTree:
     """
     Reads a process tree object from a `.ptml` file.
 
@@ -140,23 +147,23 @@ def read_ptml(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> Pro
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
     from pm4py.objects.process_tree.importer import importer as tree_importer
+
     tree = tree_importer.apply(file_path, parameters={"encoding": encoding})
     return tree
 
 
 def read_dfg(
-    file_path: str,
-    encoding: str = constants.DEFAULT_ENCODING
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
 ) -> Tuple[Dict[Tuple[str, str], int], Dict[str, int], Dict[str, int]]:
     """
     Reads a Directly-Follows Graph (DFG) from a `.dfg` file.
     The returned DFG object is a tuple containing:
-    
-    1. DFG (`Dict[Tuple[str, str], int]`): Maps pairs of activities to their occurrence count. 
+
+    1. DFG (`Dict[Tuple[str, str], int]`): Maps pairs of activities to their occurrence count.
        For example, `DFG[('a', 'b')] = k` indicates that activity `'a'` is directly followed by activity `'b'` a total of `k` times in the log.
-    2. Start Activity Dictionary (`Dict[str, int]`): Maps activities to the number of traces they start. 
+    2. Start Activity Dictionary (`Dict[str, int]`): Maps activities to the number of traces they start.
        For example, `S['a'] = k` implies that activity `'a'` starts `k` traces in the event log.
-    3. End Activity Dictionary (`Dict[str, int]`): Maps activities to the number of traces they end. 
+    3. End Activity Dictionary (`Dict[str, int]`): Maps activities to the number of traces they end.
        For example, `E['z'] = k` implies that activity `'z'` ends `k` traces in the event log.
 
     :param file_path: Path to the DFG model file on disk.
@@ -172,13 +179,16 @@ def read_dfg(
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
     from pm4py.objects.dfg.importer import importer as dfg_importer
+
     dfg, start_activities, end_activities = dfg_importer.apply(
         file_path, parameters={"encoding": encoding}
     )
     return dfg, start_activities, end_activities
 
 
-def read_bpmn(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> BPMN:
+def read_bpmn(
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> BPMN:
     """
     Reads a BPMN model from a `.bpmn` file.
 
@@ -195,14 +205,17 @@ def read_bpmn(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> BPM
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
     from pm4py.objects.bpmn.importer import importer as bpmn_importer
-    bpmn_graph = bpmn_importer.apply(file_path, parameters={"encoding": encoding})
+
+    bpmn_graph = bpmn_importer.apply(
+        file_path, parameters={"encoding": encoding}
+    )
     return bpmn_graph
 
 
 def read_ocel(
     file_path: str,
     objects_path: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an object-centric event log from a file (see: http://www.ocel-standard.org/).
@@ -235,7 +248,7 @@ def read_ocel(
 def read_ocel_csv(
     file_path: str,
     objects_path: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an object-centric event log from a CSV file (see: http://www.ocel-standard.org/).
@@ -256,14 +269,15 @@ def read_ocel_csv(
         raise Exception("File does not exist")
 
     from pm4py.objects.ocel.importer.csv import importer as csv_importer
+
     return csv_importer.apply(
-        file_path,
-        objects_path=objects_path,
-        parameters={"encoding": encoding}
+        file_path, objects_path=objects_path, parameters={"encoding": encoding}
     )
 
 
-def read_ocel_json(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> OCEL:
+def read_ocel_json(
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> OCEL:
     """
     Reads an object-centric event log from a JSON-OCEL file (see: http://www.ocel-standard.org/).
     Returns an `OCEL` object.
@@ -281,15 +295,20 @@ def read_ocel_json(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
 
-    from pm4py.objects.ocel.importer.jsonocel import importer as jsonocel_importer
+    from pm4py.objects.ocel.importer.jsonocel import (
+        importer as jsonocel_importer,
+    )
+
     return jsonocel_importer.apply(
         file_path,
         variant=jsonocel_importer.Variants.CLASSIC,
-        parameters={"encoding": encoding}
+        parameters={"encoding": encoding},
     )
 
 
-def read_ocel_xml(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> OCEL:
+def read_ocel_xml(
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> OCEL:
     """
     Reads an object-centric event log from an XML-OCEL file (see: http://www.ocel-standard.org/).
     Returns an `OCEL` object.
@@ -307,15 +326,20 @@ def read_ocel_xml(file_path: str, encoding: str = constants.DEFAULT_ENCODING) ->
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
 
-    from pm4py.objects.ocel.importer.xmlocel import importer as xmlocel_importer
+    from pm4py.objects.ocel.importer.xmlocel import (
+        importer as xmlocel_importer,
+    )
+
     return xmlocel_importer.apply(
         file_path,
         variant=xmlocel_importer.Variants.CLASSIC,
-        parameters={"encoding": encoding}
+        parameters={"encoding": encoding},
     )
 
 
-def read_ocel_sqlite(file_path: str, encoding: str = constants.DEFAULT_ENCODING) -> OCEL:
+def read_ocel_sqlite(
+    file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> OCEL:
     """
     Reads an object-centric event log from a SQLite database (see: http://www.ocel-standard.org/).
     Returns an `OCEL` object.
@@ -334,17 +358,18 @@ def read_ocel_sqlite(file_path: str, encoding: str = constants.DEFAULT_ENCODING)
         raise Exception("File does not exist")
 
     from pm4py.objects.ocel.importer.sqlite import importer as sqlite_importer
+
     return sqlite_importer.apply(
         file_path,
         variant=sqlite_importer.Variants.PANDAS_IMPORTER,
-        parameters={"encoding": encoding}
+        parameters={"encoding": encoding},
     )
 
 
 def read_ocel2(
     file_path: str,
     variant_str: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log.
@@ -369,17 +394,27 @@ def read_ocel2(
         raise Exception("File does not exist")
 
     if file_path.lower().endswith("sqlite"):
-        return read_ocel2_sqlite(file_path, variant_str=variant_str, encoding=encoding)
-    elif file_path.lower().endswith("xml") or file_path.lower().endswith("xmlocel"):
-        return read_ocel2_xml(file_path, variant_str=variant_str, encoding=encoding)
-    elif file_path.lower().endswith("json") or file_path.lower().endswith("jsonocel"):
-        return read_ocel2_json(file_path, variant_str=variant_str, encoding=encoding)
+        return read_ocel2_sqlite(
+            file_path, variant_str=variant_str, encoding=encoding
+        )
+    elif file_path.lower().endswith("xml") or file_path.lower().endswith(
+        "xmlocel"
+    ):
+        return read_ocel2_xml(
+            file_path, variant_str=variant_str, encoding=encoding
+        )
+    elif file_path.lower().endswith("json") or file_path.lower().endswith(
+        "jsonocel"
+    ):
+        return read_ocel2_json(
+            file_path, variant_str=variant_str, encoding=encoding
+        )
 
 
 def read_ocel2_json(
     file_path: str,
     variant_str: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log from a JSON-OCEL2 file.
@@ -398,22 +433,23 @@ def read_ocel2_json(
     if not os.path.exists(file_path):
         raise Exception("File does not exist")
 
-    from pm4py.objects.ocel.importer.jsonocel import importer as jsonocel_importer
+    from pm4py.objects.ocel.importer.jsonocel import (
+        importer as jsonocel_importer,
+    )
+
     variant = jsonocel_importer.Variants.OCEL20_STANDARD
     if variant_str == "ocel20_rustxes":
         variant = jsonocel_importer.Variants.OCEL20_RUSTXES
 
     return jsonocel_importer.apply(
-        file_path,
-        variant=variant,
-        parameters={"encoding": encoding}
+        file_path, variant=variant, parameters={"encoding": encoding}
     )
 
 
 def read_ocel2_sqlite(
     file_path: str,
     variant_str: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log from a SQLite database.
@@ -433,17 +469,18 @@ def read_ocel2_sqlite(
         raise Exception("File does not exist")
 
     from pm4py.objects.ocel.importer.sqlite import importer as sqlite_importer
+
     return sqlite_importer.apply(
         file_path,
         variant=sqlite_importer.Variants.OCEL20,
-        parameters={"encoding": encoding}
+        parameters={"encoding": encoding},
     )
 
 
 def read_ocel2_xml(
     file_path: str,
     variant_str: Optional[str] = None,
-    encoding: str = constants.DEFAULT_ENCODING
+    encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log from an XML file.
@@ -463,12 +500,11 @@ def read_ocel2_xml(
         raise Exception("File does not exist")
 
     from pm4py.objects.ocel.importer.xmlocel import importer as xml_importer
+
     variant = xml_importer.Variants.OCEL20
     if variant_str == "ocel20_rustxes":
         variant = xml_importer.Variants.OCEL20_RUSTXES
 
     return xml_importer.apply(
-        file_path,
-        variant=variant,
-        parameters={"encoding": encoding}
+        file_path, variant=variant, parameters={"encoding": encoding}
     )

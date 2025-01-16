@@ -1,6 +1,8 @@
 import sys
 
-from pm4py.objects.random_variables.basic_structure import BasicStructureRandomVariable
+from pm4py.objects.random_variables.basic_structure import (
+    BasicStructureRandomVariable,
+)
 
 
 class Deterministic(BasicStructureRandomVariable):
@@ -108,7 +110,7 @@ class Deterministic(BasicStructureRandomVariable):
         likelihood
             Log likelihood that the values follows the distribution
         """
-        values_0 = [x for x in values if abs(x-self.value) < tol]
+        values_0 = [x for x in values if abs(x - self.value) < tol]
         if len(values) == len(values_0):
             return sys.float_info.max
         return -sys.float_info.max

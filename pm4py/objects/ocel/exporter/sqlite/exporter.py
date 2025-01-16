@@ -10,7 +10,12 @@ class Variants(Enum):
     OCEL20 = ocel20
 
 
-def apply(ocel: OCEL, target_path: str, variant=Variants.PANDAS_EXPORTER, parameters: Optional[Dict[Any, Any]] = None):
+def apply(
+    ocel: OCEL,
+    target_path: str,
+    variant=Variants.PANDAS_EXPORTER,
+    parameters: Optional[Dict[Any, Any]] = None,
+):
     """
     Exports an OCEL to a SQLite database
 
@@ -29,4 +34,6 @@ def apply(ocel: OCEL, target_path: str, variant=Variants.PANDAS_EXPORTER, parame
     if parameters is None:
         parameters = {}
 
-    return exec_utils.get_variant(variant).apply(ocel, target_path, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        ocel, target_path, parameters=parameters
+    )

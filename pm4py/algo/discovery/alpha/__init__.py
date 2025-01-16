@@ -1,1 +1,6 @@
-from pm4py.algo.discovery.alpha import algorithm, data_structures, utils, variants
+from pm4py.algo.discovery.alpha import (
+    algorithm,
+    data_structures,
+    utils,
+    variants,
+)

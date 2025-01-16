@@ -10,7 +10,13 @@ class Variants(Enum):
     PERFORMANCE = performance
 
 
-def apply(dfg: Dict[Tuple[str, str], int], start_activities: Dict[str, int], end_activities: Dict[str, int], variant=Variants.CLASSIC, parameters: Optional[Dict[Any, Any]] = None) -> Union[EventLog, Dict[Tuple[str, str], int]]:
+def apply(
+    dfg: Dict[Tuple[str, str], int],
+    start_activities: Dict[str, int],
+    end_activities: Dict[str, int],
+    variant=Variants.CLASSIC,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Union[EventLog, Dict[Tuple[str, str], int]]:
     """
     Applies the playout algorithm on a DFG, extracting the most likely traces according to the DFG
 
@@ -34,4 +40,6 @@ def apply(dfg: Dict[Tuple[str, str], int], start_activities: Dict[str, int], end
     simulated_log
         Simulated log
     """
-    return exec_utils.get_variant(variant).apply(dfg, start_activities, end_activities, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        dfg, start_activities, end_activities, parameters=parameters
+    )

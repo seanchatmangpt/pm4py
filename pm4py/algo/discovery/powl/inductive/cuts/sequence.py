@@ -2,8 +2,12 @@ from abc import ABC
 from typing import Any, Optional, Dict, Tuple, List, Generic
 
 from pm4py.algo.discovery.inductive.base_case.abc import T
-from pm4py.algo.discovery.inductive.cuts.sequence import SequenceCut, SequenceCutUVCL, StrictSequenceCutUVCL, \
-    StrictSequenceCut
+from pm4py.algo.discovery.inductive.cuts.sequence import (
+    SequenceCut,
+    SequenceCutUVCL,
+    StrictSequenceCutUVCL,
+    StrictSequenceCut,
+)
 from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
 from pm4py.objects.powl.obj import Sequence
 
@@ -15,7 +19,9 @@ class POWLSequenceCut(SequenceCut, ABC, Generic[T]):
         raise Exception("This function should not be called!")
 
     @classmethod
-    def apply(cls, obj: T, parameters: Optional[Dict[str, Any]] = None) -> Optional[Tuple[Sequence, List[T]]]:
+    def apply(
+        cls, obj: T, parameters: Optional[Dict[str, Any]] = None
+    ) -> Optional[Tuple[Sequence, List[T]]]:
         g = cls.holds(obj, parameters)
         if g is None:
             return g
@@ -28,9 +34,15 @@ class POWLStrictSequenceCut(POWLSequenceCut[T], StrictSequenceCut, ABC):
     pass
 
 
-class POWLSequenceCutUVCL(SequenceCutUVCL, POWLSequenceCut[IMDataStructureUVCL]):
+class POWLSequenceCutUVCL(
+    SequenceCutUVCL, POWLSequenceCut[IMDataStructureUVCL]
+):
     pass
 
 
-class POWLStrictSequenceCutUVCL(StrictSequenceCutUVCL, StrictSequenceCut[IMDataStructureUVCL], POWLSequenceCutUVCL):
+class POWLStrictSequenceCutUVCL(
+    StrictSequenceCutUVCL,
+    StrictSequenceCut[IMDataStructureUVCL],
+    POWLSequenceCutUVCL,
+):
     pass

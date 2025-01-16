@@ -16,7 +16,11 @@ DEFAULT_VARIANT = CLASSIC
 VERSIONS = {CLASSIC}
 
 
-def apply(log: Union[EventLog, EventStream, pd.DataFrame], variant=DEFAULT_VARIANT, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(
+    log: Union[EventLog, EventStream, pd.DataFrame],
+    variant=DEFAULT_VARIANT,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
     """
     Discover a log skeleton from an event log
 
@@ -40,7 +44,11 @@ def apply(log: Union[EventLog, EventStream, pd.DataFrame], variant=DEFAULT_VARIA
     return exec_utils.get_variant(variant).apply(log, parameters=parameters)
 
 
-def apply_from_variants_list(var_list: List[Tuple[str, int]], variant=DEFAULT_VARIANT, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply_from_variants_list(
+    var_list: List[Tuple[str, int]],
+    variant=DEFAULT_VARIANT,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
     """
     Discovers the log skeleton from the variants list
 
@@ -59,4 +67,6 @@ def apply_from_variants_list(var_list: List[Tuple[str, int]], variant=DEFAULT_VA
     model
         Log skeleton model
     """
-    return exec_utils.get_variant(variant).apply_from_variants_list(var_list, parameters=parameters)
+    return exec_utils.get_variant(variant).apply_from_variants_list(
+        var_list, parameters=parameters
+    )

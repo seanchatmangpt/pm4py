@@ -1,4 +1,6 @@
-from pm4py.algo.discovery.ocel.interleavings.variants import timestamp_interleavings
+from pm4py.algo.discovery.ocel.interleavings.variants import (
+    timestamp_interleavings,
+)
 from enum import Enum
 from pm4py.util import exec_utils
 import pandas as pd
@@ -9,7 +11,13 @@ class Variants(Enum):
     TIMESTAMP_INTERLEAVINGS = timestamp_interleavings
 
 
-def apply(left_df: pd.DataFrame, right_df: pd.DataFrame, case_relations: pd.DataFrame, variant=Variants.TIMESTAMP_INTERLEAVINGS, parameters: Optional[Dict[Any, Any]] = None):
+def apply(
+    left_df: pd.DataFrame,
+    right_df: pd.DataFrame,
+    case_relations: pd.DataFrame,
+    variant=Variants.TIMESTAMP_INTERLEAVINGS,
+    parameters: Optional[Dict[Any, Any]] = None,
+):
     """
     Discover the interleavings between two dataframes, given also a dataframe about the relations of the cases.
 
@@ -33,4 +41,6 @@ def apply(left_df: pd.DataFrame, right_df: pd.DataFrame, case_relations: pd.Data
     interleavings
         Interleavings dataframe
     """
-    return exec_utils.get_variant(variant).apply(left_df, right_df, case_relations, parameters)
+    return exec_utils.get_variant(variant).apply(
+        left_df, right_df, case_relations, parameters
+    )

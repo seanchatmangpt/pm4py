@@ -34,13 +34,18 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
             Parameters of the algorithm
         """
         self.footprints = footprints
-        self.case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME)
-        self.activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters,
-                                                       xes_constants.DEFAULT_NAME_KEY)
+        self.case_id_key = exec_utils.get_param_value(
+            Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME
+        )
+        self.activity_key = exec_utils.get_param_value(
+            Parameters.ACTIVITY_KEY, parameters, xes_constants.DEFAULT_NAME_KEY
+        )
         self.start_activities = footprints[START_ACTIVITIES]
         self.end_activities = footprints[END_ACTIVITIES]
         self.activities = footprints[ACTIVITIES]
-        self.all_fps = set(footprints[SEQUENCE]).union(set(footprints[PARALLEL]))
+        self.all_fps = set(footprints[SEQUENCE]).union(
+            set(footprints[PARALLEL])
+        )
         self.build_dictionaries(parameters=parameters)
         StreamingAlgorithm.__init__(self)
 
@@ -56,15 +61,25 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
              - Parameters.CASE_DICT_ID: identifier of the dictionary hosting the last activity of a case (1)
              - Parameters.DEV_DICT_ID: identifier of the dictionary hosting the deviations (2)
         """
-        dict_variant = exec_utils.get_param_value(Parameters.DICT_VARIANT, parameters, generator.Variants.THREAD_SAFE)
-        case_dict_id = exec_utils.get_param_value(Parameters.CASE_DICT_ID, parameters, 0)
-        dev_dict_id = exec_utils.get_param_value(Parameters.DEV_DICT_ID, parameters, 1)
+        dict_variant = exec_utils.get_param_value(
+            Parameters.DICT_VARIANT, parameters, generator.Variants.THREAD_SAFE
+        )
+        case_dict_id = exec_utils.get_param_value(
+            Parameters.CASE_DICT_ID, parameters, 0
+        )
+        dev_dict_id = exec_utils.get_param_value(
+            Parameters.DEV_DICT_ID, parameters, 1
+        )
         parameters_case_dict = copy(parameters)
         parameters_case_dict[Parameters.DICT_ID] = case_dict_id
         parameters_dev_dict = copy(parameters)
         parameters_dev_dict[Parameters.DICT_ID] = dev_dict_id
-        self.case_dict = generator.apply(variant=dict_variant, parameters=parameters_case_dict)
-        self.dev_dict = generator.apply(variant=dict_variant, parameters=parameters_dev_dict)
+        self.case_dict = generator.apply(
+            variant=dict_variant, parameters=parameters_case_dict
+        )
+        self.dev_dict = generator.apply(
+            variant=dict_variant, parameters=parameters_dev_dict
+        )
 
     def encode_str(self, stru):
         """
@@ -82,9 +97,13 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
             Event (dictionary)
         """
         case = event[self.case_id_key] if self.case_id_key in event else None
-        activity = event[self.activity_key] if self.activity_key in event else None
+        activity = (
+            event[self.activity_key] if self.activity_key in event else None
+        )
         if case is not None and activity is not None:
-            self.verify_footprints(self.encode_str(case), self.encode_str(activity))
+            self.verify_footprints(
+                self.encode_str(case), self.encode_str(activity)
+            )
         else:
             self.message_case_or_activity_not_in_event(event)
 
@@ -223,7 +242,11 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
             Case
         """
         logging.error(
-            "the activity " + str(activity) + " is not possible according to the footprints! case: " + str(case))
+            "the activity "
+            + str(activity)
+            + " is not possible according to the footprints! case: "
+            + str(case)
+        )
 
     def message_footprints_not_possible(self, df, case):
         """
@@ -237,7 +260,12 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
         case
             Case
         """
-        logging.error("the footprints " + str(df) + " are not possible! case: " + str(case))
+        logging.error(
+            "the footprints "
+            + str(df)
+            + " are not possible! case: "
+            + str(case)
+        )
 
     def message_start_activity_not_possible(self, activity, case):
         """
@@ -250,7 +278,12 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
         case
             Case
         """
-        logging.error("the activity " + str(activity) + " is not a possible start activity! case: " + str(case))
+        logging.error(
+            "the activity "
+            + str(activity)
+            + " is not a possible start activity! case: "
+            + str(case)
+        )
 
     def message_end_activity_not_possible(self, activity, case):
         """
@@ -263,7 +296,12 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
         case
             Case
         """
-        logging.error("the activity " + str(activity) + " is not a possible end activity! case: " + str(case))
+        logging.error(
+            "the activity "
+            + str(activity)
+            + " is not a possible end activity! case: "
+            + str(case)
+        )
 
     def message_case_not_in_dictionary(self, case):
         """
@@ -274,7 +312,12 @@ class FootprintsStreamingConformance(StreamingAlgorithm):
         case
             Case
         """
-        logging.error("the case " + str(case) + " is not in the dictionary! case: " + str(case))
+        logging.error(
+            "the case "
+            + str(case)
+            + " is not in the dictionary! case: "
+            + str(case)
+        )
 
     def _current_result(self):
         """

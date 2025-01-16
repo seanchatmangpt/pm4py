@@ -1,4 +1,7 @@
-from pm4py.objects.ocel.util import events_per_type_per_activity, objects_per_type_per_activity
+from pm4py.objects.ocel.util import (
+    events_per_type_per_activity,
+    objects_per_type_per_activity,
+)
 from typing import Optional, Dict, Any
 from pm4py.objects.ocel.obj import OCEL
 
@@ -25,8 +28,12 @@ def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None):
     if parameters is None:
         parameters = {}
 
-    ev_per_type_per_act = events_per_type_per_activity.apply(ocel, parameters=parameters)
-    obj_per_type_per_act = objects_per_type_per_activity.apply(ocel, parameters=parameters)
+    ev_per_type_per_act = events_per_type_per_activity.apply(
+        ocel, parameters=parameters
+    )
+    obj_per_type_per_act = objects_per_type_per_activity.apply(
+        ocel, parameters=parameters
+    )
 
     ret = {"divergence": set(), "convergence": set()}
 

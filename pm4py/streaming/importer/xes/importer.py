@@ -1,4 +1,7 @@
-from pm4py.streaming.importer.xes.variants import xes_trace_stream, xes_event_stream
+from pm4py.streaming.importer.xes.variants import (
+    xes_trace_stream,
+    xes_event_stream,
+)
 from enum import Enum
 from pm4py.util import exec_utils
 

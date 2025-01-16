@@ -19,7 +19,7 @@ class StreamingAlgorithm(abc.ABC):
         self._lock.acquire()
         try:
             ret = self._current_result()
-        except:
+        except BaseException:
             traceback.print_exc()
             ret = None
         self._lock.release()
@@ -29,6 +29,6 @@ class StreamingAlgorithm(abc.ABC):
         self._lock.acquire()
         try:
             self._process(event)
-        except:
+        except BaseException:
             traceback.print_exc()
         self._lock.release()

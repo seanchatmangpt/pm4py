@@ -1,4 +1,8 @@
-from pm4py.visualization.footprints.variants import comparison, single, comparison_symmetric
+from pm4py.visualization.footprints.variants import (
+    comparison,
+    single,
+    comparison_symmetric,
+)
 from enum import Enum
 from pm4py.util import exec_utils, constants
 from pm4py.visualization.common import gview
@@ -14,7 +18,9 @@ class Variants(Enum):
     COMPARISON_SYMMETRIC = comparison_symmetric
 
 
-def apply(*args, variant=None, parameters: Optional[Dict[Any, Any]] = None) -> graphviz.Source:
+def apply(
+    *args, variant=None, parameters: Optional[Dict[Any, Any]] = None
+) -> graphviz.Source:
     """
     Visualize a footprints table or a comparison between footprints
     tables
@@ -45,9 +51,13 @@ def apply(*args, variant=None, parameters: Optional[Dict[Any, Any]] = None) -> g
             variant = Variants.COMPARISON
 
     if variant in [Variants.SINGLE]:
-        return exec_utils.get_variant(variant).apply(args[0], parameters=parameters)
+        return exec_utils.get_variant(variant).apply(
+            args[0], parameters=parameters
+        )
     elif variant in [Variants.COMPARISON, Variants.COMPARISON_SYMMETRIC]:
-        return exec_utils.get_variant(variant).apply(args[0], args[1], parameters=parameters)
+        return exec_utils.get_variant(variant).apply(
+            args[0], args[1], parameters=parameters
+        )
 
 
 def save(gviz, output_file_path, parameters=None):

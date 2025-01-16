@@ -3,7 +3,9 @@ from pm4py.util import exec_utils, constants
 from pm4py.objects.ocel.util import filtering_utils
 from copy import copy
 from typing import Dict, Any, Optional, Collection, Union
-from pm4py.algo.filtering.common.timestamp.timestamp_common import get_dt_from_string
+from pm4py.algo.filtering.common.timestamp.timestamp_common import (
+    get_dt_from_string,
+)
 from pm4py.objects.ocel.obj import OCEL
 import datetime
 
@@ -14,7 +16,11 @@ class Parameters(Enum):
     POSITIVE = "positive"
 
 
-def apply(ocel: OCEL, values: Collection[Any], parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def apply(
+    ocel: OCEL,
+    values: Collection[Any],
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> OCEL:
     """
     Filters the object-centric event log on the provided event attributes values
 
@@ -37,8 +43,12 @@ def apply(ocel: OCEL, values: Collection[Any], parameters: Optional[Dict[Any, An
     if parameters is None:
         parameters = {}
 
-    attribute_key = exec_utils.get_param_value(Parameters.ATTRIBUTE_KEY, parameters, ocel.event_activity)
-    positive = exec_utils.get_param_value(Parameters.POSITIVE, parameters, True)
+    attribute_key = exec_utils.get_param_value(
+        Parameters.ATTRIBUTE_KEY, parameters, ocel.event_activity
+    )
+    positive = exec_utils.get_param_value(
+        Parameters.POSITIVE, parameters, True
+    )
 
     ocel = copy(ocel)
     if positive:
@@ -46,10 +56,17 @@ def apply(ocel: OCEL, values: Collection[Any], parameters: Optional[Dict[Any, An
     else:
         ocel.events = ocel.events[~ocel.events[attribute_key].isin(values)]
 
-    return filtering_utils.propagate_event_filtering(ocel, parameters=parameters)
+    return filtering_utils.propagate_event_filtering(
+        ocel, parameters=parameters
+    )
 
 
-def apply_timestamp(ocel: OCEL, min_timest: Union[datetime.datetime, str], max_timest: Union[datetime.datetime, str], parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def apply_timestamp(
+    ocel: OCEL,
+    min_timest: Union[datetime.datetime, str],
+    max_timest: Union[datetime.datetime, str],
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> OCEL:
     """
     Filters the object-centric event log keeping events in the provided timestamp range
 
@@ -73,7 +90,9 @@ def apply_timestamp(ocel: OCEL, min_timest: Union[datetime.datetime, str], max_t
     if parameters is None:
         parameters = {}
 
-    timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters, ocel.event_timestamp)
+    timestamp_key = exec_utils.get_param_value(
+        Parameters.TIMESTAMP_KEY, parameters, ocel.event_timestamp
+    )
     min_timest = get_dt_from_string(min_timest)
     max_timest = get_dt_from_string(max_timest)
 
@@ -81,4 +100,6 @@ def apply_timestamp(ocel: OCEL, min_timest: Union[datetime.datetime, str], max_t
     ocel.events = ocel.events[ocel.events[timestamp_key] >= min_timest]
     ocel.events = ocel.events[ocel.events[timestamp_key] <= max_timest]
 
-    return filtering_utils.propagate_event_filtering(ocel, parameters=parameters)
+    return filtering_utils.propagate_event_filtering(
+        ocel, parameters=parameters
+    )

@@ -5,7 +5,11 @@ from pm4py.algo.discovery.log_skeleton import trace_skel
 from pm4py.objects.log.util import xes
 from pm4py.util import exec_utils
 from pm4py.util import variants_util, pandas_utils
-from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY, PARAMETER_CONSTANT_CASEID_KEY, CASE_CONCEPT_NAME
+from pm4py.util.constants import (
+    PARAMETER_CONSTANT_ACTIVITY_KEY,
+    PARAMETER_CONSTANT_CASEID_KEY,
+    CASE_CONCEPT_NAME,
+)
 from typing import Optional, Dict, Any, Union
 from pm4py.objects.log.obj import EventLog
 import pandas as pd
@@ -14,11 +18,19 @@ import pandas as pd
 class Parameters(Enum):
     # parameter for the noise threshold
     NOISE_THRESHOLD = "noise_threshold"
-    # considered constraints in conformance checking among: equivalence, always_after, always_before, never_together, directly_follows, activ_freq
+    # considered constraints in conformance checking among: equivalence,
+    # always_after, always_before, never_together, directly_follows,
+    # activ_freq
     CONSIDERED_CONSTRAINTS = "considered_constraints"
     # default choice for conformance checking
-    DEFAULT_CONSIDERED_CONSTRAINTS = ["equivalence", "always_after", "always_before", "never_together",
-                                      "directly_follows", "activ_freq"]
+    DEFAULT_CONSIDERED_CONSTRAINTS = [
+        "equivalence",
+        "always_after",
+        "always_before",
+        "never_together",
+        "directly_follows",
+        "activ_freq",
+    ]
     CASE_ID_KEY = PARAMETER_CONSTANT_CASEID_KEY
     ACTIVITY_KEY = PARAMETER_CONSTANT_ACTIVITY_KEY
     PARAMETER_VARIANT_DELIMITER = "variant_delimiter"
@@ -64,7 +76,11 @@ def equivalence(logs_traces, all_activs, noise_threshold=0):
         for k in rs:
             rs[k] = rs[k] * logs_traces[trace]
         ret0 += rs
-    ret = set(x for x, y in ret0.items() if y >= all_activs[x[0]] * (1.0 - noise_threshold))
+    ret = set(
+        x
+        for x, y in ret0.items()
+        if y >= all_activs[x[0]] * (1.0 - noise_threshold)
+    )
     return ret
 
 
@@ -95,7 +111,11 @@ def always_after(logs_traces, all_activs, noise_threshold=0):
     first_count = Counter()
     for x, y in ret0.items():
         first_count[x[0]] += y
-    ret = set(x for x, y in ret0.items() if y >= first_count[x[0]] * (1.0 - noise_threshold))
+    ret = set(
+        x
+        for x, y in ret0.items()
+        if y >= first_count[x[0]] * (1.0 - noise_threshold)
+    )
     return ret
 
 
@@ -126,7 +146,11 @@ def always_before(logs_traces, all_activs, noise_threshold=0):
     first_count = Counter()
     for x, y in ret0.items():
         first_count[x[0]] += y
-    ret = set(x for x, y in ret0.items() if y >= first_count[x[0]] * (1.0 - noise_threshold))
+    ret = set(
+        x
+        for x, y in ret0.items()
+        if y >= first_count[x[0]] * (1.0 - noise_threshold)
+    )
     return ret
 
 
@@ -159,7 +183,11 @@ def never_together(logs_traces, all_activs, len_log, noise_threshold=0):
         for k in rs:
             rs[k] = rs[k] * logs_traces[trace]
         ret0 -= rs
-    ret = set(x for x, y in ret0.items() if y >= all_activs[x[0]] * (1.0 - noise_threshold))
+    ret = set(
+        x
+        for x, y in ret0.items()
+        if y >= all_activs[x[0]] * (1.0 - noise_threshold)
+    )
     return ret
 
 
@@ -187,7 +215,11 @@ def directly_follows(logs_traces, all_activs, noise_threshold=0):
         for k in rs:
             rs[k] = rs[k] * logs_traces[trace]
         ret0 += rs
-    ret = set(x for x, y in ret0.items() if y >= all_activs[x[0]] * (1.0 - noise_threshold))
+    ret = set(
+        x
+        for x, y in ret0.items()
+        if y >= all_activs[x[0]] * (1.0 - noise_threshold)
+    )
     return ret
 
 
@@ -223,19 +255,26 @@ def activ_freq(logs_traces, all_activs, len_log, noise_threshold=0):
                 ret0[act] = Counter()
             ret0[act][rs[act]] += logs_traces[trace]
     for act in ret0:
-        ret0[act] = sorted(list((x, y) for x, y in ret0[act].items()), key=lambda x: x[1], reverse=True)
+        ret0[act] = sorted(
+            list((x, y) for x, y in ret0[act].items()),
+            key=lambda x: x[1],
+            reverse=True,
+        )
         added = 0
         i = 0
         while i < len(ret0[act]):
             added += ret0[act][i][1]
             if added >= (1.0 - noise_threshold) * len_log:
-                ret0[act] = ret0[act][:min(i + 1, len(ret0[act]))]
+                ret0[act] = ret0[act][: min(i + 1, len(ret0[act]))]
             i = i + 1
         ret[act] = set(x[0] for x in ret0[act])
     return ret
 
 
-def apply(log: Union[EventLog, pd.DataFrame], parameters: Optional[Dict[Union[str, Parameters], Any]] = None) -> Dict[str, Any]:
+def apply(
+    log: Union[EventLog, pd.DataFrame],
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> Dict[str, Any]:
     """
     Discover a log skeleton from an event log
 
@@ -256,25 +295,50 @@ def apply(log: Union[EventLog, pd.DataFrame], parameters: Optional[Dict[Union[st
     if parameters is None:
         parameters = {}
 
-    activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters, xes.DEFAULT_NAME_KEY)
-    noise_threshold = exec_utils.get_param_value(Parameters.NOISE_THRESHOLD, parameters, 0.0)
+    activity_key = exec_utils.get_param_value(
+        Parameters.ACTIVITY_KEY, parameters, xes.DEFAULT_NAME_KEY
+    )
+    noise_threshold = exec_utils.get_param_value(
+        Parameters.NOISE_THRESHOLD, parameters, 0.0
+    )
 
     if type(log) is EventLog:
         logs_traces = Counter([tuple(y[activity_key] for y in x) for x in log])
         all_activs = Counter(list(y[activity_key] for x in log for y in x))
     elif pandas_utils.check_is_pandas_dataframe(log):
-        case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, CASE_CONCEPT_NAME)
+        case_id_key = exec_utils.get_param_value(
+            Parameters.CASE_ID_KEY, parameters, CASE_CONCEPT_NAME
+        )
         all_activs = log[activity_key].value_counts().to_dict()
-        logs_traces = Counter([tuple(x) for x in log.groupby(case_id_key)[activity_key].agg(list).to_dict().values()])
+        logs_traces = Counter(
+            [
+                tuple(x)
+                for x in log.groupby(case_id_key)[activity_key]
+                .agg(list)
+                .to_dict()
+                .values()
+            ]
+        )
 
     ret = {}
-    ret[Outputs.EQUIVALENCE.value] = equivalence(logs_traces, all_activs, noise_threshold=noise_threshold)
-    ret[Outputs.ALWAYS_AFTER.value] = always_after(logs_traces, all_activs, noise_threshold=noise_threshold)
-    ret[Outputs.ALWAYS_BEFORE.value] = always_before(logs_traces, all_activs, noise_threshold=noise_threshold)
-    ret[Outputs.NEVER_TOGETHER.value] = never_together(logs_traces, all_activs, len(log),
-                                                       noise_threshold=noise_threshold)
-    ret[Outputs.DIRECTLY_FOLLOWS.value] = directly_follows(logs_traces, all_activs, noise_threshold=noise_threshold)
-    ret[Outputs.ACTIV_FREQ.value] = activ_freq(logs_traces, all_activs, len(log), noise_threshold=noise_threshold)
+    ret[Outputs.EQUIVALENCE.value] = equivalence(
+        logs_traces, all_activs, noise_threshold=noise_threshold
+    )
+    ret[Outputs.ALWAYS_AFTER.value] = always_after(
+        logs_traces, all_activs, noise_threshold=noise_threshold
+    )
+    ret[Outputs.ALWAYS_BEFORE.value] = always_before(
+        logs_traces, all_activs, noise_threshold=noise_threshold
+    )
+    ret[Outputs.NEVER_TOGETHER.value] = never_together(
+        logs_traces, all_activs, len(log), noise_threshold=noise_threshold
+    )
+    ret[Outputs.DIRECTLY_FOLLOWS.value] = directly_follows(
+        logs_traces, all_activs, noise_threshold=noise_threshold
+    )
+    ret[Outputs.ACTIV_FREQ.value] = activ_freq(
+        logs_traces, all_activs, len(log), noise_threshold=noise_threshold
+    )
 
     return ret
 
@@ -321,11 +385,23 @@ def prepare_encode(log_skeleton):
     log_skeleton
         Log skeleton (with lists instead of sets)
     """
-    log_skeleton[Outputs.EQUIVALENCE.value] = list(log_skeleton[Outputs.EQUIVALENCE.value])
-    log_skeleton[Outputs.ALWAYS_AFTER.value] = list(log_skeleton[Outputs.ALWAYS_AFTER.value])
-    log_skeleton[Outputs.ALWAYS_BEFORE.value] = list(log_skeleton[Outputs.ALWAYS_BEFORE.value])
-    log_skeleton[Outputs.NEVER_TOGETHER.value] = list(log_skeleton[Outputs.NEVER_TOGETHER.value])
-    log_skeleton[Outputs.DIRECTLY_FOLLOWS.value] = list(log_skeleton[Outputs.DIRECTLY_FOLLOWS.value])
+    log_skeleton[Outputs.EQUIVALENCE.value] = list(
+        log_skeleton[Outputs.EQUIVALENCE.value]
+    )
+    log_skeleton[Outputs.ALWAYS_AFTER.value] = list(
+        log_skeleton[Outputs.ALWAYS_AFTER.value]
+    )
+    log_skeleton[Outputs.ALWAYS_BEFORE.value] = list(
+        log_skeleton[Outputs.ALWAYS_BEFORE.value]
+    )
+    log_skeleton[Outputs.NEVER_TOGETHER.value] = list(
+        log_skeleton[Outputs.NEVER_TOGETHER.value]
+    )
+    log_skeleton[Outputs.DIRECTLY_FOLLOWS.value] = list(
+        log_skeleton[Outputs.DIRECTLY_FOLLOWS.value]
+    )
     for act in log_skeleton[Outputs.ACTIV_FREQ.value]:
-        log_skeleton[Outputs.ACTIV_FREQ.value][act] = list(log_skeleton[Outputs.ACTIV_FREQ.value][act])
+        log_skeleton[Outputs.ACTIV_FREQ.value][act] = list(
+            log_skeleton[Outputs.ACTIV_FREQ.value][act]
+        )
     return log_skeleton

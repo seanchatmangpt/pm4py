@@ -1,7 +1,11 @@
 from enum import Enum
 from typing import Optional, Dict, Any
 
-from pm4py.objects.ocel.exporter.jsonocel.variants import classic, ocel20, ocel20_standard
+from pm4py.objects.ocel.exporter.jsonocel.variants import (
+    classic,
+    ocel20,
+    ocel20_standard,
+)
 from pm4py.objects.ocel.obj import OCEL
 from pm4py.util import exec_utils
 
@@ -12,7 +16,12 @@ class Variants(Enum):
     OCEL20_STANDARD = ocel20_standard
 
 
-def apply(ocel: OCEL, target_path: str, variant=Variants.CLASSIC, parameters: Optional[Dict[Any, Any]] = None):
+def apply(
+    ocel: OCEL,
+    target_path: str,
+    variant=Variants.CLASSIC,
+    parameters: Optional[Dict[Any, Any]] = None,
+):
     """
     Exports an object-centric event log in a JSONOCEL file
 

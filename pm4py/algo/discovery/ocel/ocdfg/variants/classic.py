@@ -13,7 +13,9 @@ class Parameters(Enum):
     COMPUTE_EDGES_PERFORMANCE = "compute_edges_performance"
 
 
-def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(
+    ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None
+) -> Dict[str, Any]:
     """
     Discovers an OC-DFG model from an object-centric event log.
     Reference paper:
@@ -62,62 +64,110 @@ def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, 
     if parameters is None:
         parameters = {}
 
-    compute_edges_performance = exec_utils.get_param_value(Parameters.COMPUTE_EDGES_PERFORMANCE, parameters, True)
+    compute_edges_performance = exec_utils.get_param_value(
+        Parameters.COMPUTE_EDGES_PERFORMANCE, parameters, True
+    )
 
-    ot_independent = act_utils.find_associations_from_ocel(ocel, parameters=parameters)
-    ot_dependent = act_ot_dependent.find_associations_from_ocel(ocel, parameters=parameters)
+    ot_independent = act_utils.find_associations_from_ocel(
+        ocel, parameters=parameters
+    )
+    ot_dependent = act_ot_dependent.find_associations_from_ocel(
+        ocel, parameters=parameters
+    )
     start_parameters = copy(parameters)
     start_parameters["prefiltering"] = "start"
-    ot_dependent_start = act_ot_dependent.find_associations_from_ocel(ocel, parameters=start_parameters)
+    ot_dependent_start = act_ot_dependent.find_associations_from_ocel(
+        ocel, parameters=start_parameters
+    )
     end_parameters = copy(parameters)
     end_parameters["prefiltering"] = "end"
-    ot_dependent_end = act_ot_dependent.find_associations_from_ocel(ocel, parameters=end_parameters)
-    edges = edge_metrics.find_associations_per_edge(ocel, parameters=end_parameters)
+    ot_dependent_end = act_ot_dependent.find_associations_from_ocel(
+        ocel, parameters=end_parameters
+    )
+    edges = edge_metrics.find_associations_per_edge(
+        ocel, parameters=end_parameters
+    )
 
-    object_type = exec_utils.get_param_value(Parameters.OBJECT_TYPE, parameters, ocel.object_type_column)
-    event_activity = exec_utils.get_param_value(Parameters.EVENT_ACTIVITY, parameters, ocel.event_activity)
+    object_type = exec_utils.get_param_value(
+        Parameters.OBJECT_TYPE, parameters, ocel.object_type_column
+    )
+    event_activity = exec_utils.get_param_value(
+        Parameters.EVENT_ACTIVITY, parameters, ocel.event_activity
+    )
 
     ret = {}
-    ret["activities"] = set(pandas_utils.format_unique(ocel.events[event_activity].unique()))
-    ret["object_types"] = set(pandas_utils.format_unique(ocel.objects[object_type].unique()))
+    ret["activities"] = set(
+        pandas_utils.format_unique(ocel.events[event_activity].unique())
+    )
+    ret["object_types"] = set(
+        pandas_utils.format_unique(ocel.objects[object_type].unique())
+    )
 
     ret["edges"] = {}
     ret["edges"]["event_couples"] = edge_metrics.aggregate_ev_couples(edges)
-    ret["edges"]["unique_objects"] = edge_metrics.aggregate_unique_objects(edges)
+    ret["edges"]["unique_objects"] = edge_metrics.aggregate_unique_objects(
+        edges
+    )
     ret["edges"]["total_objects"] = edge_metrics.aggregate_total_objects(edges)
 
     ret["activities_indep"] = {}
-    ret["activities_indep"]["events"] = act_utils.aggregate_events(ot_independent)
-    ret["activities_indep"]["unique_objects"] = act_utils.aggregate_unique_objects(ot_independent)
-    ret["activities_indep"]["total_objects"] = act_utils.aggregate_total_objects(ot_independent)
+    ret["activities_indep"]["events"] = act_utils.aggregate_events(
+        ot_independent
+    )
+    ret["activities_indep"]["unique_objects"] = (
+        act_utils.aggregate_unique_objects(ot_independent)
+    )
+    ret["activities_indep"]["total_objects"] = (
+        act_utils.aggregate_total_objects(ot_independent)
+    )
 
     ret["activities_ot"] = {}
-    ret["activities_ot"]["events"] = act_ot_dependent.aggregate_events(ot_dependent)
-    ret["activities_ot"]["unique_objects"] = act_ot_dependent.aggregate_unique_objects(ot_dependent)
-    ret["activities_ot"]["total_objects"] = act_ot_dependent.aggregate_total_objects(ot_dependent)
+    ret["activities_ot"]["events"] = act_ot_dependent.aggregate_events(
+        ot_dependent
+    )
+    ret["activities_ot"]["unique_objects"] = (
+        act_ot_dependent.aggregate_unique_objects(ot_dependent)
+    )
+    ret["activities_ot"]["total_objects"] = (
+        act_ot_dependent.aggregate_total_objects(ot_dependent)
+    )
 
     ret["start_activities"] = {}
-    ret["start_activities"]["events"] = act_ot_dependent.aggregate_events(ot_dependent_start)
-    ret["start_activities"]["unique_objects"] = act_ot_dependent.aggregate_unique_objects(ot_dependent_start)
-    ret["start_activities"]["total_objects"] = act_ot_dependent.aggregate_total_objects(ot_dependent_start)
+    ret["start_activities"]["events"] = act_ot_dependent.aggregate_events(
+        ot_dependent_start
+    )
+    ret["start_activities"]["unique_objects"] = (
+        act_ot_dependent.aggregate_unique_objects(ot_dependent_start)
+    )
+    ret["start_activities"]["total_objects"] = (
+        act_ot_dependent.aggregate_total_objects(ot_dependent_start)
+    )
 
     ret["end_activities"] = {}
-    ret["end_activities"]["events"] = act_ot_dependent.aggregate_events(ot_dependent_end)
-    ret["end_activities"]["unique_objects"] = act_ot_dependent.aggregate_unique_objects(ot_dependent_end)
-    ret["end_activities"]["total_objects"] = act_ot_dependent.aggregate_total_objects(ot_dependent_end)
+    ret["end_activities"]["events"] = act_ot_dependent.aggregate_events(
+        ot_dependent_end
+    )
+    ret["end_activities"]["unique_objects"] = (
+        act_ot_dependent.aggregate_unique_objects(ot_dependent_end)
+    )
+    ret["end_activities"]["total_objects"] = (
+        act_ot_dependent.aggregate_total_objects(ot_dependent_end)
+    )
 
     ret["edges_performance"] = {}
     ret["edges_performance"]["event_couples"] = {}
     ret["edges_performance"]["total_objects"] = {}
 
     if compute_edges_performance:
-        ret["edges_performance"]["event_couples"] = edge_metrics.performance_calculation_ocel_aggregation(ocel,
-                                                                                                          ret["edges"][
-                                                                                                              "event_couples"],
-                                                                                                          parameters=parameters)
-        ret["edges_performance"]["total_objects"] = edge_metrics.performance_calculation_ocel_aggregation(ocel,
-                                                                                                          ret["edges"][
-                                                                                                              "total_objects"],
-                                                                                                          parameters=parameters)
+        ret["edges_performance"]["event_couples"] = (
+            edge_metrics.performance_calculation_ocel_aggregation(
+                ocel, ret["edges"]["event_couples"], parameters=parameters
+            )
+        )
+        ret["edges_performance"]["total_objects"] = (
+            edge_metrics.performance_calculation_ocel_aggregation(
+                ocel, ret["edges"]["total_objects"], parameters=parameters
+            )
+        )
 
     return ret

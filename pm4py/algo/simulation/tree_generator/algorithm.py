@@ -1,4 +1,7 @@
-from pm4py.algo.simulation.tree_generator.variants import basic, ptandloggenerator
+from pm4py.algo.simulation.tree_generator.variants import (
+    basic,
+    ptandloggenerator,
+)
 from enum import Enum
 from pm4py.util import exec_utils
 from pm4py.objects.process_tree.obj import ProcessTree
@@ -17,7 +20,9 @@ DEFAULT_VARIANT = Variants.PTANDLOGGENERATOR
 VERSIONS = {Variants.BASIC, Variants.PTANDLOGGENERATOR}
 
 
-def apply(variant=DEFAULT_VARIANT, parameters: Optional[Dict[Any, Any]] = None) -> ProcessTree:
+def apply(
+    variant=DEFAULT_VARIANT, parameters: Optional[Dict[Any, Any]] = None
+) -> ProcessTree:
     """
     Generate a process tree
 

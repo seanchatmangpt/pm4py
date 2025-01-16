@@ -30,7 +30,9 @@ def apply(file_path, variant=DEFAULT_VARIANT, parameters=None):
     tree
         Process tree
     """
-    return exec_utils.get_variant(variant).apply(file_path, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        file_path, parameters=parameters
+    )
 
 
 def deserialize(tree_string, variant=DEFAULT_VARIANT, parameters=None):
@@ -52,4 +54,6 @@ def deserialize(tree_string, variant=DEFAULT_VARIANT, parameters=None):
     tree
         Process tree
     """
-    return exec_utils.get_variant(variant).import_tree_from_string(tree_string, parameters=parameters)
+    return exec_utils.get_variant(variant).import_tree_from_string(
+        tree_string, parameters=parameters
+    )

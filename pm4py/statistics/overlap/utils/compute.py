@@ -10,7 +10,10 @@ class Parameters(Enum):
     EPSILON = "epsilon"
 
 
-def apply(points: List[Tuple[float, float]], parameters: Optional[Dict[Union[str, Parameters], Any]] = None) -> List[int]:
+def apply(
+    points: List[Tuple[float, float]],
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> List[int]:
     """
     Computes the overlap statistic given a list of points, expressed as (min_timestamp, max_timestamp)
 
@@ -30,7 +33,9 @@ def apply(points: List[Tuple[float, float]], parameters: Optional[Dict[Union[str
     if parameters is None:
         parameters = {}
 
-    epsilon = exec_utils.get_param_value(Parameters.EPSILON, parameters, 10 ** (-5))
+    epsilon = exec_utils.get_param_value(
+        Parameters.EPSILON, parameters, 10 ** (-5)
+    )
     points = [(x[0] - epsilon, x[1] + epsilon) for x in points]
     sorted_points = sorted(points)
     tree = IntervalTree()
@@ -40,6 +45,6 @@ def apply(points: List[Tuple[float, float]], parameters: Optional[Dict[Union[str
 
     overlap = []
     for p in points:
-        overlap.append(len(tree[p[0]:p[1]]))
+        overlap.append(len(tree[p[0]: p[1]]))
 
     return overlap

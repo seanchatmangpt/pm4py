@@ -11,7 +11,12 @@ class Variants(Enum):
 DEFAULT_VARIANT = Variants.PYEMD
 
 
-def apply(lang1: Dict[List[str], float], lang2: Dict[List[str], float], variant=Variants.PYEMD, parameters: Optional[Dict[Any, Any]] = None) -> float:
+def apply(
+    lang1: Dict[List[str], float],
+    lang2: Dict[List[str], float],
+    variant=Variants.PYEMD,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> float:
     """
     Gets the EMD language between the two languages
 
@@ -34,4 +39,6 @@ def apply(lang1: Dict[List[str], float], lang2: Dict[List[str], float], variant=
     dist
         EMD distance
     """
-    return exec_utils.get_variant(variant).apply(lang1, lang2, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        lang1, lang2, parameters=parameters
+    )

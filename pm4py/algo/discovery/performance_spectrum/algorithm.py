@@ -1,4 +1,9 @@
-from pm4py.algo.discovery.performance_spectrum.variants import dataframe, log, dataframe_disconnected, log_disconnected
+from pm4py.algo.discovery.performance_spectrum.variants import (
+    dataframe,
+    log,
+    dataframe_disconnected,
+    log_disconnected,
+)
 from pm4py.util import exec_utils
 from enum import Enum
 from pm4py.util import constants, pandas_utils
@@ -27,7 +32,12 @@ class Variants(Enum):
     LOG_DISCONNECTED = log_disconnected
 
 
-def apply(log: Union[EventLog, EventStream, pd.DataFrame], list_activities: List[str], variant=None, parameters: Optional[Dict[Any, Any]] = None) -> Dict[str, Any]:
+def apply(
+    log: Union[EventLog, EventStream, pd.DataFrame],
+    list_activities: List[str],
+    variant=None,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
     """
     Finds the performance spectrum provided a log/dataframe
     and a list of activities
@@ -55,10 +65,14 @@ def apply(log: Union[EventLog, EventStream, pd.DataFrame], list_activities: List
     if parameters is None:
         parameters = {}
 
-    sample_size = exec_utils.get_param_value(Parameters.PARAMETER_SAMPLE_SIZE, parameters, 10000)
+    sample_size = exec_utils.get_param_value(
+        Parameters.PARAMETER_SAMPLE_SIZE, parameters, 10000
+    )
 
     if len(list_activities) < 2:
-        raise Exception("performance spectrum can be applied providing at least two activities!")
+        raise Exception(
+            "performance spectrum can be applied providing at least two activities!"
+        )
 
     points = None
 
@@ -66,15 +80,28 @@ def apply(log: Union[EventLog, EventStream, pd.DataFrame], list_activities: List
         if variant is None:
             variant = Variants.DATAFRAME
 
-        points = exec_utils.get_variant(variant).apply(log, list_activities, sample_size, parameters)
+        points = exec_utils.get_variant(variant).apply(
+            log, list_activities, sample_size, parameters
+        )
 
     if points is None:
         if variant is None:
             variant = Variants.LOG
 
-        points = exec_utils.get_variant(variant).apply(log_conversion.apply(log, variant=log_conversion.Variants.TO_EVENT_LOG, parameters=parameters), list_activities, sample_size,
-                                                            parameters)
+        points = exec_utils.get_variant(variant).apply(
+            log_conversion.apply(
+                log,
+                variant=log_conversion.Variants.TO_EVENT_LOG,
+                parameters=parameters,
+            ),
+            list_activities,
+            sample_size,
+            parameters,
+        )
 
-    ps = {Outputs.LIST_ACTIVITIES.value: list_activities, Outputs.POINTS.value: points}
+    ps = {
+        Outputs.LIST_ACTIVITIES.value: list_activities,
+        Outputs.POINTS.value: points,
+    }
 
     return ps

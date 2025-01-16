@@ -1,1 +1,3 @@
-from pm4py.algo.filtering.pandas.consecutive_act_case_grouping import consecutive_act_case_grouping_filter
+from pm4py.algo.filtering.pandas.consecutive_act_case_grouping import (
+    consecutive_act_case_grouping_filter,
+)

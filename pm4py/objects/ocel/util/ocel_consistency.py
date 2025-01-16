@@ -26,10 +26,15 @@ def apply(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
     fields = {
         "events": [ocel.event_id_column, ocel.event_activity],
         "objects": [ocel.object_id_column, ocel.object_type_column],
-        "relations": [ocel.event_id_column, ocel.object_id_column, ocel.event_activity, ocel.object_type_column],
-        "o2o": [ocel.object_id_column, ocel.object_id_column+"_2"],
-        "e2e": [ocel.event_id_column, ocel.event_id_column+"_2"],
-        "object_changes": [ocel.object_id_column]
+        "relations": [
+            ocel.event_id_column,
+            ocel.object_id_column,
+            ocel.event_activity,
+            ocel.object_type_column,
+        ],
+        "o2o": [ocel.object_id_column, ocel.object_id_column + "_2"],
+        "e2e": [ocel.event_id_column, ocel.event_id_column + "_2"],
+        "object_changes": [ocel.object_id_column],
     }
 
     for tab in fields:

@@ -1,7 +1,8 @@
 from enum import Enum
 from pm4py.util import exec_utils
 from typing import Optional, Dict, Any
-import base64, os
+import base64
+import os
 from pm4py.util import constants
 
 
@@ -15,7 +16,7 @@ class Parameters(Enum):
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')
+        return base64.b64encode(image_file.read()).decode("utf-8")
 
 
 def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
@@ -24,10 +25,16 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
     if parameters is None:
         parameters = {}
 
-    image_path = exec_utils.get_param_value(Parameters.IMAGE_PATH, parameters, None)
-    api_key = exec_utils.get_param_value(Parameters.API_KEY, parameters, constants.ANTHROPIC_API_KEY)
+    image_path = exec_utils.get_param_value(
+        Parameters.IMAGE_PATH, parameters, None
+    )
+    api_key = exec_utils.get_param_value(
+        Parameters.API_KEY, parameters, constants.ANTHROPIC_API_KEY
+    )
     api_url = exec_utils.get_param_value(Parameters.API_URL, parameters, None)
-    max_tokens = exec_utils.get_param_value(Parameters.MAX_TOKENS, parameters, 8192)
+    max_tokens = exec_utils.get_param_value(
+        Parameters.MAX_TOKENS, parameters, 8192
+    )
     simple_content_specification = image_path is None
 
     if api_url is None:
@@ -36,24 +43,27 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
         if not api_url.endswith("/"):
             api_url += "/"
 
-    model = exec_utils.get_param_value(Parameters.ANTHROPIC_MODEL, parameters, constants.ANTHROPIC_DEFAULT_MODEL)
+    model = exec_utils.get_param_value(
+        Parameters.ANTHROPIC_MODEL,
+        parameters,
+        constants.ANTHROPIC_DEFAULT_MODEL,
+    )
 
     headers = {
         "content-type": "application/json",
         "anthropic-version": "2023-06-01",
-        "x-api-key": api_key
+        "x-api-key": api_key,
     }
 
     messages = []
     if simple_content_specification:
         messages.append({"role": "user", "content": prompt})
     else:
-        messages.append({"role": "user", "content": [{"type": "text", "text": prompt}]})
+        messages.append(
+            {"role": "user", "content": [{"type": "text", "text": prompt}]}
+        )
 
-    payload = {
-        "model": model,
-        "max_tokens": max_tokens
-    }
+    payload = {"model": model, "max_tokens": max_tokens}
 
     if image_path is not None:
         image_format = os.path.splitext(image_path)[1][1:].lower()
@@ -63,14 +73,16 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
             "source": {
                 "type": "base64",
                 "media_type": "image/" + image_format,
-                "data": base64_image
-            }
+                "data": base64_image,
+            },
         }
         messages[0]["content"].append(artefact)
 
     payload["messages"] = messages
 
-    response = requests.post(api_url+"messages", headers=headers, json=payload).json()
+    response = requests.post(
+        api_url + "messages", headers=headers, json=payload
+    ).json()
 
     if "error" in response:
         # raise an exception when the request fails, with the provided message

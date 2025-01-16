@@ -1,7 +1,12 @@
-from pm4py.algo.evaluation.replay_fitness.variants import alignment_based, token_replay
+from pm4py.algo.evaluation.replay_fitness.variants import (
+    alignment_based,
+    token_replay,
+)
 from pm4py.algo.conformance import alignments
 from pm4py.util import exec_utils
-from pm4py.objects.petri_net.utils.check_soundness import check_easy_soundness_net_in_fin_marking
+from pm4py.objects.petri_net.utils.check_soundness import (
+    check_easy_soundness_net_in_fin_marking,
+)
 from enum import Enum
 from typing import Optional, Dict, Any, Union
 from pm4py.objects.log.obj import EventLog
@@ -24,7 +29,15 @@ TOKEN_BASED = Variants.TOKEN_BASED
 VERSIONS = {ALIGNMENT_BASED, TOKEN_BASED}
 
 
-def apply(log: Union[EventLog, pd.DataFrame], petri_net: PetriNet, initial_marking: Marking, final_marking: Marking, parameters: Optional[Dict[Union[str, Parameters], Any]] = None, variant=None, align_variant=None) -> Dict[str, Any]:
+def apply(
+    log: Union[EventLog, pd.DataFrame],
+    petri_net: PetriNet,
+    initial_marking: Marking,
+    final_marking: Marking,
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+    variant=None,
+    align_variant=None,
+) -> Dict[str, Any]:
     """
     Apply fitness evaluation starting from an event log and a marked Petri net,
     by using one of the replay techniques provided by PM4Py
@@ -56,30 +69,44 @@ def apply(log: Union[EventLog, pd.DataFrame], petri_net: PetriNet, initial_marki
     if parameters is None:
         parameters = {}
 
-    # execute the following part of code when the variant is not specified by the user
+    # execute the following part of code when the variant is not specified by
+    # the user
     if variant is None:
         if not (
-                check_easy_soundness_net_in_fin_marking(petri_net, initial_marking,
-                                                                              final_marking)):
-            # in the case the net is not a easy sound workflow net, we must apply token-based replay
+            check_easy_soundness_net_in_fin_marking(
+                petri_net, initial_marking, final_marking
+            )
+        ):
+            # in the case the net is not a easy sound workflow net, we must
+            # apply token-based replay
             variant = TOKEN_BASED
         else:
-            # otherwise, use the align-etconformance approach (safer, in the case the model contains duplicates)
+            # otherwise, use the align-etconformance approach (safer, in the
+            # case the model contains duplicates)
             variant = ALIGNMENT_BASED
 
     if variant == TOKEN_BASED:
         # execute the token-based replay variant
-        return exec_utils.get_variant(variant).apply(log,
-                                                     petri_net,
-                                                     initial_marking, final_marking, parameters=parameters)
+        return exec_utils.get_variant(variant).apply(
+            log,
+            petri_net,
+            initial_marking,
+            final_marking,
+            parameters=parameters,
+        )
     else:
-        # execute the alignments based variant, with the specification of the alignments variant
+        # execute the alignments based variant, with the specification of the
+        # alignments variant
         if align_variant is None:
             align_variant = alignments.petri_net.algorithm.DEFAULT_VARIANT
-        return exec_utils.get_variant(variant).apply(log,
-                                                     petri_net,
-                                                     initial_marking, final_marking, align_variant=align_variant,
-                                                     parameters=parameters)
+        return exec_utils.get_variant(variant).apply(
+            log,
+            petri_net,
+            initial_marking,
+            final_marking,
+            align_variant=align_variant,
+            parameters=parameters,
+        )
 
 
 def evaluate(results, parameters=None, variant=TOKEN_BASED):
@@ -100,4 +127,6 @@ def evaluate(results, parameters=None, variant=TOKEN_BASED):
     fitness_eval
         Fitness evaluation
     """
-    return exec_utils.get_variant(variant).evaluate(results, parameters=parameters)
+    return exec_utils.get_variant(variant).evaluate(
+        results, parameters=parameters
+    )

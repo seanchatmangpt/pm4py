@@ -1,7 +1,14 @@
 from enum import Enum
 from pm4py.util import constants
 
-from pm4py.objects.log.importer.xes.variants import iterparse, line_by_line, iterparse_mem_compressed, iterparse_20, chunk_regex, rustxes
+from pm4py.objects.log.importer.xes.variants import (
+    iterparse,
+    line_by_line,
+    iterparse_mem_compressed,
+    iterparse_20,
+    chunk_regex,
+    rustxes,
+)
 
 
 class Variants(Enum):
@@ -16,13 +23,13 @@ class Variants(Enum):
 def __get_variant(variant_str: str):
     variant = Variants.CHUNK_REGEX
 
-    if variant_str == 'nonstandard':
+    if variant_str == "nonstandard":
         variant = Variants.LINE_BY_LINE
-    elif variant_str == 'iterparse':
+    elif variant_str == "iterparse":
         variant = Variants.ITERPARSE
-    elif variant_str == 'lxml':
+    elif variant_str == "lxml":
         variant = Variants.ITERPARSE
-    elif variant_str == 'chunk_regex':
+    elif variant_str == "chunk_regex":
         variant = Variants.CHUNK_REGEX
     elif variant_str == "line_by_line":
         variant = Variants.LINE_BY_LINE
@@ -72,7 +79,9 @@ def apply(path, parameters=None, variant=constants.DEFAULT_XES_PARSER):
     return log
 
 
-def deserialize(log_string, parameters=None, variant=constants.DEFAULT_XES_PARSER):
+def deserialize(
+    log_string, parameters=None, variant=constants.DEFAULT_XES_PARSER
+):
     """
     Deserialize a text/binary string representing a XES log
 

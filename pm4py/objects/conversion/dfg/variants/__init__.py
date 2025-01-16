@@ -1,1 +1,4 @@
-from pm4py.objects.conversion.dfg.variants import to_petri_net_activity_defines_place, to_petri_net_invisibles_no_duplicates
+from pm4py.objects.conversion.dfg.variants import (
+    to_petri_net_activity_defines_place,
+    to_petri_net_invisibles_no_duplicates,
+)

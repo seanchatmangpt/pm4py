@@ -12,8 +12,13 @@ class Variants(Enum):
     GRAPHVIZ = graphviz
 
 
-def apply(dataframe1: pd.DataFrame, dataframe2: pd.DataFrame, interleavings: pd.DataFrame, variant=Variants.GRAPHVIZ,
-          parameters: Optional[Dict[Any, Any]] = None) -> Digraph:
+def apply(
+    dataframe1: pd.DataFrame,
+    dataframe2: pd.DataFrame,
+    interleavings: pd.DataFrame,
+    variant=Variants.GRAPHVIZ,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Digraph:
     """
     Visualizes the interleavings discovered between two different processes.
     We suppose to provide both event logs, and the discovered interleavings.
@@ -38,7 +43,9 @@ def apply(dataframe1: pd.DataFrame, dataframe2: pd.DataFrame, interleavings: pd.
     digraph
         Graphviz Digraph
     """
-    return exec_utils.get_variant(variant).apply(dataframe1, dataframe2, interleavings, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        dataframe1, dataframe2, interleavings, parameters=parameters
+    )
 
 
 def save(gviz: Digraph, output_file_path: str, parameters=None):

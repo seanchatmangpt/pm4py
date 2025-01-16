@@ -7,7 +7,9 @@ from pm4py.util import constants, nx_utils
 DEFAULT_NOISE_THRESH_DF = 0.16
 
 
-def generate_nx_graph_from_dfg(dfg, start_activities, end_activities, activities_count):
+def generate_nx_graph_from_dfg(
+    dfg, start_activities, end_activities, activities_count
+):
     """
     Generate a NetworkX graph for reachability-checking purposes out of the DFG
 
@@ -31,8 +33,9 @@ def generate_nx_graph_from_dfg(dfg, start_activities, end_activities, activities
     end_node
         Identifier of the end node (connected to all the end activities)
     """
-    start_node = '4d872045-8664-4e21-bd55-5da5edb096fe' # made static to avoid undeterminism
-    end_node = 'b8136db7-b162-4763-bd68-4d5ccbcdff87' # made static to avoid undeterminism
+    start_node = "4d872045-8664-4e21-bd55-5da5edb096fe"  # made static to avoid undeterminism
+    # made static to avoid undeterminism
+    end_node = "b8136db7-b162-4763-bd68-4d5ccbcdff87"
     G = nx_utils.DiGraph()
     G.add_node(start_node)
     G.add_node(end_node)
@@ -47,7 +50,9 @@ def generate_nx_graph_from_dfg(dfg, start_activities, end_activities, activities
     return G, start_node, end_node
 
 
-def filter_dfg_on_activities_percentage(dfg0, start_activities0, end_activities0, activities_count0, percentage):
+def filter_dfg_on_activities_percentage(
+    dfg0, start_activities0, end_activities0, activities_count0, percentage
+):
     """
     Filters a DFG (complete, and so connected) on the specified percentage of activities
     (but ensuring that every node is still reachable from the start and to the end)
@@ -76,36 +81,59 @@ def filter_dfg_on_activities_percentage(dfg0, start_activities0, end_activities0
     activities_count
         (Filtered) activities of the DFG along with their count
     """
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     start_activities = deepcopy(start_activities0)
     end_activities = deepcopy(end_activities0)
     activities_count = deepcopy(activities_count0)
 
     if len(activities_count) > 1 and len(dfg) > 1:
-        activities_count_sorted_list = sorted([(x, y) for x, y in activities_count.items()], key=lambda x: (x[1], x[0]),
-                                              reverse=True)
-        # retrieve the minimum list of activities to keep in the graph, according to the percentage
+        activities_count_sorted_list = sorted(
+            [(x, y) for x, y in activities_count.items()],
+            key=lambda x: (x[1], x[0]),
+            reverse=True,
+        )
+        # retrieve the minimum list of activities to keep in the graph,
+        # according to the percentage
         min_set_activities_to_keep = set(
-            x[0] for x in activities_count_sorted_list[:math.ceil((len(activities_count) - 1) * percentage) + 1])
-        # retrieve the activities that can be possibly discarded, according to the percentage
+            x[0]
+            for x in activities_count_sorted_list[
+                : math.ceil((len(activities_count) - 1) * percentage) + 1
+            ]
+        )
+        # retrieve the activities that can be possibly discarded, according to
+        # the percentage
         activities_to_possibly_discard = list(
-            x[0] for x in activities_count_sorted_list[math.ceil((len(activities_count) - 1) * percentage) + 1:])
+            x[0]
+            for x in activities_count_sorted_list[
+                math.ceil((len(activities_count) - 1) * percentage) + 1:
+            ]
+        )
         activities_to_possibly_discard.reverse()
-        # build a graph structure that helps in deciding whether the activities can be discarded safely
-        graph, start_node, end_node = generate_nx_graph_from_dfg(dfg, start_activities, end_activities,
-                                                                 activities_count)
+        # build a graph structure that helps in deciding whether the activities
+        # can be discarded safely
+        graph, start_node, end_node = generate_nx_graph_from_dfg(
+            dfg, start_activities, end_activities, activities_count
+        )
         for act in activities_to_possibly_discard:
             new_graph = nx_utils.DiGraph(graph)
             # try to remove the node
             new_graph.remove_node(act)
-            # check whether all the activities to keep can be reached from the start and can reach the end
-            reachable_from_start = set(nx_utils.descendants(new_graph, start_node))
+            # check whether all the activities to keep can be reached from the
+            # start and can reach the end
+            reachable_from_start = set(
+                nx_utils.descendants(new_graph, start_node)
+            )
             reachable_to_end = set(nx_utils.ancestors(new_graph, end_node))
-            if min_set_activities_to_keep.issubset(reachable_from_start) and min_set_activities_to_keep.issubset(
-                    reachable_to_end):
-                # if that is the case, try to elaborate the new DFG (without the activity)
-                new_dfg = {x: y for x, y in dfg.items() if x[0] != act and x[1] != act}
+            if min_set_activities_to_keep.issubset(
+                reachable_from_start
+            ) and min_set_activities_to_keep.issubset(reachable_to_end):
+                # if that is the case, try to elaborate the new DFG (without
+                # the activity)
+                new_dfg = {
+                    x: y for x, y in dfg.items() if x[0] != act and x[1] != act
+                }
                 # if that is still not empty ...
                 if new_dfg:
                     # ... then the activity can be safely removed
@@ -122,9 +150,13 @@ def filter_dfg_on_activities_percentage(dfg0, start_activities0, end_activities0
         # are connected
         reachable_from_start = set(nx_utils.descendants(graph, start_node))
         reachable_to_end = set(nx_utils.ancestors(graph, end_node))
-        reachable_start_end = reachable_from_start.intersection(reachable_to_end)
+        reachable_start_end = reachable_from_start.intersection(
+            reachable_to_end
+        )
         activities_set = set(activities_count.keys())
-        non_reachable_activities = activities_set.difference(reachable_start_end)
+        non_reachable_activities = activities_set.difference(
+            reachable_start_end
+        )
 
         # remove these non reachable activities
         for act in non_reachable_activities:
@@ -138,20 +170,33 @@ def filter_dfg_on_activities_percentage(dfg0, start_activities0, end_activities0
     return dfg, start_activities, end_activities, activities_count
 
 
-def __filter_specified_paths(dfg, start_activities, end_activities, activities_count, graph, start_node, end_node,
-                             discardable_edges, activities_not_to_discard):
+def __filter_specified_paths(
+    dfg,
+    start_activities,
+    end_activities,
+    activities_count,
+    graph,
+    start_node,
+    end_node,
+    discardable_edges,
+    activities_not_to_discard,
+):
     for edge in discardable_edges:
         if len(dfg) > 1:
             new_graph = nx_utils.DiGraph(graph)
             # try to remove the edge
             new_graph.remove_edge(edge[0], edge[1])
 
-            # check whether all the activities to keep can be reached from the start and can reach the end
-            reachable_from_start = set(nx_utils.descendants(new_graph, start_node))
+            # check whether all the activities to keep can be reached from the
+            # start and can reach the end
+            reachable_from_start = set(
+                nx_utils.descendants(new_graph, start_node)
+            )
             reachable_to_end = set(nx_utils.ancestors(new_graph, end_node))
 
-            if activities_not_to_discard.issubset(reachable_from_start) and activities_not_to_discard.issubset(
-                    reachable_to_end):
+            if activities_not_to_discard.issubset(
+                reachable_from_start
+            ) and activities_not_to_discard.issubset(reachable_to_end):
                 # remove the edge
                 graph = new_graph
                 if edge in dfg:
@@ -181,13 +226,23 @@ def __filter_specified_paths(dfg, start_activities, end_activities, activities_c
             del end_activities[act]
 
     # make sure that the DFG contains only edges between these activities
-    dfg = {x: y for x, y in dfg.items() if x[0] in activities_count and x[1] in activities_count}
+    dfg = {
+        x: y
+        for x, y in dfg.items()
+        if x[0] in activities_count and x[1] in activities_count
+    }
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def filter_dfg_on_paths_percentage(dfg0, start_activities0, end_activities0, activities_count0, percentage,
-                                   keep_all_activities=False):
+def filter_dfg_on_paths_percentage(
+    dfg0,
+    start_activities0,
+    end_activities0,
+    activities_count0,
+    percentage,
+    keep_all_activities=False,
+):
     """
     Filters a DFG (complete, and so connected) on the specified percentage of paths
     (but ensuring that every node is still reachable from the start and to the end)
@@ -220,48 +275,88 @@ def filter_dfg_on_paths_percentage(dfg0, start_activities0, end_activities0, act
         (Filtered) activities of the DFG along with their count
     """
 
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     start_activities = deepcopy(start_activities0)
     end_activities = deepcopy(end_activities0)
     activities_count = deepcopy(activities_count0)
 
     if len(activities_count) > 1 and len(dfg) > 1:
-        # build a graph structure that helps in deciding whether the paths can be discarded safely
-        graph, start_node, end_node = generate_nx_graph_from_dfg(dfg, start_activities, end_activities,
-                                                                 activities_count)
-        all_edges = [(x, y) for x, y in dfg.items()] + [((start_node, x), start_activities[x]) for x in
-                                                        start_activities] + [((x, end_node), end_activities[x]) for x in
-                                                                             end_activities]
+        # build a graph structure that helps in deciding whether the paths can
+        # be discarded safely
+        graph, start_node, end_node = generate_nx_graph_from_dfg(
+            dfg, start_activities, end_activities, activities_count
+        )
+        all_edges = (
+            [(x, y) for x, y in dfg.items()]
+            + [
+                ((start_node, x), start_activities[x])
+                for x in start_activities
+            ]
+            + [((x, end_node), end_activities[x]) for x in end_activities]
+        )
         all_edges = sorted(all_edges, key=lambda x: (x[1], x[0]), reverse=True)
         # calculate a set of edges that could be discarded and not
         non_discardable_edges = list(
-            x[0] for x in all_edges[:math.ceil((len(all_edges) - 1) * percentage) + 1])
-        discardable_edges = list(x[0] for x in all_edges[math.ceil((len(all_edges) - 1) * percentage) + 1:])
+            x[0]
+            for x in all_edges[
+                : math.ceil((len(all_edges) - 1) * percentage) + 1
+            ]
+        )
+        discardable_edges = list(
+            x[0]
+            for x in all_edges[
+                math.ceil((len(all_edges) - 1) * percentage) + 1:
+            ]
+        )
         discardable_edges.reverse()
 
         # according to the parameter's value, keep the activities that appears in the edges that should not be
         # discarded (default), OR keep all the activities, trying to remove edges but ensure connectiveness of
         # everything
         if keep_all_activities:
-            activities_not_to_discard = set(x[0] for x in dfg).union(set(x[1] for x in dfg)).union(
-                set(start_activities)).union(set(end_activities)).union(set(activities_count))
+            activities_not_to_discard = (
+                set(x[0] for x in dfg)
+                .union(set(x[1] for x in dfg))
+                .union(set(start_activities))
+                .union(set(end_activities))
+                .union(set(activities_count))
+            )
         else:
-            activities_not_to_discard = set(x[0] for x in non_discardable_edges if not x[0] == start_node).union(
-                set(x[1] for x in non_discardable_edges if not x[1] == end_node))
+            activities_not_to_discard = set(
+                x[0] for x in non_discardable_edges if not x[0] == start_node
+            ).union(
+                set(
+                    x[1] for x in non_discardable_edges if not x[1] == end_node
+                )
+            )
 
-        dfg, start_activities, end_activities, activities_count = __filter_specified_paths(dfg, start_activities,
-                                                                                           end_activities,
-                                                                                           activities_count, graph,
-                                                                                           start_node, end_node,
-                                                                                           discardable_edges,
-                                                                                           activities_not_to_discard)
+        dfg, start_activities, end_activities, activities_count = (
+            __filter_specified_paths(
+                dfg,
+                start_activities,
+                end_activities,
+                activities_count,
+                graph,
+                start_node,
+                end_node,
+                discardable_edges,
+                activities_not_to_discard,
+            )
+        )
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def filter_dfg_keep_connected(dfg0, start_activities0, end_activities0, activities_count0, threshold,
-                              keep_all_activities=False):
+def filter_dfg_keep_connected(
+    dfg0,
+    start_activities0,
+    end_activities0,
+    activities_count0,
+    threshold,
+    keep_all_activities=False,
+):
     """
     Filters a DFG (complete, and so connected) on the specified dependency threshold (Heuristics Miner dependency)
     (but ensuring that every node is still reachable from the start and to the end)
@@ -294,16 +389,19 @@ def filter_dfg_keep_connected(dfg0, start_activities0, end_activities0, activiti
         (Filtered) activities of the DFG along with their count
     """
 
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     start_activities = deepcopy(start_activities0)
     end_activities = deepcopy(end_activities0)
     activities_count = deepcopy(activities_count0)
 
     if len(activities_count) > 1 and len(dfg) > 1:
-        # build a graph structure that helps in deciding whether the paths can be discarded safely
-        graph, start_node, end_node = generate_nx_graph_from_dfg(dfg, start_activities, end_activities,
-                                                                 activities_count)
+        # build a graph structure that helps in deciding whether the paths can
+        # be discarded safely
+        graph, start_node, end_node = generate_nx_graph_from_dfg(
+            dfg, start_activities, end_activities, activities_count
+        )
 
         dependency = {}
         for el in dfg:
@@ -314,12 +412,16 @@ def filter_dfg_keep_connected(dfg0, start_activities0, end_activities0, activiti
                 dep = dfg[el] / (dfg[el] + 1)
             dependency[el] = dep
 
-        all_edges = [(x, y) for x, y in dependency.items()] + [((start_node, x), 1.0) for x in
-                                                        start_activities] + [((x, end_node), 1.0) for x in
-                                                                             end_activities]
+        all_edges = (
+            [(x, y) for x, y in dependency.items()]
+            + [((start_node, x), 1.0) for x in start_activities]
+            + [((x, end_node), 1.0) for x in end_activities]
+        )
         all_edges = sorted(all_edges, key=lambda x: (x[1], x[0]), reverse=True)
         # calculate a set of edges that could be discarded and not
-        non_discardable_edges = list(x[0] for x in all_edges if x[1] >= threshold)
+        non_discardable_edges = list(
+            x[0] for x in all_edges if x[1] >= threshold
+        )
         discardable_edges = list(x[0] for x in all_edges if x[1] < threshold)
         discardable_edges.reverse()
 
@@ -327,24 +429,47 @@ def filter_dfg_keep_connected(dfg0, start_activities0, end_activities0, activiti
         # discarded (default), OR keep all the activities, trying to remove edges but ensure connectiveness of
         # everything
         if keep_all_activities:
-            activities_not_to_discard = set(x[0] for x in dfg).union(set(x[1] for x in dfg)).union(
-                set(start_activities)).union(set(end_activities)).union(set(activities_count))
+            activities_not_to_discard = (
+                set(x[0] for x in dfg)
+                .union(set(x[1] for x in dfg))
+                .union(set(start_activities))
+                .union(set(end_activities))
+                .union(set(activities_count))
+            )
         else:
-            activities_not_to_discard = set(x[0] for x in non_discardable_edges if not x[0] == start_node).union(
-                set(x[1] for x in non_discardable_edges if not x[1] == end_node))
+            activities_not_to_discard = set(
+                x[0] for x in non_discardable_edges if not x[0] == start_node
+            ).union(
+                set(
+                    x[1] for x in non_discardable_edges if not x[1] == end_node
+                )
+            )
 
-        dfg, start_activities, end_activities, activities_count = __filter_specified_paths(dfg, start_activities,
-                                                                                           end_activities,
-                                                                                           activities_count, graph,
-                                                                                           start_node, end_node,
-                                                                                           discardable_edges,
-                                                                                           activities_not_to_discard)
+        dfg, start_activities, end_activities, activities_count = (
+            __filter_specified_paths(
+                dfg,
+                start_activities,
+                end_activities,
+                activities_count,
+                graph,
+                start_node,
+                end_node,
+                discardable_edges,
+                activities_not_to_discard,
+            )
+        )
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def filter_dfg_to_activity(dfg0, start_activities0, end_activities0, activities_count0, target_activity,
-                           parameters=None):
+def filter_dfg_to_activity(
+    dfg0,
+    start_activities0,
+    end_activities0,
+    activities_count0,
+    target_activity,
+    parameters=None,
+):
     """
     Filters the DFG, making "target_activity" the only possible end activity of the graph
 
@@ -377,7 +502,8 @@ def filter_dfg_to_activity(dfg0, start_activities0, end_activities0, activities_
     if parameters is None:
         parameters = {}
 
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     start_activities = deepcopy(start_activities0)
     activities_count = deepcopy(activities_count0)
@@ -396,18 +522,38 @@ def filter_dfg_to_activity(dfg0, start_activities0, end_activities0, activities_
             successors_from_sa = successors_from_sa.union(successors[act])
             successors_from_sa.add(act)
 
-        reachable_nodes = successors_from_sa.intersection(predecessors[target_activity]).union({target_activity})
+        reachable_nodes = successors_from_sa.intersection(
+            predecessors[target_activity]
+        ).union({target_activity})
         if reachable_nodes != set(activities_count.keys()):
             changed = True
-            activities_count = {x: y for x, y in activities_count.items() if x in reachable_nodes}
-            start_activities = {x: y for x, y in start_activities.items() if x in reachable_nodes}
-            dfg = {x: y for x, y in dfg.items() if x[0] in reachable_nodes and x[1] in reachable_nodes}
+            activities_count = {
+                x: y
+                for x, y in activities_count.items()
+                if x in reachable_nodes
+            }
+            start_activities = {
+                x: y
+                for x, y in start_activities.items()
+                if x in reachable_nodes
+            }
+            dfg = {
+                x: y
+                for x, y in dfg.items()
+                if x[0] in reachable_nodes and x[1] in reachable_nodes
+            }
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def filter_dfg_from_activity(dfg0, start_activities0, end_activities0, activities_count0, source_activity,
-                             parameters=None):
+def filter_dfg_from_activity(
+    dfg0,
+    start_activities0,
+    end_activities0,
+    activities_count0,
+    source_activity,
+    parameters=None,
+):
     """
     Filters the DFG, making "source_activity" the only possible source activity of the graph
 
@@ -440,7 +586,8 @@ def filter_dfg_from_activity(dfg0, start_activities0, end_activities0, activitie
     if parameters is None:
         parameters = {}
 
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     end_activities = deepcopy(end_activities0)
     activities_count = deepcopy(activities_count0)
@@ -459,17 +606,36 @@ def filter_dfg_from_activity(dfg0, start_activities0, end_activities0, activitie
             predecessors_from_ea = predecessors_from_ea.union(predecessors[ea])
             predecessors_from_ea.add(ea)
 
-        reachable_nodes = predecessors_from_ea.intersection(successors[source_activity]).union({source_activity})
+        reachable_nodes = predecessors_from_ea.intersection(
+            successors[source_activity]
+        ).union({source_activity})
         if reachable_nodes != set(activities_count.keys()):
             changed = True
-            activities_count = {x: y for x, y in activities_count.items() if x in reachable_nodes}
-            end_activities = {x: y for x, y in end_activities.items() if x in reachable_nodes}
-            dfg = {x: y for x, y in dfg.items() if x[0] in reachable_nodes and x[1] in reachable_nodes}
+            activities_count = {
+                x: y
+                for x, y in activities_count.items()
+                if x in reachable_nodes
+            }
+            end_activities = {
+                x: y for x, y in end_activities.items() if x in reachable_nodes
+            }
+            dfg = {
+                x: y
+                for x, y in dfg.items()
+                if x[0] in reachable_nodes and x[1] in reachable_nodes
+            }
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def filter_dfg_contain_activity(dfg0, start_activities0, end_activities0, activities_count0, activity, parameters=None):
+def filter_dfg_contain_activity(
+    dfg0,
+    start_activities0,
+    end_activities0,
+    activities_count0,
+    activity,
+    parameters=None,
+):
     """
     Filters the DFG keeping only nodes that can reach / are reachable from activity
 
@@ -502,7 +668,8 @@ def filter_dfg_contain_activity(dfg0, start_activities0, end_activities0, activi
     if parameters is None:
         parameters = {}
 
-    # since the dictionaries/sets are modified, a deepcopy is the best option to ensure data integrity
+    # since the dictionaries/sets are modified, a deepcopy is the best option
+    # to ensure data integrity
     dfg = deepcopy(dfg0)
     start_activities = deepcopy(start_activities0)
     end_activities = deepcopy(end_activities0)
@@ -517,10 +684,17 @@ def filter_dfg_contain_activity(dfg0, start_activities0, end_activities0, activi
         predecessors_act = predecessors[activity].union({activity})
         successors_act = successors[activity].union({activity})
 
-        start_activities1 = {x: y for x, y in start_activities.items() if x in predecessors_act}
-        end_activities1 = {x: y for x, y in end_activities.items() if x in successors_act}
+        start_activities1 = {
+            x: y for x, y in start_activities.items() if x in predecessors_act
+        }
+        end_activities1 = {
+            x: y for x, y in end_activities.items() if x in successors_act
+        }
 
-        if start_activities != start_activities1 or end_activities != end_activities1:
+        if (
+            start_activities != start_activities1
+            or end_activities != end_activities1
+        ):
             changed = True
 
         start_activities = start_activities1
@@ -529,13 +703,23 @@ def filter_dfg_contain_activity(dfg0, start_activities0, end_activities0, activi
         reachable_nodes = predecessors_act.union(successors_act)
         if reachable_nodes != set(activities_count.keys()):
             changed = True
-            activities_count = {x: y for x, y in activities_count.items() if x in reachable_nodes}
-            dfg = {x: y for x, y in dfg.items() if x[0] in reachable_nodes and x[1] in reachable_nodes}
+            activities_count = {
+                x: y
+                for x, y in activities_count.items()
+                if x in reachable_nodes
+            }
+            dfg = {
+                x: y
+                for x, y in dfg.items()
+                if x[0] in reachable_nodes and x[1] in reachable_nodes
+            }
 
     return dfg, start_activities, end_activities, activities_count
 
 
-def clean_dfg_based_on_noise_thresh(dfg, activities, noise_threshold, parameters=None):
+def clean_dfg_based_on_noise_thresh(
+    dfg, activities, noise_threshold, parameters=None
+):
     """
     Clean Directly-Follows graph based on noise threshold
 
@@ -556,8 +740,11 @@ def clean_dfg_based_on_noise_thresh(dfg, activities, noise_threshold, parameters
     if parameters is None:
         parameters = {}
 
-    most_common_paths = parameters[
-        constants.PARAM_MOST_COMMON_PATHS] if constants.PARAM_MOST_COMMON_PATHS in parameters else None
+    most_common_paths = (
+        parameters[constants.PARAM_MOST_COMMON_PATHS]
+        if constants.PARAM_MOST_COMMON_PATHS in parameters
+        else None
+    )
     if most_common_paths is None:
         most_common_paths = []
 
@@ -580,8 +767,10 @@ def clean_dfg_based_on_noise_thresh(dfg, activities, noise_threshold, parameters
             act2 = el[0][1]
             val = el[1]
 
-        if not el in most_common_paths and val < min(activ_max_count[act1] * noise_threshold,
-                                                     activ_max_count[act2] * noise_threshold):
+        if el not in most_common_paths and val < min(
+            activ_max_count[act1] * noise_threshold,
+            activ_max_count[act2] * noise_threshold,
+        ):
             pass
         else:
             if type(el[0]) is str:

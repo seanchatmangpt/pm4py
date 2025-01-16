@@ -11,7 +11,9 @@ class Parameters(Enum):
     OBJECT_TYPE = constants.PARAM_OBJECT_TYPE
 
 
-def propagate_event_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def propagate_event_filtering(
+    ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None
+) -> OCEL:
     """
     Propagates the filtering at the event level to the remaining parts of the OCEL structure
     (objects, relations)
@@ -34,23 +36,45 @@ def propagate_event_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any]] =
     if parameters is None:
         parameters = {}
 
-    event_id = exec_utils.get_param_value(Parameters.EVENT_ID, parameters, ocel.event_id_column)
-    object_id = exec_utils.get_param_value(Parameters.OBJECT_ID, parameters, ocel.object_id_column)
+    event_id = exec_utils.get_param_value(
+        Parameters.EVENT_ID, parameters, ocel.event_id_column
+    )
+    object_id = exec_utils.get_param_value(
+        Parameters.OBJECT_ID, parameters, ocel.object_id_column
+    )
 
-    selected_event_ids = set(pandas_utils.format_unique(ocel.events[event_id].unique()))
-    ocel.relations = ocel.relations[ocel.relations[event_id].isin(selected_event_ids)]
-    selected_object_ids = set(pandas_utils.format_unique(ocel.relations[object_id].unique()))
-    ocel.objects = ocel.objects[ocel.objects[object_id].isin(selected_object_ids)]
+    selected_event_ids = set(
+        pandas_utils.format_unique(ocel.events[event_id].unique())
+    )
+    ocel.relations = ocel.relations[
+        ocel.relations[event_id].isin(selected_event_ids)
+    ]
+    selected_object_ids = set(
+        pandas_utils.format_unique(ocel.relations[object_id].unique())
+    )
+    ocel.objects = ocel.objects[
+        ocel.objects[object_id].isin(selected_object_ids)
+    ]
 
-    ocel.e2e = ocel.e2e[(ocel.e2e[event_id].isin(selected_event_ids)) & (ocel.e2e[event_id+"_2"].isin(selected_event_ids))]
-    ocel.o2o = ocel.o2o[(ocel.o2o[object_id].isin(selected_object_ids)) & (ocel.o2o[object_id+"_2"].isin(selected_object_ids))]
+    ocel.e2e = ocel.e2e[
+        (ocel.e2e[event_id].isin(selected_event_ids))
+        & (ocel.e2e[event_id + "_2"].isin(selected_event_ids))
+    ]
+    ocel.o2o = ocel.o2o[
+        (ocel.o2o[object_id].isin(selected_object_ids))
+        & (ocel.o2o[object_id + "_2"].isin(selected_object_ids))
+    ]
 
-    ocel.object_changes = ocel.object_changes[ocel.object_changes[object_id].isin(selected_object_ids)]
+    ocel.object_changes = ocel.object_changes[
+        ocel.object_changes[object_id].isin(selected_object_ids)
+    ]
 
     return ocel
 
 
-def propagate_object_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def propagate_object_filtering(
+    ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None
+) -> OCEL:
     """
     Propagates the filtering at the object level to the remaining parts of the OCEL structure
     (events, relations)
@@ -73,23 +97,43 @@ def propagate_object_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any]] 
     if parameters is None:
         parameters = {}
 
-    event_id = exec_utils.get_param_value(Parameters.EVENT_ID, parameters, ocel.event_id_column)
-    object_id = exec_utils.get_param_value(Parameters.OBJECT_ID, parameters, ocel.object_id_column)
+    event_id = exec_utils.get_param_value(
+        Parameters.EVENT_ID, parameters, ocel.event_id_column
+    )
+    object_id = exec_utils.get_param_value(
+        Parameters.OBJECT_ID, parameters, ocel.object_id_column
+    )
 
-    selected_object_ids = set(pandas_utils.format_unique(ocel.objects[object_id].unique()))
-    ocel.relations = ocel.relations[ocel.relations[object_id].isin(selected_object_ids)]
-    selected_event_ids = set(pandas_utils.format_unique(ocel.relations[event_id].unique()))
+    selected_object_ids = set(
+        pandas_utils.format_unique(ocel.objects[object_id].unique())
+    )
+    ocel.relations = ocel.relations[
+        ocel.relations[object_id].isin(selected_object_ids)
+    ]
+    selected_event_ids = set(
+        pandas_utils.format_unique(ocel.relations[event_id].unique())
+    )
     ocel.events = ocel.events[ocel.events[event_id].isin(selected_event_ids)]
 
-    ocel.e2e = ocel.e2e[(ocel.e2e[event_id].isin(selected_event_ids)) & (ocel.e2e[event_id+"_2"].isin(selected_event_ids))]
-    ocel.o2o = ocel.o2o[(ocel.o2o[object_id].isin(selected_object_ids)) & (ocel.o2o[object_id+"_2"].isin(selected_object_ids))]
+    ocel.e2e = ocel.e2e[
+        (ocel.e2e[event_id].isin(selected_event_ids))
+        & (ocel.e2e[event_id + "_2"].isin(selected_event_ids))
+    ]
+    ocel.o2o = ocel.o2o[
+        (ocel.o2o[object_id].isin(selected_object_ids))
+        & (ocel.o2o[object_id + "_2"].isin(selected_object_ids))
+    ]
 
-    ocel.object_changes = ocel.object_changes[ocel.object_changes[object_id].isin(selected_object_ids)]
+    ocel.object_changes = ocel.object_changes[
+        ocel.object_changes[object_id].isin(selected_object_ids)
+    ]
 
     return ocel
 
 
-def propagate_relations_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def propagate_relations_filtering(
+    ocel: OCEL, parameters: Optional[Dict[Any, Any]] = None
+) -> OCEL:
     """
     Propagates the filtering at the relations level to the remaining parts of the OCEL structure
     (events, objects)
@@ -112,19 +156,45 @@ def propagate_relations_filtering(ocel: OCEL, parameters: Optional[Dict[Any, Any
     if parameters is None:
         parameters = {}
 
-    event_id = exec_utils.get_param_value(Parameters.EVENT_ID, parameters, ocel.event_id_column)
-    object_id = exec_utils.get_param_value(Parameters.OBJECT_ID, parameters, ocel.object_id_column)
+    event_id = exec_utils.get_param_value(
+        Parameters.EVENT_ID, parameters, ocel.event_id_column
+    )
+    object_id = exec_utils.get_param_value(
+        Parameters.OBJECT_ID, parameters, ocel.object_id_column
+    )
 
-    selected_event_ids = set(pandas_utils.format_unique(ocel.relations[event_id].unique())).intersection(set(pandas_utils.format_unique(ocel.events[event_id].unique())))
-    selected_object_ids = set(pandas_utils.format_unique(ocel.relations[object_id].unique())).intersection(set(pandas_utils.format_unique(ocel.objects[object_id].unique())))
+    selected_event_ids = set(
+        pandas_utils.format_unique(ocel.relations[event_id].unique())
+    ).intersection(
+        set(pandas_utils.format_unique(ocel.events[event_id].unique()))
+    )
+    selected_object_ids = set(
+        pandas_utils.format_unique(ocel.relations[object_id].unique())
+    ).intersection(
+        set(pandas_utils.format_unique(ocel.objects[object_id].unique()))
+    )
     ocel.events = ocel.events[ocel.events[event_id].isin(selected_event_ids)]
-    ocel.objects = ocel.objects[ocel.objects[object_id].isin(selected_object_ids)]
-    ocel.relations = ocel.relations[ocel.relations[event_id].isin(selected_event_ids)]
-    ocel.relations = ocel.relations[ocel.relations[object_id].isin(selected_object_ids)]
+    ocel.objects = ocel.objects[
+        ocel.objects[object_id].isin(selected_object_ids)
+    ]
+    ocel.relations = ocel.relations[
+        ocel.relations[event_id].isin(selected_event_ids)
+    ]
+    ocel.relations = ocel.relations[
+        ocel.relations[object_id].isin(selected_object_ids)
+    ]
 
-    ocel.e2e = ocel.e2e[(ocel.e2e[event_id].isin(selected_event_ids)) & (ocel.e2e[event_id+"_2"].isin(selected_event_ids))]
-    ocel.o2o = ocel.o2o[(ocel.o2o[object_id].isin(selected_object_ids)) & (ocel.o2o[object_id+"_2"].isin(selected_object_ids))]
+    ocel.e2e = ocel.e2e[
+        (ocel.e2e[event_id].isin(selected_event_ids))
+        & (ocel.e2e[event_id + "_2"].isin(selected_event_ids))
+    ]
+    ocel.o2o = ocel.o2o[
+        (ocel.o2o[object_id].isin(selected_object_ids))
+        & (ocel.o2o[object_id + "_2"].isin(selected_object_ids))
+    ]
 
-    ocel.object_changes = ocel.object_changes[ocel.object_changes[object_id].isin(selected_object_ids)]
+    ocel.object_changes = ocel.object_changes[
+        ocel.object_changes[object_id].isin(selected_object_ids)
+    ]
 
     return ocel

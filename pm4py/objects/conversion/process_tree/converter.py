@@ -1,5 +1,7 @@
 from pm4py.objects.conversion.process_tree.variants import to_petri_net
-from pm4py.objects.conversion.process_tree.variants import to_petri_net_transition_bordered
+from pm4py.objects.conversion.process_tree.variants import (
+    to_petri_net_transition_bordered,
+)
 from pm4py.objects.conversion.process_tree.variants import to_bpmn
 from pm4py.objects.conversion.process_tree.variants import to_powl
 from pm4py.util import exec_utils

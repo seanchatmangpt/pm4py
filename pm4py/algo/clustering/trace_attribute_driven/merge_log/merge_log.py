@@ -12,7 +12,9 @@ def merge_log(path, cate, iter):
 
     for i in range(1, cate + 1):
         for j in range(1, iter + 1):
-            log = xes_importer.apply(path + '\\log_1_' + str(i) + '_' + str(j) + ".xes")
+            log = xes_importer.apply(
+                path + "\\log_1_" + str(i) + "_" + str(j) + ".xes"
+            )
             for trace in log:
                 trace.attributes["concept:name"] = str(iter * (i - 1) + j)
                 trace.attributes["index"] = str(iter * (i - 1) + j)
@@ -36,20 +38,28 @@ def update_merge(loglist):
 
 # this is for single string
 def log2sublog(log, string, KEY):
-    tracefilter_log = filter_subsets.apply_trace_attributes(log, [string],
-                                                            parameters={
-                                                                constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY: KEY,
-                                                                "positive": True})
+    tracefilter_log = filter_subsets.apply_trace_attributes(
+        log,
+        [string],
+        parameters={
+            constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY: KEY,
+            "positive": True,
+        },
+    )
 
     return tracefilter_log
 
 
 # this is for string list
 def logslice(log, str_list, KEY):
-    tracefilter_log = filter_subsets.apply_trace_attributes(log, str_list,
-                                                            parameters={
-                                                                constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY: KEY,
-                                                                "positive": True})
+    tracefilter_log = filter_subsets.apply_trace_attributes(
+        log,
+        str_list,
+        parameters={
+            constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY: KEY,
+            "positive": True,
+        },
+    )
 
     return tracefilter_log
 
@@ -61,8 +71,10 @@ def add_node(node, parent):
     parent["children"].append(newNode)
 
     # Recursively add the current node's children
-    if node.left: add_node(node.left, newNode)
-    if node.right: add_node(node.right, newNode)
+    if node.left:
+        add_node(node.left, newNode)
+    if node.right:
+        add_node(node.right, newNode)
 
 
 # Label each node with the names of each leaf in its subtree
@@ -74,7 +86,9 @@ def label_tree(n, id2name):
 
     # If not, flatten all the leaves in the node's subtree
     else:
-        leafNames = reduce(lambda ls, c: ls + label_tree(c, id2name), n["children"], [])
+        leafNames = reduce(
+            lambda ls, c: ls + label_tree(c, id2name), n["children"], []
+        )
 
     # Delete the node id since we don't need it anymore and
     # it makes for cleaner JSON
@@ -87,7 +101,7 @@ def label_tree(n, id2name):
 
 
 def clusteredlog(Z, maxclust, list_of_vals, log, METHOD, ATTR_NAME):
-    clu_index = fcluster(Z, maxclust, criterion='maxclust')
+    clu_index = fcluster(Z, maxclust, criterion="maxclust")
     clu_index = dict(zip(list_of_vals, clu_index))
     clu_list_log = []
     clu_list = []

@@ -11,7 +11,11 @@ class Variants(Enum):
     OCEL20 = ocel20
 
 
-def apply(file_path: str, variant=Variants.PANDAS_IMPORTER, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
+def apply(
+    file_path: str,
+    variant=Variants.PANDAS_IMPORTER,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> OCEL:
     """
     Imports an OCEL from a SQLite database
 
@@ -33,4 +37,6 @@ def apply(file_path: str, variant=Variants.PANDAS_IMPORTER, parameters: Optional
     if parameters is None:
         parameters = {}
 
-    return exec_utils.get_variant(variant).apply(file_path, parameters=parameters)
+    return exec_utils.get_variant(variant).apply(
+        file_path, parameters=parameters
+    )
