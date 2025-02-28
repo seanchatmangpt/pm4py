@@ -26,6 +26,7 @@ CASE_INDEX_COLUMN = "@@case_index"
 
 class Shared:
     RUSTXES_WARNING_SHOWN = False
+    FILTERING_LEVEL_WARNING_SHOWN = False
 
 
 def format_dataframe(
@@ -778,3 +779,9 @@ def __rustxes_non_usage_warning():
     if Shared.RUSTXES_WARNING_SHOWN is False:
         warnings.warn("Install the optional requirement `rustxes` to import files faster.")
         Shared.RUSTXES_WARNING_SHOWN = True
+
+
+def __event_log_filtering_level_warning():
+    if Shared.FILTERING_LEVEL_WARNING_SHOWN is False:
+        warnings.warn("The filtering operates at the case level (i.e., cases that contain at least one event satisfying the filter are retained in their entirety).")
+        Shared.FILTERING_LEVEL_WARNING_SHOWN = True
