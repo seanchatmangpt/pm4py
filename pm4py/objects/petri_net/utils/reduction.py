@@ -7,14 +7,47 @@ from pm4py.objects.petri_net.utils.petri_utils import (
     post_set,
     get_arc_type,
 )
+from pm4py.objects.petri_net.obj import PetriNet
 from pm4py.objects.petri_net import properties
 import itertools
 from itertools import combinations, chain
 
 
+######################################################################
+# NEW HELPER FUNCTIONS
+######################################################################
+
+def _has_only_this_transition_as_output(place, transition):
+    """
+    Checks if all arcs exiting the given place go to exactly this 'transition'
+    (i.e., place -> transition, no other transitions).
+    """
+    outgoing_transitions = {
+        arc.target for arc in place.out_arcs if isinstance(arc.target, PetriNet.Transition)
+    }
+    return outgoing_transitions == {transition}
+
+
+def _has_only_this_transition_as_input(place, transition):
+    """
+    Checks if all arcs entering the given place come from exactly this 'transition'
+    (i.e., transition -> place, no other transitions).
+    """
+    incoming_transitions = {
+        arc.source for arc in place.in_arcs if isinstance(arc.source, PetriNet.Transition)
+    }
+    return incoming_transitions == {transition}
+
+
+######################################################################
+# REFACTOR: SINGLE-ENTRY / SINGLE-EXIT REDUCTIONS
+######################################################################
+
 def reduce_single_entry_transitions(net):
     """
-    Reduces the number of the single entry transitions in the Petri net
+    Reduces the number of single-entry silent transitions in the Petri net
+    by merging them upward when the place feeding them does not feed any
+    other transition.
 
     Parameters
     ----------------
@@ -24,24 +57,31 @@ def reduce_single_entry_transitions(net):
     cont = True
     while cont:
         cont = False
+        # Identify silent transitions with exactly 1 input place.
         single_entry_transitions = [
-            t
-            for t in net.transitions
+            t for t in net.transitions
             if t.label is None and len(t.in_arcs) == 1
         ]
-        for i in range(len(single_entry_transitions)):
-            t = single_entry_transitions[i]
+        for t in single_entry_transitions:
             source_place = list(t.in_arcs)[0].source
-            target_places = [a.target for a in t.out_arcs]
+            # We check:
+            # 1) source_place has exactly 1 input transition
+            # 2) source_place is used *only* by 't' (i.e., no other transitions).
             if (
                 len(source_place.in_arcs) == 1
-                and len(source_place.out_arcs) == 1
+                and _has_only_this_transition_as_output(source_place, t)
             ):
+                # We can merge out 't' and 'source_place'
                 source_transition = list(source_place.in_arcs)[0].source
+                target_places = [arc.target for arc in t.out_arcs]
+
                 remove_transition(net, t)
                 remove_place(net, source_place)
+
+                # Wire the old source transition directly to t's old targets
                 for p in target_places:
                     add_arc_from_to(source_transition, p, net)
+
                 cont = True
                 break
     return net
@@ -49,7 +89,9 @@ def reduce_single_entry_transitions(net):
 
 def reduce_single_exit_transitions(net):
     """
-    Reduces the number of the single exit transitions in the Petri net
+    Reduces the number of single-exit silent transitions in the Petri net
+    by merging them downward when the place receiving them does not receive
+    arcs from any other transition.
 
     Parameters
     --------------
@@ -59,24 +101,30 @@ def reduce_single_exit_transitions(net):
     cont = True
     while cont:
         cont = False
+        # Identify silent transitions with exactly 1 output place.
         single_exit_transitions = [
-            t
-            for t in net.transitions
+            t for t in net.transitions
             if t.label is None and len(t.out_arcs) == 1
         ]
-        for i in range(len(single_exit_transitions)):
-            t = single_exit_transitions[i]
+        for t in single_exit_transitions:
             target_place = list(t.out_arcs)[0].target
-            source_places = [a.source for a in t.in_arcs]
+            # We check:
+            # 1) target_place has exactly 1 output transition
+            # 2) target_place is used *only* by 't' (i.e., no other transitions).
             if (
-                len(target_place.in_arcs) == 1
-                and len(target_place.out_arcs) == 1
+                len(target_place.out_arcs) == 1
+                and _has_only_this_transition_as_input(target_place, t)
             ):
                 target_transition = list(target_place.out_arcs)[0].target
+                source_places = [arc.source for arc in t.in_arcs]
+
                 remove_transition(net, t)
                 remove_place(net, target_place)
+
+                # Wire the old input places directly to t's old target transition
                 for p in source_places:
                     add_arc_from_to(p, target_transition, net)
+
                 cont = True
                 break
     return net
@@ -84,17 +132,34 @@ def reduce_single_exit_transitions(net):
 
 def apply_simple_reduction(net):
     """
-    Apply a simple reduction to the Petri net
+    Apply a simple reduction to the Petri net by repeatedly merging
+    single-entry and single-exit silent transitions where possible.
 
     Parameters
     --------------
     net
         Petri net
     """
-    reduce_single_entry_transitions(net)
-    reduce_single_exit_transitions(net)
+    changed = True
+    while changed:
+        old_t_count = len(net.transitions)
+        old_p_count = len(net.places)
+
+        reduce_single_entry_transitions(net)
+        reduce_single_exit_transitions(net)
+
+        new_t_count = len(net.transitions)
+        new_p_count = len(net.places)
+
+        # If the overall structure changed, keep iterating
+        changed = (new_t_count < old_t_count or new_p_count < old_p_count)
+
     return net
 
+
+######################################################################
+# REMAINING REDUCTION FUNCTIONS (unchanged)
+######################################################################
 
 def apply_fst_rule(net):
     """
@@ -225,14 +290,12 @@ def apply_fpt_rule(net):
     cont = True
     while cont:
         cont = False
-        for V in power_set(
-            [
-                transition
-                for transition in net.transitions
-                if transition.label is None
-            ],
-            2,
-        ):
+        # only silent transitions are considered for parallel merging
+        silent_transitions = [
+            transition for transition in net.transitions
+            if transition.label is None
+        ]
+        for V in power_set(silent_transitions, 2):
             condition = True
             for x, y in itertools.product(V, V):
                 if x != y:
@@ -251,7 +314,7 @@ def apply_fpt_rule(net):
                         condition = False
                         break
             # V is a valid candidate
-            if condition:
+            if condition and len(V) > 1:
                 # remove transitions except the first one
                 for t in V[1:]:
                     remove_transition(net, t)
@@ -306,7 +369,7 @@ def apply_fpp_rule(net, im=None):
                         continue
                     break
             # Q is a valid candidate
-            if condition:
+            if condition and len(Q) > 1:
                 # remove places except the first one
                 for p in Q[1:]:
                     remove_place(net, p)
@@ -514,13 +577,12 @@ def apply_reset_inhibitor_net_reduction(net, im=None, fm=None):
         fm = {}
     apply_fst_rule(net)
     apply_fsp_rule(net, im, fm)
-    # (FPT) rule is exponential to model size
+    # (FPT) and (FPP) and (A) rules may be very expensive for large nets
+    # Uncomment them if needed:
     # apply_fpt_rule(net)
-    # (FPP) rule is exponential to model size
     # apply_fpp_rule(net, im)
+    # apply_a_rule(net)
     apply_elt_rule(net)
     apply_elp_rule(net, im)
-    # (A) rule is exponential to model size
-    # apply_a_rule(net)
     apply_r_rule(net)
     return net, im, fm

@@ -24,6 +24,10 @@ INDEX_COLUMN = "@@index"
 CASE_INDEX_COLUMN = "@@case_index"
 
 
+class Shared:
+    RUSTXES_WARNING_SHOWN = False
+
+
 def format_dataframe(
     df: pd.DataFrame,
     case_id: str = constants.CASE_CONCEPT_NAME,
@@ -763,3 +767,14 @@ def __event_log_deprecation_warning(log):
                     "The EventStream class has been deprecated and will be removed in a future release."
                 )
                 log.deprecation_warning_shown = True
+
+
+def __rustxes_usage_warning():
+    if Shared.RUSTXES_WARNING_SHOWN is False:
+        warnings.warn("In the current version, the import/export operation uses `rustxes` by default for importing/exporting files faster. Please uninstall `rustxes` to revert the behavior.")
+        Shared.RUSTXES_WARNING_SHOWN = True
+
+def __rustxes_non_usage_warning():
+    if Shared.RUSTXES_WARNING_SHOWN is False:
+        warnings.warn("Install the optional requirement `rustxes` to import/export files faster.")
+        Shared.RUSTXES_WARNING_SHOWN = True

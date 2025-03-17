@@ -21,15 +21,8 @@ class Parameters(Enum):
 
 
 def generate_label_for_transition(t):
-    return (
-        "tau"
-        if t.label is None
-        else (
-            "'" + t.label + "'"
-            if not t.name.startswith(TRANSITION_PREFIX)
-            else t.label
-        )
-    )
+    return 'tau' if t.label is None else '\'' + t.label.replace("'", "") + '\'' if not t.name.startswith(
+        TRANSITION_PREFIX) else t.label
 
 
 def generate_new_binary_transition(t1, t2, operator, net):

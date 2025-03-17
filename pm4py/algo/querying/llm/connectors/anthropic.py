@@ -12,6 +12,7 @@ class Parameters(Enum):
     ANTHROPIC_MODEL = "anthropic_model"
     IMAGE_PATH = "image_path"
     MAX_TOKENS = "max_tokens"
+    THINKING_TOKENS = "thinking_tokens"
 
 
 def encode_image(image_path):
@@ -35,6 +36,7 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
     max_tokens = exec_utils.get_param_value(
         Parameters.MAX_TOKENS, parameters, 8192
     )
+    thinking_tokens = exec_utils.get_param_value(Parameters.THINKING_TOKENS, parameters, None)
     simple_content_specification = image_path is None
 
     if api_url is None:
@@ -65,6 +67,13 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
 
     payload = {"model": model, "max_tokens": max_tokens}
 
+    if thinking_tokens is not None:
+        thinking_tokens = min(thinking_tokens, 65536)
+        headers["anthropic-beta"] = "output-128k-2025-02-19"
+        payload["max_tokens"] = payload["max_tokens"] + thinking_tokens
+        payload["max_tokens"] = min(payload["max_tokens"], 128000)
+        payload["thinking"] = {"type": "enabled", "budget_tokens": thinking_tokens}
+
     if image_path is not None:
         image_format = os.path.splitext(image_path)[1][1:].lower()
         base64_image = encode_image(image_path)
@@ -82,10 +91,11 @@ def apply(prompt: str, parameters: Optional[Dict[Any, Any]] = None) -> str:
 
     response = requests.post(
         api_url + "messages", headers=headers, json=payload
-    ).json()
+    )
+    response = response.json()
 
     if "error" in response:
         # raise an exception when the request fails, with the provided message
         raise Exception(response["error"]["message"])
 
-    return response["content"][0]["text"]
+    return response["content"][-1]["text"]
