@@ -155,14 +155,52 @@ class StrictPartialOrder(POWL):
         return self.order.nodes
 
     def to_string(self, level=0, indent=False, max_indent=sys.maxsize) -> str:
-        model_string = STRICT_PARTIAL_ORDER_LABEL + self.order.__repr__()
-        if indent:
-            model_string = "\n".join(
-                hie_utils.indent_representation(
-                    model_string, max_indent=max_indent
-                )
-            )
-        return model_string
+        """
+        Represents a StrictPartialOrder as a string, avoiding infinite recursion.
+
+        Parameters
+        ----------
+        level : int
+            Current indentation level
+        indent : bool
+            Whether to indent the output
+        max_indent : int
+            Maximum indentation level
+
+        Returns
+        -------
+        str
+            String representation of the partial order
+        """
+        # Start with the partial order label
+        rep = f"{STRICT_PARTIAL_ORDER_LABEL}=(nodes={{"
+
+        # Represent the nodes (children)
+        nodes_str = []
+        for i, node in enumerate(self.order.nodes):
+            # Call to_string on each child with increased level, preventing recursive blow-up
+            node_str = node.to_string(level=level + 1, indent=False, max_indent=max_indent)
+            nodes_str.append(node_str)
+        rep += ", ".join(nodes_str)
+        rep += "}, order={"
+
+        # Represent the edges in the partial order
+        edges_str = []
+        for source in self.order.nodes:
+            for target in self.order.nodes:
+                if self.order.is_edge(source, target):
+                    # Use a simplified representation for source and target to avoid recursion
+                    source_str = source.label if source.label else f"id_{hash(source)}"
+                    target_str = target.label if target.label else f"id_{hash(target)}"
+                    edges_str.append(f"{source_str}-->{target_str}")
+        rep += ", ".join(edges_str)
+        rep += "})"
+
+        # Apply indentation if requested
+        if indent and level <= max_indent:
+            rep = "\n".join(hie_utils.indent_representation(rep, max_indent=max_indent))
+
+        return rep
 
     def __repr__(self) -> str:
         return self.to_string()

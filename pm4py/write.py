@@ -9,7 +9,7 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.process_tree.obj import ProcessTree
 from pm4py.utils import __event_log_deprecation_warning
 import pandas as pd
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple, Dict, Optional
 from pm4py.util import constants
 from pm4py.util.pandas_utils import (
     check_is_pandas_dataframe,
@@ -23,6 +23,7 @@ def write_xes(
     case_id_key: str = "case:concept:name",
     extensions=None,
     encoding: str = constants.DEFAULT_ENCODING,
+    variant_str: Optional[str] = None,
     **kwargs
 ) -> None:
     """
@@ -32,6 +33,7 @@ def write_xes(
     :param file_path: Target file path of the event log (``.xes`` file) on disk.
     :param case_id_key: Column key that identifies the case identifier.
     :param extensions: Extensions defined for the event log.
+    :param variant_str: Variant to be used (default: line-by-line, rustxes)
     :param encoding: The encoding to be used (default: utf-8).
 
     .. code-block:: python3
@@ -59,9 +61,14 @@ def write_xes(
     parameters["extensions"] = extensions
     parameters["encoding"] = encoding
 
-    from pm4py.objects.log.exporter.xes import exporter as xes_exporter
-
-    xes_exporter.apply(log, file_path, parameters=parameters)
+    if variant_str is None or variant_str == "line_by_line":
+        from pm4py.objects.log.exporter.xes import exporter as xes_exporter
+        xes_exporter.apply(log, file_path, variant=xes_exporter.Variants.LINE_BY_LINE, parameters=parameters)
+    else:
+        import pm4py, rustxes, polars
+        log = pm4py.convert_to_dataframe(log)
+        log = polars.DataFrame(log)
+        rustxes.export_xes(log, file_path)
 
 
 def write_pnml(
@@ -420,8 +427,8 @@ def write_ocel2_json(
         pm4py.write_ocel2_json(ocel, '<path_to_export_to>')
     """
     file_path = str(file_path)
-    if not file_path.lower().endswith("jsonocel"):
-        file_path = file_path + ".jsonocel"
+    if not (file_path.lower().endswith("jsonocel") or file_path.lower().endswith("json")):
+        file_path = file_path + ".json"
 
     from pm4py.objects.ocel.exporter.jsonocel import (
         exporter as jsonocel_exporter,
@@ -482,8 +489,8 @@ def write_ocel2_xml(
         pm4py.write_ocel2_xml(ocel, '<path_to_export_to>')
     """
     file_path = str(file_path)
-    if not file_path.lower().endswith("xmlocel"):
-        file_path = file_path + ".xmlocel"
+    if not (file_path.lower().endswith("xmlocel") or file_path.lower().endswith("xml")):
+        file_path = file_path + ".xml"
 
     from pm4py.objects.ocel.exporter.xmlocel import exporter as xml_exporter
 

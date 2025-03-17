@@ -3,7 +3,6 @@ import heapq
 import math
 import sys
 import time
-from collections import Counter
 from copy import deepcopy
 from enum import Enum
 from typing import Optional, Dict, Any, Union, Tuple
@@ -123,24 +122,32 @@ def get_traces(dfg, start_activities, end_activities, parameters=None):
     heapq.heapify(partial_traces)
 
     while partial_traces:
-        trace = heapq.heappop(partial_traces)
-        trace = list(trace)
-        trace[1] = list(trace[1])
-        trace_counter = Counter(trace[1])
-        last_act = trace[1][-1]
-        prob = trace[0]
+        item = heapq.heappop(partial_traces)
+        prob = item[0]
+        trace_tuple = item[1]
+
+        # Get last activity directly from the tuple
+        last_act = trace_tuple[-1]
+
+        # Count activities efficiently without using Counter
+        trace_counter = {}
+        for act in trace_tuple:
+            trace_counter[act] = trace_counter.get(act, 0) + 1
 
         for new_act in node_transition_probabilities[last_act]:
-            if trace_counter[new_act] < max_no_occ_per_activity:
+            # Use get() to avoid KeyError for activities not yet in trace
+            current_count = trace_counter.get(new_act, 0)
+            if current_count < max_no_occ_per_activity:
                 prob_new_act = node_transition_probabilities[last_act][new_act]
                 if new_act is None:
                     p = math.exp(-(prob - prob_new_act))
-                    tr = tuple(trace[1])
-                    yield (tr, p)
+                    yield (trace_tuple, p)
                 else:
+                    # Create new trace directly without list conversions
+                    new_trace = trace_tuple + (new_act,)
                     heapq.heappush(
                         partial_traces,
-                        (prob - prob_new_act, tuple(trace[1] + [new_act])),
+                        (prob - prob_new_act, new_trace)
                     )
 
 

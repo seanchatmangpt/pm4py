@@ -4,6 +4,7 @@ import os
 # NEW IMPORTS FOR URI SUPPORT
 import requests
 import tempfile
+import importlib.util
 from urllib.parse import urlparse
 
 from pm4py.objects.bpmn.obj import BPMN
@@ -14,6 +15,7 @@ from pm4py.objects.process_tree.obj import ProcessTree
 from pm4py.util import constants
 
 from pandas import DataFrame
+from pm4py.utils import __rustxes_usage_warning, __rustxes_non_usage_warning
 
 INDEX_COLUMN = "@@index"
 
@@ -82,7 +84,12 @@ def read_xes(
     local_path = _resolve_path(file_path)
 
     if variant is None:
-        variant = constants.DEFAULT_XES_PARSER
+        if importlib.util.find_spec("rustxes"):
+            #__rustxes_usage_warning()
+            variant = constants.DEFAULT_XES_PARSER
+        else:
+            #__rustxes_non_usage_warning()
+            variant = constants.DEFAULT_XES_PARSER
 
     from pm4py.objects.log.importer.xes import importer as xes_importer
 
@@ -410,27 +417,25 @@ def read_ocel2(
         "xmlocel"
     ):
         return read_ocel2_xml(
-            local_path, variant_str=variant_str, encoding=encoding
+            local_path, encoding=encoding
         )
     elif local_path.lower().endswith("json") or local_path.lower().endswith(
         "jsonocel"
     ):
         return read_ocel2_json(
-            local_path, variant_str=variant_str, encoding=encoding
+            local_path, encoding=encoding
         )
     raise Exception("Unsupported file format for OCEL 2.0")
 
 
 def read_ocel2_json(
     file_path: str,
-    variant_str: Optional[str] = None,
     encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log from a JSON-OCEL2 file.
 
     :param file_path: Path/URI to the JSON file (`.jsonocel`).
-    :param variant_str: [Optional] Specification of the importer variant to be used.
     :param encoding: Encoding to be used (default: `utf-8`).
     :rtype: `OCEL`
 
@@ -442,9 +447,12 @@ def read_ocel2_json(
     """
     from pm4py.objects.ocel.importer.jsonocel import importer as jsonocel_importer
 
-    variant = jsonocel_importer.Variants.OCEL20_STANDARD
-    if variant_str == "ocel20_rustxes":
-        variant = jsonocel_importer.Variants.OCEL20_RUSTXES
+    if importlib.util.find_spec("rustxes"):
+        #__rustxes_usage_warning()
+        variant = jsonocel_importer.Variants.OCEL20_STANDARD
+    else:
+        #__rustxes_non_usage_warning()
+        variant = jsonocel_importer.Variants.OCEL20_STANDARD
 
     return jsonocel_importer.apply(
         file_path, variant=variant, parameters={"encoding": encoding}
@@ -481,14 +489,12 @@ def read_ocel2_sqlite(
 
 def read_ocel2_xml(
     file_path: str,
-    variant_str: Optional[str] = None,
     encoding: str = constants.DEFAULT_ENCODING,
 ) -> OCEL:
     """
     Reads an OCEL 2.0 event log from an XML file.
 
     :param file_path: Path/URI to the OCEL 2.0 XML file (`.xmlocel`).
-    :param variant_str: [Optional] Specification of the importer variant to be used.
     :param encoding: Encoding to be used (default: `utf-8`).
     :rtype: `OCEL`
 
@@ -500,9 +506,12 @@ def read_ocel2_xml(
     """
     from pm4py.objects.ocel.importer.xmlocel import importer as xml_importer
 
-    variant = xml_importer.Variants.OCEL20
-    if variant_str == "ocel20_rustxes":
-        variant = xml_importer.Variants.OCEL20_RUSTXES
+    if importlib.util.find_spec("rustxes"):
+        #__rustxes_usage_warning()
+        variant = xml_importer.Variants.OCEL20
+    else:
+        #__rustxes_non_usage_warning()
+        variant = xml_importer.Variants.OCEL20
 
     return xml_importer.apply(
         file_path, variant=variant, parameters={"encoding": encoding}
