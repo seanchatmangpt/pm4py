@@ -177,7 +177,7 @@ OPENAI_DEFAULT_VISION_MODEL = get_param_from_env(
     "PM4PY_OPENAI_DEFAULT_VISION_MODEL", "gpt-4o"
 )
 ANTHROPIC_DEFAULT_MODEL = get_param_from_env(
-    "PM4PY_ANTHROPIC_DEFAULT_MODEL", "claude-3-5-sonnet-20241022"
+    "PM4PY_ANTHROPIC_DEFAULT_MODEL", "claude-3-7-sonnet-20250219"
 )
 GOOGLE_DEFAULT_MODEL = get_param_from_env(
     "PM4PY_GOOGLE_DEFAULT_MODEL", "gemini-1.5-flash-002"
