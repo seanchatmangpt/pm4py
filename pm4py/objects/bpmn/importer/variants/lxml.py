@@ -549,12 +549,8 @@ def parse_element(
         for seq_flow_id in outgoing_dict:
             if outgoing_dict[seq_flow_id][0] in nodes_dict:
                 outgoing_dict[seq_flow_id] = (
-                    nodes_dict[outgoing_dict[seq_flow_id][0]],
-                    outgoing_dict[seq_flow_id][1],
-                    outgoing_dict[seq_flow_id][2],
-                    outgoing_dict[seq_flow_id][3],
-                    outgoing_dict[seq_flow_id][4],
-                )
+                nodes_dict[outgoing_dict[seq_flow_id][0]], outgoing_dict[seq_flow_id][1], outgoing_dict[seq_flow_id][2],
+                outgoing_dict[seq_flow_id][3], outgoing_dict[seq_flow_id][4])
 
         # also supports flows without waypoints
         flows_without_waypoints = set(flow_info).union(

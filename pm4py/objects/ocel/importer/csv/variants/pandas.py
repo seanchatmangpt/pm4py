@@ -1,7 +1,5 @@
 from typing import Optional, Dict, Any
 
-import pandas as pd
-
 from pm4py.objects.ocel.obj import OCEL
 from pm4py.objects.ocel.util import extended_table
 from pm4py.objects.ocel.util import ocel_consistency
@@ -38,18 +36,12 @@ def apply(
     if parameters is None:
         parameters = {}
 
-    encoding = exec_utils.get_param_value(
-        Parameters.ENCODING, parameters, pm4_constants.DEFAULT_ENCODING
-    )
-    table = pandas_utils.read_csv(
-        file_path, index_col=False, encoding=encoding
-    )
+    encoding = exec_utils.get_param_value(Parameters.ENCODING, parameters, pm4_constants.DEFAULT_ENCODING)
+    table = pandas_utils.read_csv(file_path, index_col=False, encoding=encoding, dtype=str)
 
     objects = None
     if objects_path is not None:
-        objects = pandas_utils.read_csv(
-            objects_path, index_col=False, encoding=encoding
-        )
+        objects = pandas_utils.read_csv(objects_path, index_col=False, encoding=encoding, dtype=str)
 
     ocel = extended_table.get_ocel_from_extended_table(
         table, objects, parameters=parameters
