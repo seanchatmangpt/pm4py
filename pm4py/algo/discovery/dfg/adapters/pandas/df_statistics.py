@@ -1,5 +1,8 @@
+import numpy as np
+
 from pm4py.util import xes_constants, pandas_utils, constants
 from pm4py.util.business_hours import soj_time_business_hours_diff
+import pandas as pd
 
 
 def get_dfg_graph(
@@ -54,9 +57,6 @@ def get_dfg_graph(
     dfg
         DFG in the chosen measure (may be only the frequency, only the performance, or both)
     """
-    import pandas as pd
-    import numpy as np
-
     # added support to specify an activity key for the target event which is different
     # from the activity key of the source event.
     if target_activity_key is None:
@@ -103,7 +103,7 @@ def get_dfg_graph(
     df_shifted.columns = shifted_cols
 
     # Concatenate the dataframes efficiently
-    df_successive_rows = pd.concat([df, df_shifted], axis=1)
+    df_successive_rows = pandas_utils.DATAFRAME.concat([df, df_shifted], axis=1)
 
     # Filter for matching case IDs (more efficient with direct access)
     case_id_col = case_id_glue
@@ -142,8 +142,8 @@ def get_dfg_graph(
                 start_ts_values = np.array(df_successive_rows[start_timestamp_key + suffix].dt.to_pydatetime())
             else:
                 # If timestamps are pandas Timestamp objects or strings, convert properly
-                ts_values = np.array(pd.to_datetime(df_successive_rows[timestamp_key]).dt.to_pydatetime())
-                start_ts_values = np.array(pd.to_datetime(df_successive_rows[start_timestamp_key + suffix]).dt.to_pydatetime())
+                ts_values = np.array(pandas_utils.DATAFRAME.to_datetime(df_successive_rows[timestamp_key]).dt.to_pydatetime())
+                start_ts_values = np.array(pandas_utils.DATAFRAME.to_datetime(df_successive_rows[start_timestamp_key + suffix]).dt.to_pydatetime())
 
             # Use list comprehension which is faster than apply but handles datetime objects correctly
             flow_times = [
@@ -172,7 +172,7 @@ def get_dfg_graph(
     # Create dictionary directly rather than creating a Series object first (more efficient)
     if measure == "frequency" or measure == "both":
         # Use value_counts which is more efficient than groupby+size for frequency
-        if len(group_cols) == 2:  # Most common case
+        if type(df) is pd.DataFrame and len(group_cols) == 2:  # Most common case
             temp_df = df_successive_rows[group_cols].copy()
             temp_df['dummy'] = 1  # Add a column to count
             pivot = temp_df.pivot_table(
@@ -196,6 +196,11 @@ def get_dfg_graph(
             # Calculate all metrics at once (more efficient than separate calls)
             metrics = grouped.agg(['mean', 'median', 'max', 'min', 'sum', 'std'])
 
+            if type(metrics) is pd.DataFrame:
+                metrics = metrics.iterrows()
+            else:
+                metrics = metrics.to_pandas().iterrows()
+
             # Convert to the expected dictionary structure
             dfg_performance = {
                 group: {
@@ -206,7 +211,7 @@ def get_dfg_graph(
                     'sum': row['sum'],
                     'stdev': row['std']
                 }
-                for group, row in metrics.iterrows()
+                for group, row in metrics
             }
         elif perf_aggregation_key == "raw_values":
             dfg_performance = grouped.agg(list).to_dict()

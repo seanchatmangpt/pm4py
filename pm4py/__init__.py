@@ -109,7 +109,7 @@ from pm4py.filtering import (
     filter_ocel_cc_activity,
     filter_ocel_activities_connected_object_type,
     filter_dfg_activities_percentage,
-    filter_dfg_paths_percentage,
+    filter_dfg_paths_percentage
 )
 from pm4py.discovery import (
     discover_petri_net_alpha,
@@ -233,6 +233,7 @@ from pm4py.convert import (
     convert_log_to_time_intervals,
     convert_petri_net_to_networkx,
     convert_petri_net_type,
+    convert_to_powl,
 )
 from pm4py.analysis import (
     cluster_log,
