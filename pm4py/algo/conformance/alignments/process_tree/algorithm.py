@@ -3,7 +3,7 @@ from pm4py.algo.conformance.alignments.process_tree.variants.approximated import
 from pm4py.algo.conformance.alignments.process_tree.variants.approximated import (
     original as approximated_original, )
 from pm4py.algo.conformance.alignments.process_tree.variants import (
-    search_graph_pt,
+    search_graph_pt, dynamic_programming, milp
 )
 
 from pm4py.util import exec_utils
@@ -20,6 +20,8 @@ class Variants(Enum):
     APPROXIMATED_ORIGINAL = approximated_original
     APPROXIMATED_MATRIX_LP = approximated_matrix_lp
     SEARCH_GRAPH_PT = search_graph_pt
+    DYNAMIC_PROGRAMMING = dynamic_programming
+    MILP = milp
 
 
 DEFAULT_VARIANT = Variants.SEARCH_GRAPH_PT
