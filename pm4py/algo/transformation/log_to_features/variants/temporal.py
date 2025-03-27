@@ -158,40 +158,46 @@ def apply(
         dct["average_service_time"] = gval_first[service_time].mean()
 
         # -----------------------------------------------------------------
-        # NEW FEATURES REQUESTED
+        # NEW FEATURES
         # -----------------------------------------------------------------
         # (1) Total number of reworked activities
         # For each case: (number_of_events) - (unique_activities)
         # Then sum across all cases in the window.
-        reworks_series = gval.groupby(case_id_column).apply(
-            lambda x: len(x) - x[activity_column].nunique()
-        )
-        dct["total_number_of_reworked_activities"] = reworks_series.sum()
+        if len(gval) > 0:
+            reworks_series = gval.groupby(case_id_column).apply(
+                lambda x: len(x) - x[activity_column].nunique()
+            )
+            dct["total_number_of_reworked_activities"] = reworks_series.sum()
 
-        # (2) Average number of cases per resource
-        # For each resource, count distinct cases, then average over resources
-        cases_per_resource = gval.groupby(resource_column)[case_id_column].nunique()
-        dct["avg_cases_per_resource"] = (
-            cases_per_resource.mean() if not pd.isna(cases_per_resource.mean()) else 0
-        )
+            # (2) Average number of cases per resource
+            # For each resource, count distinct cases, then average over resources
+            cases_per_resource = gval.groupby(resource_column)[case_id_column].nunique()
+            dct["avg_cases_per_resource"] = (
+                cases_per_resource.mean() if not pd.isna(cases_per_resource.mean()) else 0
+            )
 
-        # (3) Average number of events per case
-        # For each case, count events, then average
-        events_per_case = gval.groupby(case_id_column).size()
-        dct["avg_events_per_case"] = (
-            events_per_case.mean() if not pd.isna(events_per_case.mean()) else 0
-        )
+            # (3) Average number of events per case
+            # For each case, count events, then average
+            events_per_case = gval.groupby(case_id_column).size()
+            dct["avg_events_per_case"] = (
+                events_per_case.mean() if not pd.isna(events_per_case.mean()) else 0
+            )
 
-        # (4) Number of cases
-        dct["number_of_cases"] = gval[case_id_column].nunique()
+            # (4) Number of cases
+            dct["number_of_cases"] = gval[case_id_column].nunique()
 
-        # (5) Average number of resources per case
-        # For each case, count distinct resources, then average
-        resources_per_case = gval.groupby(case_id_column)[resource_column].nunique()
-        dct["avg_resources_per_case"] = (
-            resources_per_case.mean() if not pd.isna(resources_per_case.mean()) else 0
-        )
-        # -----------------------------------------------------------------
+            # (5) Average number of resources per case
+            # For each case, count distinct resources, then average
+            resources_per_case = gval.groupby(case_id_column)[resource_column].nunique()
+            dct["avg_resources_per_case"] = (
+                resources_per_case.mean() if not pd.isna(resources_per_case.mean()) else 0
+            )
+            # -----------------------------------------------------------------
+        else:
+            dct["total_number_of_reworked_activities"] = 0
+            dct["avg_cases_per_resource"] = 0
+            dct["avg_events_per_case"] = 0
+            dct["avg_resources_per_case"] = 0
 
         final_values.append(dct)
 
