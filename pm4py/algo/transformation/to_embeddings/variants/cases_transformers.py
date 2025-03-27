@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List, Tuple
 from pm4py.objects.conversion.log import converter as log_converter
 import pandas as pd
 from enum import Enum
+from pm4py.algo.transformation.to_embeddings.util import similarity
 from sentence_transformers import SentenceTransformer
 
 
@@ -14,13 +15,13 @@ class Parameters(Enum):
 
 def apply(log: pd.DataFrame, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[List[str], List[List[float]]]:
     """
-    Computes the embeddings of case, concatenating all the values of a specified attribute for the events of the case.
+    Computes the embeddings of cases, concatenating all the values of a specified attribute for the events of the case.
 
     Parameters
     -----------------
     log
         Pandas dataframe
-    Parameters
+    parameters
         Parameters of the algorithm, including:
         - Parameters.CASE_ID_KEY => the case identifier column
         - Parameters.EMBEDDING_MODEL => the embedding to be used (default: all-MiniLM-L6-v2)
@@ -58,3 +59,46 @@ def apply(log: pd.DataFrame, parameters: Optional[Dict[Any, Any]] = None) -> Tup
     embeddings_list = list(model.encode(sentences))
 
     return cases_identifiers, embeddings_list
+
+
+def keep_top_k_per_similarity(log: pd.DataFrame, target_sentence: str, k: int, cases_identifiers: Optional[List[str]] = None, embeddings_list: Optional[List[List[float]]] = None, parameters: Optional[Dict[Any, Any]] = None) -> pd.DataFrame:
+    """
+    Keeps the top K cases for (embedding-based) similarity with the given sentence
+
+    Parameters
+    ----------------
+    log
+        Pandas dataframe
+    target_sentence
+        Target sentence
+    k
+        Number of similar cases to retain
+    cases_identifiers
+        (Optional) the list of cases identifiers in the log, as returned by the 'apply' method
+    embeddings_list
+        (Optional) the list of embeddings for such cases, as returned by the 'apply' method
+    parameters
+        Other parameters of the method
+
+    Returns
+    -----------------
+    filtered_log
+        Event log filtered on the top K cases according to the similarity metric.
+    """
+    if parameters is None:
+        parameters = {}
+
+    case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME)
+
+    if cases_identifiers is None or embeddings_list is None:
+        cases_identifiers, embeddings_list = apply(log, parameters=parameters)
+
+    sim = similarity.apply(target_sentence, embeddings_list)
+    cases = [(cases_identifiers[i], sim[i]) for i in range(len(cases_identifiers))]
+    cases.sort(key=lambda x: (x[1], x[0]), reverse=True)
+    cases = cases[:k]
+    cases = [x[0] for x in cases]
+
+    log = log[log[case_id_key].isin(cases)]
+
+    return log
