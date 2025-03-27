@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 from typing import List, Optional, Dict, Any
 from enum import Enum
-from pm4py.util import exec_utils
+from pm4py.util import exec_utils, constants
 
 
 class Parameters(Enum):
@@ -28,7 +28,8 @@ def apply(sentence: str, parameters: Optional[Dict[Any, Any]] = None) -> List[fl
     if parameters is None:
         parameters = {}
 
-    embedding_model = exec_utils.get_param_value(Parameters.EMBEDDING_MODEL, parameters, 'all-MiniLM-L6-v2')
+    embedding_model = exec_utils.get_param_value(Parameters.EMBEDDING_MODEL, parameters,
+                                                 constants.DEFAULT_EMBEDDING_MODEL)
 
     model = SentenceTransformer(embedding_model)
 
