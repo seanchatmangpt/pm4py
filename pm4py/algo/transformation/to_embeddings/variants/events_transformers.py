@@ -12,6 +12,7 @@ class Parameters(Enum):
     CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
     EMBEDDING_MODEL = "embedding_model"
     ATTRIBUTE_KEY = constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY
+    KEEP_CASES = "keep_cases"
 
 
 def apply(log: pd.DataFrame, parameters: Optional[Dict[Any, Any]] = None) -> Tuple[List[str], List[List[float]]]:
@@ -61,8 +62,13 @@ def apply(log: pd.DataFrame, parameters: Optional[Dict[Any, Any]] = None) -> Tup
     return event_identifiers, embeddings_list
 
 
-def keep_top_k_per_similarity(log: pd.DataFrame, target_sentence: str, k: int, keep_cases: bool = False, event_identifiers: Optional[List[str]] = None, embeddings_list: Optional[List[List[float]]] = None, parameters: Optional[Dict[Any, Any]] = None) -> pd.DataFrame:
+def keep_top_k_per_similarity(log: pd.DataFrame, target_sentence: str, k: int,
+                              event_identifiers: Optional[List[str]] = None,
+                              embeddings_list: Optional[List[List[float]]] = None,
+                              parameters: Optional[Dict[Any, Any]] = None) -> pd.DataFrame:
     """
+    Keeps the top K events for (embedding-based) similarity with the given sentence
+
     Parameters
     ----------------
     log
@@ -71,22 +77,24 @@ def keep_top_k_per_similarity(log: pd.DataFrame, target_sentence: str, k: int, k
         Target sentence
     k
         Number of similar events to retain
-    keep_cases
-        Keep the cases containing such events, instead of the events themselves (default: False)
     event_identifiers
         (Optional) the list of event identifiers in the log, as returned by the 'apply' method
     embeddings_list
         (Optional) the list of embeddings for such events, as returned by the 'apply' method
     parameters
-        Other parameters of the method
+        Other parameters of the method:
+        - Parameters.KEEP_CASES => If True, keep the cases containing such events, instead of the events themselves (default: False)
 
     Returns
     -----------------
+    filtered_log
+        Event log filtered on the top K events (or cases) according to the similarity metric.
     """
     if parameters is None:
         parameters = {}
 
     event_id_key = exec_utils.get_param_value(Parameters.EVENT_ID_KEY, parameters, constants.DEFAULT_INDEX_KEY)
+    keep_cases = exec_utils.get_param_value(Parameters.KEEP_CASES, parameters, False)
 
     if event_identifiers is None or embeddings_list is None:
         event_identifiers, embeddings_list = apply(log, parameters=parameters)
