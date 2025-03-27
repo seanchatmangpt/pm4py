@@ -6,10 +6,10 @@ def execute_script():
     log = pm4py.read_xes("../tests/input_data/running-example.xes")
 
     log_paid = cases_transformers.keep_top_k_per_similarity(log, "paid cases", 2)
-    print(log)
+    print(log_paid)
 
     log_rejected = cases_transformers.keep_top_k_per_similarity(log, "rejected cases", 2)
-    print(log)
+    print(log_rejected)
 
 
 if __name__ == "__main__":
