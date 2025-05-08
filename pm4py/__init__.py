@@ -252,6 +252,13 @@ from pm4py.analysis import (
     insert_case_service_waiting_time,
     get_enabled_transitions,
     simplicity_petri_net,
+    behavioral_similarity,
+    structural_similarity,
+    embeddings_similarity,
+    get_activity_labels,
+    replace_activity_labels,
+    label_sets_similarity,
+    map_labels_from_second_model
 )
 from pm4py.stats import (
     get_start_activities,
@@ -277,6 +284,7 @@ from pm4py.stats import (
     split_by_process_variant,
     get_variants_paths_duration,
     get_service_time,
+    get_process_cube
 )
 from pm4py.sim import play_out, generate_process_tree
 from pm4py.ml import (
