@@ -336,7 +336,7 @@ def apply(
 
         c1.node(
             "@@startnode1",
-            "<&#9679;>",
+            constants.DEFAULT_START_SYMBOL_GRAPHS,
             shape="circle",
             fontsize="34",
             color="black",
@@ -344,7 +344,7 @@ def apply(
         )
         c1.node(
             "@@endnode1",
-            "<&#9632;>",
+            constants.DEFAULT_END_SYMBOL_GRAPHS,
             shape="doublecircle",
             fontsize="32",
             color="black",
@@ -430,7 +430,7 @@ def apply(
 
         c2.node(
             "@@startnode2",
-            "<&#9679;>",
+            constants.DEFAULT_START_SYMBOL_GRAPHS,
             shape="circle",
             fontsize="34",
             color="gray",
@@ -438,7 +438,7 @@ def apply(
         )
         c2.node(
             "@@endnode2",
-            "<&#9632;>",
+            constants.DEFAULT_END_SYMBOL_GRAPHS,
             shape="doublecircle",
             fontsize="32",
             color="gray",

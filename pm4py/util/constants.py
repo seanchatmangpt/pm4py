@@ -118,6 +118,9 @@ DEFAULT_XES_TIMESTAMP_PARSE_FORMAT = get_param_from_env(
     get_default_xes_timestamp_format(),
 )
 
+DEFAULT_START_SYMBOL_GRAPHS = get_param_from_env("PM4PY_DEFAULT_START_SYMBOL_GRAPHS", "<&#9679;>")
+DEFAULT_END_SYMBOL_GRAPHS = get_param_from_env("PM4PY_DEFAULT_END_SYMBOL_GRAPHS", "<&#9632;>")
+
 ENABLE_MULTIPROCESSING_DEFAULT = (
     True
     if get_param_from_env(
@@ -172,16 +175,16 @@ OPENAI_API_URL = get_param_from_env(
     "PM4PY_OPENAI_API_URL", "https://api.openai.com/v1/"
 )
 OPENAI_DEFAULT_MODEL = get_param_from_env(
-    "PM4PY_OPENAI_DEFAULT_MODEL", "gpt-4o"
+    "PM4PY_OPENAI_DEFAULT_MODEL", "gpt-4.1"
 )
 OPENAI_DEFAULT_VISION_MODEL = get_param_from_env(
-    "PM4PY_OPENAI_DEFAULT_VISION_MODEL", "gpt-4o"
+    "PM4PY_OPENAI_DEFAULT_VISION_MODEL", "gpt-4.1"
 )
 ANTHROPIC_DEFAULT_MODEL = get_param_from_env(
     "PM4PY_ANTHROPIC_DEFAULT_MODEL", "claude-3-7-sonnet-20250219"
 )
 GOOGLE_DEFAULT_MODEL = get_param_from_env(
-    "PM4PY_GOOGLE_DEFAULT_MODEL", "gemini-1.5-flash-002"
+    "PM4PY_GOOGLE_DEFAULT_MODEL", "gemini-2.0-flash"
 )
 OPENAI_DEFAULT_STT_MODEL = get_param_from_env(
     "PM4PY_OPENAI_DEFAULT_STT_MODEL", "whisper-1"
