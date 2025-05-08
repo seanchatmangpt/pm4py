@@ -3,7 +3,7 @@ The ``pm4py.stats`` module contains the statistical functionalities offered in `
 """
 
 import sys
-from typing import Dict, Union, List, Tuple, Collection, Iterator
+from typing import Dict, Union, List, Tuple, Collection, Iterator, Any
 from typing import Set, Optional
 from typing import Counter as TCounter
 from collections import Counter
@@ -1283,3 +1283,104 @@ def get_activity_position_summary(
                 if this_act == activity:
                     ret[i] += 1
         return dict(ret)
+
+
+def get_process_cube(
+    feature_table: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    agg_col: str,
+    parameters: Optional[Dict[Any, Any]] = None
+) -> Tuple[pd.DataFrame, Dict[Any, Any]]:
+    """
+    Build a two-dimensional process cube by slicing and aggregating a feature table.
+
+    Parameters
+    ----------
+    feature_table : pd.DataFrame
+        A table containing one row per case and columns for:
+        - 'case:concept:name' (case identifiers)
+        - Numeric metrics (e.g. '@@arrival_rate', '@@finish_rate')
+        - Prefix-based indicators (e.g. 'concept:name_<activity>', 'org:resource_<resource>')
+        - Aggregation target (e.g. '@@sojourn_time')
+        Typically constructed via:
+        ```python
+        enriched_df = pm4py.extract_outcome_enriched_dataframe(log_df)
+        feature_table = pm4py.extract_features_dataframe(enriched_df, include_case_id=True)
+        ```
+
+    x_col : str
+        Name of the X dimension:
+        - **Numeric mode**: If this exact column exists (e.g. '@@arrival_rate'), cases will be binned by value into equally sized ranges.
+        - **Prefix mode**: If not present, treated as prefix for indicator columns (e.g. 'concept:name'), grouping each column starting with this prefix.
+          Each bin corresponds to presence/absence of that prefix-based feature.
+
+    y_col : str
+        Name of the Y dimension (same rules as x_col):
+        - Numeric if present in columns (e.g. '@@finish_rate').
+        - Prefix-based otherwise (e.g. 'case:channel').
+
+    agg_col : str
+        Name of the column to aggregate over each cell. Must be present in feature_table.
+        Commonly a duration or count metric, such as '@@sojourn_time'.
+
+    variant : Variants, optional
+        Algorithm variant to use. Defaults to Variants.CLASSIC.
+
+    parameters : Dict[Any, Any], optional
+        Additional settings for numeric binning and aggregation:
+        - Parameters.MAX_DIVISIONS_X (int): Number of bins for X in numeric mode.
+        - Parameters.MAX_DIVISIONS_Y (int): Number of bins for Y in numeric mode.
+        - Parameters.AGGREGATION_FUNCTION (str): One of 'mean', 'sum', 'min', 'max'.
+
+    Returns
+    -------
+    pivot_df : pd.DataFrame
+        Rows are X bins, columns are Y bins; each cell holds the aggregated agg_col value.
+
+    cell_case_dict : Dict[Tuple, Set]
+        Maps each (x_bin, y_bin) to the set of case IDs included in that cell, allowing drill-down.
+
+    Examples
+    --------
+    # 1) Activity vs. Resource, aggregating sojourn time:
+    cube_df, cell_cases = pm4py.get_process_cube(
+        feature_table,
+        x_col="concept:name",             # prefix mode: one bin per activity
+        y_col="org:resource",             # prefix mode: one bin per resource
+        agg_col="@@sojourn_time",          # total case time per cell
+        parameters={
+            "aggregation_function": "sum"
+        }
+    )
+
+    # 2) Binary presence of a specific activity vs. channel:
+    cube_df2, cell_cases2 = pm4py.get_process_cube(
+        feature_table,
+        x_col="concept:name_T06Determinenecessityofstopadvice",  # prefix for this specific activity
+        y_col="case:channel",         # prefix mode: one bin per channel value
+        agg_col="@@sojourn_time"
+    )
+
+    # 3) Numeric arrival vs. finish rate:
+    cube_df3, cell_cases3 = pm4py.get_process_cube(
+        feature_table,
+        x_col="@@arrival_rate",       # numeric mode: divide into bins
+        y_col="@@finish_rate",         # numeric mode: divide into bins
+        agg_col="@@sojourn_time",
+        parameters={
+            "max_divisions_x": 5,
+            "max_divisions_y": 5,
+            "aggregation_function": "mean"
+        }
+    )
+    """
+    from pm4py.statistics.process_cube import algorithm
+
+    return algorithm.apply(
+        feature_table,
+        x_col=x_col,
+        y_col=y_col,
+        agg_col=agg_col,
+        parameters=parameters
+    )
