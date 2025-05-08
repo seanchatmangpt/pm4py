@@ -474,7 +474,7 @@ def save_vis_bpmn(
     :param file_path: Destination path
     :param bgcolor: Background color of the visualization (default: white)
     :param rankdir: Sets the direction of the graph ("LR" for left-to-right; "TB" for top-to-bottom)
-    :param variant_str: Variant of the visualization to be used ("classic" or "dagrejs")
+    :param variant_str: Variant of the visualization to be used ("classic" or "dagrejs" or "bpmnio_auto_layout")
     :param graph_title: Sets the title of the visualization (if provided)
 
     .. code-block:: python3
@@ -492,6 +492,9 @@ def save_vis_bpmn(
         variant = bpmn_visualizer.Variants.CLASSIC
     elif variant_str == "dagrejs":
         variant = bpmn_visualizer.Variants.DAGREJS
+    elif variant_str == "bpmnio_auto_layout":
+        variant = bpmn_visualizer.Variants.BPMNIO_AUTO_LAYOUT
+
     props = _setup_parameters(fmt, bgcolor, rankdir, graph_title)
     gviz = bpmn_visualizer.apply(bpmn_graph, variant=variant, parameters=props)
     return bpmn_visualizer.save(gviz, file_path, variant=variant)
@@ -512,7 +515,7 @@ def view_bpmn(
     :param format: Format of the visualization (if 'html' is provided, GraphvizJS is used to render the visualization in an HTML page)
     :param bgcolor: Background color of the visualization (default: white)
     :param rankdir: Sets the direction of the graph ("LR" for left-to-right; "TB" for top-to-bottom)
-    :param variant_str: Variant of the visualization to be used ("classic" or "dagrejs")
+    :param variant_str: Variant of the visualization to be used ("classic" or "dagrejs" or "bpmnio_auto_layout")
     :param graph_title: Sets the title of the visualization (if provided)
 
     .. code-block:: python3
@@ -530,6 +533,9 @@ def view_bpmn(
         variant = bpmn_visualizer.Variants.CLASSIC
     elif variant_str == "dagrejs":
         variant = bpmn_visualizer.Variants.DAGREJS
+    elif variant_str == "bpmnio_auto_layout":
+        variant = bpmn_visualizer.Variants.BPMNIO_AUTO_LAYOUT
+
     props = _setup_parameters(fmt, bgcolor, rankdir, graph_title)
     gviz = bpmn_visualizer.apply(bpmn_graph, variant=variant, parameters=props)
     bpmn_visualizer.view(gviz, variant=variant)
