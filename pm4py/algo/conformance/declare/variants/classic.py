@@ -2,6 +2,7 @@ from enum import Enum
 from pm4py.objects.log.obj import EventLog
 import pandas as pd
 from typing import Union, Dict, Optional, Any, List
+from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.algo.discovery.declare.templates import *
 from pm4py.util import exec_utils, constants, xes_constants, pandas_utils
 from collections import Counter
@@ -500,7 +501,7 @@ def get_diagnostics_dataframe(
         Parameters.CASE_ID_KEY, parameters, xes_constants.DEFAULT_TRACEID_KEY
     )
 
-    import pandas as pd
+    log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
 
     diagn_stream = []
 
