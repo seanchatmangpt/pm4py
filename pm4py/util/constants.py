@@ -166,6 +166,7 @@ DEFAULT_BUSINESS_HOUR_SLOTS = [
     ((4 * 24 + 7) * 60 * 60, (4 * 24 + 17) * 60 * 60),
 ]
 
+DEFAULT_EMBEDDING_MODEL = get_param_from_env("PM4PY_DEFAULT_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 OPENAI_MAX_LEN = int(get_param_from_env("PM4PY_OPENAI_MAX_LEN", "10000"))
 OPENAI_API_KEY = get_param_from_env("PM4PY_OPENAI_API_KEY", None)
 ANTHROPIC_API_KEY = get_param_from_env("PM4PY_ANTHROPIC_API_KEY", None)
