@@ -498,7 +498,7 @@ def get_diagnostics_dataframe(log, align_output, parameters=None):
         Parameters.CASE_ID_KEY, parameters, DEFAULT_TRACEID_KEY
     )
 
-    import pandas as pd
+    log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
 
     diagn_stream = []
 

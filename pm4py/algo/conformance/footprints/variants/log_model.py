@@ -1,5 +1,6 @@
 from pm4py.util import exec_utils, xes_constants, constants, pandas_utils
 from typing import Optional, Dict, Any, Union, List
+from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.objects.log.obj import EventLog
 import pandas as pd
 
@@ -145,7 +146,7 @@ def get_diagnostics_dataframe(
         Parameters.CASE_ID_KEY, parameters, xes_constants.DEFAULT_TRACEID_KEY
     )
 
-    import pandas as pd
+    log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
 
     diagn_stream = []
 

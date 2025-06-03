@@ -16,6 +16,7 @@ from pm4py.util.pandas_utils import (
 )
 from pm4py.utils import get_properties, __event_log_deprecation_warning
 from pm4py.objects.ocel.obj import OCEL
+from pm4py.utils import __event_log_filtering_level_warning
 import datetime
 
 
@@ -222,7 +223,7 @@ def filter_event_attribute_values(
     log: Union[EventLog, pd.DataFrame],
     attribute_key: str,
     values: Union[Set[str], List[str]],
-    level: str = "case",
+    level: Optional[str] = None,
     retain: bool = True,
     case_id_key: str = "case:concept:name",
 ) -> Union[EventLog, pd.DataFrame]:
@@ -249,6 +250,9 @@ def filter_event_attribute_values(
         )
     """
     __event_log_deprecation_warning(log)
+
+    if level is None:
+        __event_log_filtering_level_warning()
 
     parameters = get_properties(log, case_id_key=case_id_key)
     parameters[constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY] = attribute_key

@@ -1,6 +1,73 @@
 # Changelog of pm4py
 
 
+# pm4py 2.7.19 (2025.06.XX)
+
+### Added
+* 94d4ab12330ba8e62d3ff732e64a5fb88ce91196
+  * LLM-based clustering
+* 56b530e457b59fcd67a02c68b2d8652131111d5d
+  * introducing textual embeddings at the case/event level
+
+### Changed
+* c7dc88ca733241271e7bd88498c4087899bc99c7
+  * improving the extraction of temporal features
+* de4f05b4b7236082c6c47944595f496934742c53
+  * warning users on the filtering level for filtering event logs
+* 67685623663a8f39f72673bdfb3de1a963c94d19
+  * revised Outlook calendar event log extraction
+* 005df4ae5b41de410718bc036c98f55308a0f12d
+  * revised Outlook mail extraction
+* 7062f1d38cda0e86e03ec0dfdc21c9021397e71b
+  * revised Chrome history extraction
+* 9d4b2108ac9eac1e1777ae706e39d12e1581929f
+  * revised Firefox historz extractor
+
+### Deprecated
+
+### Fixed
+* c20c6a070fea14491011845cd79d1dabfe18d5b9
+  * Missing event log conversion in get_diagnostics_dataframe
+* 4059ebe07a2f1d4e3eb0df1b6a3d8eb43993b6de
+  * Missing activity and edge threshold in OC-DFG ELKJS visualization
+
+### Removed
+* df906cb68b144d003beef4e03034bc393bf2fac9
+  * removed extra documentation files
+
+### Other
+
+
+---
+
+# pm4py 2.7.18.1 (2025.05.08)
+
+### Added
+* c02d02d7d146f8760c82ae9cf096ca7832008ab2
+  * example for label replacement in models
+* 0255f91f83ec4f6ff1fcc8a91082746951ac1710
+  * example computation M2M similarities
+
+### Changed
+* 5a661bb3a7498d3cfc5efaac2b4eee8ff1a27864
+  da9aa0cf8e40607570307425567939ab00f08411
+  d410501438c42ddfe945168e628fd3c533b64bc0
+  * Updated examples directory
+* 03964b640a73daaabf79a988d35f46a8f1b6de51
+  * parameter for extensive visit of the state space
+    to traverse invisibles.
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
+### Other
+
+
+---
+
 ## pm4py 2.7.18 (2025.05.05)
 
 ### Added
