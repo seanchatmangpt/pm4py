@@ -107,8 +107,7 @@ def always_after(logs_traces, all_activs, noise_threshold=0):
     traces_with_A = Counter()
     # For each (trace_variant → freq), check if A appears in that variant.
     for trace_variant, freq in logs_traces.items():
-        unique_activities = set(trace_variant)
-        for act in unique_activities:
+        for act in trace_variant:
             traces_with_A[act] += freq
 
     # Next, for each pair (A,B), count how many traces have B after A at least once.
@@ -146,11 +145,10 @@ def always_before(logs_traces, all_activs, noise_threshold=0):
     rel
         List of relations in the log
     """
-    traces_with_B = Counter()
+    traces_with_A = Counter()
     for trace_variant, freq in logs_traces.items():
-        unique_activities = set(trace_variant)
-        for act in unique_activities:
-            traces_with_B[act] += freq
+        for act in trace_variant:
+            traces_with_A[act] += freq
 
     traces_with_A_then_B = Counter()
     for trace_variant, freq in logs_traces.items():
@@ -160,7 +158,7 @@ def always_before(logs_traces, all_activs, noise_threshold=0):
 
     result = set()
     for (A,B), count_AB in traces_with_A_then_B.items():
-        if count_AB >= traces_with_B[B] * (1 - noise_threshold):
+        if count_AB >= traces_with_A[A] * (1 - noise_threshold):
             result.add((A,B))
     return result
 
