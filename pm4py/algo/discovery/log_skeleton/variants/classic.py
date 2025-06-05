@@ -102,21 +102,29 @@ def always_after(logs_traces, all_activs, noise_threshold=0):
     rel
         List of relations in the log
     """
-    ret0 = Counter()
-    for trace in logs_traces:
-        rs = Counter(trace_skel.after(list(trace)))
-        for k in rs:
-            rs[k] = rs[k] * logs_traces[trace]
-        ret0 += rs
-    first_count = Counter()
-    for x, y in ret0.items():
-        first_count[x[0]] += y
-    ret = set(
-        x
-        for x, y in ret0.items()
-        if y >= first_count[x[0]] * (1.0 - noise_threshold)
-    )
-    return ret
+    # logs_traces: Counter mapping each trace‐tuple → frequency
+    # First, for each A, count how many traces have A at all.
+    traces_with_A = Counter()
+    # For each (trace_variant → freq), check if A appears in that variant.
+    for trace_variant, freq in logs_traces.items():
+        for act in trace_variant:
+            traces_with_A[act] += freq
+
+    # Next, for each pair (A,B), count how many traces have B after A at least once.
+    traces_with_A_then_B = Counter()
+    for trace_variant, freq in logs_traces.items():
+        # Build the set of all (A,B) such that B comes after A in this one variant
+        after_pairs = set(trace_skel.after(list(trace_variant)))
+        for (A,B) in after_pairs:
+            traces_with_A_then_B[(A,B)] += freq
+
+    # Finally, keep only those (A,B) with
+    #   traces_with_A_then_B[(A,B)]  >=  traces_with_A[A] * (1 - noise_threshold)
+    result = set()
+    for (A,B), count_AB in traces_with_A_then_B.items():
+        if count_AB >= traces_with_A[A] * (1 - noise_threshold):
+            result.add((A,B))
+    return result
 
 
 def always_before(logs_traces, all_activs, noise_threshold=0):
@@ -137,21 +145,22 @@ def always_before(logs_traces, all_activs, noise_threshold=0):
     rel
         List of relations in the log
     """
-    ret0 = Counter()
-    for trace in logs_traces:
-        rs = Counter(trace_skel.before(list(trace)))
-        for k in rs:
-            rs[k] = rs[k] * logs_traces[trace]
-        ret0 += rs
-    first_count = Counter()
-    for x, y in ret0.items():
-        first_count[x[0]] += y
-    ret = set(
-        x
-        for x, y in ret0.items()
-        if y >= first_count[x[0]] * (1.0 - noise_threshold)
-    )
-    return ret
+    traces_with_A = Counter()
+    for trace_variant, freq in logs_traces.items():
+        for act in trace_variant:
+            traces_with_A[act] += freq
+
+    traces_with_A_then_B = Counter()
+    for trace_variant, freq in logs_traces.items():
+        before_pairs = set(trace_skel.before(list(trace_variant)))
+        for (A,B) in before_pairs:
+            traces_with_A_then_B[(A,B)] += freq
+
+    result = set()
+    for (A,B), count_AB in traces_with_A_then_B.items():
+        if count_AB >= traces_with_A[A] * (1 - noise_threshold):
+            result.add((A,B))
+    return result
 
 
 def never_together(logs_traces, all_activs, len_log, noise_threshold=0):
