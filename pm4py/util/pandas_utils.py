@@ -523,3 +523,63 @@ def check_pandas_dataframe_columns(
                  xes_constants.DEFAULT_TIMESTAMP_KEY]))) < 3:
         raise Exception(
             "please format your dataframe accordingly! df = pm4py.format_dataframe(df, case_id='<name of the case ID column>', activity_key='<name of the activity column>', timestamp_key='<name of the timestamp column>')")"""
+
+
+def get_pivot_timestamp_distribution(
+        dataframe: pd.DataFrame,
+        frequency_alias="M",
+        case_id_col="case:concept:name",
+        timestamp_col="time:timestamp"
+) -> pd.DataFrame:
+    """
+    Creates a pivot table showing the distribution of timestamp occurrences for each case,
+    grouped by a specified time frequency.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        The input event log as a pandas DataFrame, with at least case and timestamp columns.
+    frequency_alias : str, default 'M'
+        The frequency at which to group (bin) the timestamps. This value should be a valid
+        pandas frequency alias, such as:
+            - 'A' or 'Y'   : Yearly (e.g., 2024)
+            - 'Q'          : Quarterly (e.g., 2024Q2)
+            - 'M'          : Monthly (e.g., 2024-06)
+            - 'W'          : Weekly (e.g., 2024-06-17/2024-06-23)
+            - 'D'          : Daily (e.g., 2024-06-18)
+            - 'H'          : Hourly (e.g., 2024-06-18 15:00)
+            - 'T', 'min'   : Minutely (e.g., 2024-06-18 15:30)
+            - 'S'          : Secondly (e.g., 2024-06-18 15:30:00)
+        For a complete list, see:
+        https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+    case_id_col : str, default 'case:concept:name'
+        The name of the column identifying each case.
+    timestamp_col : str, default 'time:timestamp'
+        The name of the column containing the event timestamps (must be pandas datetime dtype).
+
+    Returns
+    -------
+    pd.DataFrame
+        A pivot table where each row represents a case, columns represent time bins (according
+        to the frequency), and values are the counts of events in each bin.
+
+    Example
+    -------
+    get_pivot_timestamp_distribution(df, frequency_alias='D')
+    """
+    # Create column for binning
+    dataframe["@@binning"] = dataframe[timestamp_col].dt.to_period(frequency_alias).astype(str)
+
+    # Pivot table: cases as rows, yearmonths as columns, counts as values
+    pivot = dataframe.pivot_table(
+        index=case_id_col,
+        columns="@@binning",
+        values=timestamp_col,
+        aggfunc="count",
+        fill_value=0
+    )
+
+    pivot = pivot.reindex(sorted(pivot.columns), axis=1).reset_index()
+    pivot.columns = [x if x == case_id_col else "@@evcount_"+x for x in pivot.columns]
+
+    return pivot
