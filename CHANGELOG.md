@@ -21,7 +21,11 @@
 * 7062f1d38cda0e86e03ec0dfdc21c9021397e71b
   * revised Chrome history extraction
 * 9d4b2108ac9eac1e1777ae706e39d12e1581929f
-  * revised Firefox historz extractor
+  * revised Firefox history extractor
+* 8efcf9ea8575b3098e0e69a8d663d6ce66fb470c
+  * Pivot table for temporal distribution (+ feature table)
+* 619145a15cb9a584e3e80bbc91b84e9656fc2d0a
+  * partial translation filters from Pandas to Polars LazyFrame
 
 ### Deprecated
 
@@ -30,6 +34,8 @@
   * Missing event log conversion in get_diagnostics_dataframe
 * 4059ebe07a2f1d4e3eb0df1b6a3d8eb43993b6de
   * Missing activity and edge threshold in OC-DFG ELKJS visualization
+* 6601a9745c4d9fffa3fc0b268de4f9772a32b192
+  * Timeframe filter sampling is revised
 
 ### Removed
 * df906cb68b144d003beef4e03034bc393bf2fac9
