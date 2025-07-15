@@ -185,7 +185,7 @@ def extract_features_dataframe(
     timestamp_key: str = "time:timestamp",
     case_id_key: Optional[str] = None,
     resource_key: str = "org:resource",
-    include_case_id: bool = False,
+    include_case_id: bool = False, count_occurrences: bool = False,
     **kwargs
 ) -> pd.DataFrame:
     """
@@ -240,6 +240,7 @@ def extract_features_dataframe(
     parameters["num_ev_attr"] = num_ev_attr or []
     parameters["str_evsucc_attr"] = str_evsucc_attr or []
     parameters["add_case_identifier_column"] = include_case_id
+    parameters["count_occurrences"] = count_occurrences
 
     from pm4py.algo.transformation.log_to_features import (
         algorithm as log_to_features,
