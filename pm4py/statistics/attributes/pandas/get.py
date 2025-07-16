@@ -203,7 +203,7 @@ def get_kde_numeric_attribute(
     red_df = df.dropna(subset=[attribute])
     if len(red_df) > max_no_of_points_to_sample:
         red_df = red_df.sample(n=max_no_of_points_to_sample)
-    values = list(red_df[attribute])
+    values = sorted(list(red_df[attribute]))
 
     return attributes_common.get_kde_numeric_attribute(
         values, parameters=parameters
@@ -270,7 +270,7 @@ def get_kde_date_attribute(
     red_df = df.dropna(subset=[attribute])
     if len(red_df) > max_no_of_points_to_sample:
         red_df = red_df.sample(n=max_no_of_points_to_sample)
-    date_values = list(red_df[attribute])
+    date_values = sorted(list(red_df[attribute]))
     return attributes_common.get_kde_date_attribute(
         date_values, parameters=parameters
     )
