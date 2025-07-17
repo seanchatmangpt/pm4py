@@ -180,7 +180,7 @@ def get_kde_date_attribute(values, parameters=None):
             Parameters.POINT_TO_SAMPLE, parameters, 400
         )
 
-        red_values = pick_chosen_points_list(points_to_sample, values)
+        red_values = pick_chosen_points_list(points_to_sample, values, include_extremes=True)
         int_values = sorted(
             [x.replace(tzinfo=None).timestamp() for x in red_values]
         )

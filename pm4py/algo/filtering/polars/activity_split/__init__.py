@@ -1,0 +1,1 @@
+from pm4py.algo.filtering.polars.activity_split import activity_split_filter

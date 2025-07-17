@@ -1,0 +1,1 @@
+from pm4py.algo.filtering.polars.consecutive_act_case_grouping import consecutive_act_case_grouping_filter

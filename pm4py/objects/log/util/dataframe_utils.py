@@ -37,6 +37,7 @@ class Parameters(Enum):
     USE_EXTREMES_TIMESTAMP = "use_extremes_timestamp"
     ADD_CASE_IDENTIFIER_COLUMN = "add_case_identifier_column"
     DETERMINISTIC = "deterministic"
+    COUNT_OCCURRENCES = "count_occurrences"
 
 
 def insert_partitioning(df, num_partitions, parameters=None):
@@ -375,6 +376,7 @@ def select_string_column(
     fea_df: pd.DataFrame,
     col: str,
     case_id_key=constants.CASE_CONCEPT_NAME,
+    count_occurrences=False,
 ) -> pd.DataFrame:
     """
     Extract N columns (for N different attribute values; hotencoding) for the features dataframe for the given string attribute
@@ -389,6 +391,9 @@ def select_string_column(
         String column
     case_id_key
         Case ID key
+    count_occurrences
+        If True, count the number of occurrences of the attribute value in each case.
+        If False (default), use binary encoding (1 if present, 0 if not present)
 
     Returns
     --------------
@@ -398,9 +403,6 @@ def select_string_column(
     vals = pandas_utils.format_unique(df[col].unique())
     for val in vals:
         if val is not None:
-            filt_df_cases = pandas_utils.format_unique(
-                df[df[col] == val][case_id_key].unique()
-            )
             new_col = (
                 col
                 + "_"
@@ -408,8 +410,23 @@ def select_string_column(
                 .decode("ascii")
                 .replace(" ", "")
             )
-            fea_df[new_col] = fea_df[case_id_key].isin(filt_df_cases)
-            fea_df[new_col] = fea_df[new_col].astype(np.float32)
+            
+            if count_occurrences:
+                # Count the number of occurrences of this value per case
+                counts = df[df[col] == val].groupby(case_id_key).size().reset_index(name='count')
+                fea_df = fea_df.merge(
+                    counts.rename(columns={'count': new_col}),
+                    on=case_id_key,
+                    how="left"
+                )
+                fea_df[new_col] = fea_df[new_col].fillna(0).astype(np.float32)
+            else:
+                # Binary encoding (original behavior)
+                filt_df_cases = pandas_utils.format_unique(
+                    df[df[col] == val][case_id_key].unique()
+                )
+                fea_df[new_col] = fea_df[case_id_key].isin(filt_df_cases)
+                fea_df[new_col] = fea_df[new_col].astype(np.float32)
     return fea_df
 
 
@@ -430,6 +447,7 @@ def get_features_df(
     parameters
         Parameters of the algorithm, including:
         - Parameters.CASE_ID_KEY: the case ID
+        - Parameters.COUNT_OCCURRENCES: if True, count occurrences of string attributes instead of binary encoding
 
     Returns
     ---------------
@@ -445,6 +463,9 @@ def get_features_df(
     add_case_identifier_column = exec_utils.get_param_value(
         Parameters.ADD_CASE_IDENTIFIER_COLUMN, parameters, False
     )
+    count_occurrences = exec_utils.get_param_value(
+        Parameters.COUNT_OCCURRENCES, parameters, False
+    )
 
     fea_df = pandas_utils.instantiate_dataframe(
         {
@@ -456,7 +477,7 @@ def get_features_df(
     for col in list_columns:
         if "obj" in str(df[col].dtype) or "str" in str(df[col].dtype):
             fea_df = select_string_column(
-                df, fea_df, col, case_id_key=case_id_key
+                df, fea_df, col, case_id_key=case_id_key, count_occurrences=count_occurrences
             )
         elif "float" in str(df[col].dtype) or "int" in str(df[col].dtype):
             fea_df = select_number_column(

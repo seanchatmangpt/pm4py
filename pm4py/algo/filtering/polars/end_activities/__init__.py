@@ -1,0 +1,1 @@
+from pm4py.algo.filtering.polars.end_activities import end_activities_filter
