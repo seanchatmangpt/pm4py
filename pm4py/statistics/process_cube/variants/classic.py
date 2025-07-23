@@ -72,99 +72,140 @@ def apply(
     x_bins_param = exec_utils.get_param_value(Parameters.X_BINS, parameters, None)
     y_bins_param = exec_utils.get_param_value(Parameters.Y_BINS, parameters, None)
 
-    df = feature_table.copy()
+    # Work with a view instead of copy when possible
+    df = feature_table
+    
+    # Pre-compute column lists and masks for better performance
+    numeric_x = x_col in df.columns
+    numeric_y = y_col in df.columns
+    
+    if not numeric_x:
+        x_prefix_cols = [c for c in df.columns if c.startswith(x_col)]
+    if not numeric_y:
+        y_prefix_cols = [c for c in df.columns if c.startswith(y_col)]
+
     # ------------------------------------------------------
-    # 1) Determine if X is numeric-based or prefix-based
+    # Handle X dimension binning
     # ------------------------------------------------------
-    if x_col in df.columns:
-        numeric_x = True
+    if numeric_x:
         # Use manual bins if provided, else auto-generate equal-width bins
         if x_bins_param is not None:
             x_bins = sorted(x_bins_param)
         else:
             x_min, x_max = df[x_col].min(), df[x_col].max()
             x_bins = np.linspace(x_min, x_max, max_divisions_x + 1)
-            print(x_bins)
-        df["__x_bin_tmp__"] = pd.cut(df[x_col], bins=x_bins, include_lowest=True)
+        
+        # Create binned column directly without temporary column
+        x_binned = pd.cut(df[x_col], bins=x_bins, include_lowest=True)
+        x_valid_mask = pd.notna(x_binned)
     else:
-        numeric_x = False
-        x_prefix_cols = [c for c in df.columns if c.startswith(x_col)]
+        # Pre-filter and vectorize prefix-based column selection
+        x_prefix_data = df[x_prefix_cols].fillna(0)
+        x_valid_cols_mask = x_prefix_data >= 1
+        x_valid_mask = x_valid_cols_mask.any(axis=1)
 
     # ------------------------------------------------------
-    # 2) Determine if Y is numeric-based or prefix-based
+    # Handle Y dimension binning
     # ------------------------------------------------------
-    if y_col in df.columns:
-        numeric_y = True
+    if numeric_y:
         if y_bins_param is not None:
             y_bins = sorted(y_bins_param)
         else:
             y_min, y_max = df[y_col].min(), df[y_col].max()
             y_bins = np.linspace(y_min, y_max, max_divisions_y + 1)
-        df["__y_bin_tmp__"] = pd.cut(df[y_col], bins=y_bins, include_lowest=True)
+        
+        y_binned = pd.cut(df[y_col], bins=y_bins, include_lowest=True)
+        y_valid_mask = pd.notna(y_binned)
     else:
-        numeric_y = False
-        y_prefix_cols = [c for c in df.columns if c.startswith(y_col)]
+        y_prefix_data = df[y_prefix_cols].fillna(0)
+        y_valid_cols_mask = y_prefix_data >= 1
+        y_valid_mask = y_valid_cols_mask.any(axis=1)
 
-    # Build intermediate records
-    records = []
-    for _, row in df.iterrows():
-        case_id = row["case:concept:name"]
-        agg_value = row[agg_col]
-
-        # X bins assignment
-        if numeric_x:
-            xb = row["__x_bin_tmp__"]
-            if pd.isna(xb):
-                continue
-            x_bin_list = [xb]
-        else:
-            x_bin_list = [col for col in x_prefix_cols if pd.notna(row[col]) and row[col] >= 1]
-            if not x_bin_list:
-                continue
-
-        # Y bins assignment
-        if numeric_y:
-            yb = row["__y_bin_tmp__"]
-            if pd.isna(yb):
-                continue
-            y_bin_list = [yb]
-        else:
-            y_bin_list = [col for col in y_prefix_cols if pd.notna(row[col]) and row[col] >= 1]
-            if not y_bin_list:
-                continue
-
-        # Cross-product
-        for xb in x_bin_list:
-            for yb in y_bin_list:
-                records.append((case_id, xb, yb, agg_value))
-
-    temp_df = pd.DataFrame(records, columns=["case:concept:name", "x_bin", "y_bin", agg_col])
-    if temp_df.empty:
+    # Combined validity mask
+    valid_mask = x_valid_mask & y_valid_mask
+    if not valid_mask.any():
         return pd.DataFrame(), {}
 
-    # Aggregation
-    agg_df = temp_df.groupby(["x_bin", "y_bin"])[agg_col].agg(agg_fn).reset_index()
-    cases_df = temp_df.groupby(["x_bin", "y_bin"])['case:concept:name'] \
-        .agg(lambda x: set(x)).reset_index().rename(columns={"case:concept:name": "case_set"})
-    merged_df = pd.merge(agg_df, cases_df, on=["x_bin", "y_bin"], how="outer")
+    # Filter data to valid rows only
+    valid_df = df[valid_mask]
+    case_ids = valid_df["case:concept:name"].values
+    agg_values = valid_df[agg_col].values
 
-    # Pivot
-    pivot_df = merged_df.pivot(index="x_bin", columns="y_bin", values=agg_col)
+    # Build records more efficiently using vectorized operations
+    records = []
+    
+    if numeric_x and numeric_y:
+        # Both numeric - simplest case
+        x_bins_valid = x_binned[valid_mask]
+        y_bins_valid = y_binned[valid_mask]
+        
+        for i, (case_id, agg_val, x_bin, y_bin) in enumerate(zip(case_ids, agg_values, x_bins_valid, y_bins_valid)):
+            records.append((case_id, x_bin, y_bin, agg_val))
+            
+    elif numeric_x and not numeric_y:
+        # X numeric, Y prefix-based
+        x_bins_valid = x_binned[valid_mask]
+        y_prefix_valid = y_prefix_data[valid_mask]
+        y_valid_cols_valid = y_valid_cols_mask[valid_mask]
+        
+        for i, (case_id, agg_val, x_bin) in enumerate(zip(case_ids, agg_values, x_bins_valid)):
+            y_cols = [col for j, col in enumerate(y_prefix_cols) if y_valid_cols_valid.iloc[i, j]]
+            for y_col_name in y_cols:
+                records.append((case_id, x_bin, y_col_name, agg_val))
+                
+    elif not numeric_x and numeric_y:
+        # X prefix-based, Y numeric
+        x_prefix_valid = x_prefix_data[valid_mask]
+        x_valid_cols_valid = x_valid_cols_mask[valid_mask]
+        y_bins_valid = y_binned[valid_mask]
+        
+        for i, (case_id, agg_val, y_bin) in enumerate(zip(case_ids, agg_values, y_bins_valid)):
+            x_cols = [col for j, col in enumerate(x_prefix_cols) if x_valid_cols_valid.iloc[i, j]]
+            for x_col_name in x_cols:
+                records.append((case_id, x_col_name, y_bin, agg_val))
+                
+    else:
+        # Both prefix-based
+        x_prefix_valid = x_prefix_data[valid_mask]
+        x_valid_cols_valid = x_valid_cols_mask[valid_mask]
+        y_prefix_valid = y_prefix_data[valid_mask]
+        y_valid_cols_valid = y_valid_cols_mask[valid_mask]
+        
+        for i, (case_id, agg_val) in enumerate(zip(case_ids, agg_values)):
+            x_cols = [col for j, col in enumerate(x_prefix_cols) if x_valid_cols_valid.iloc[i, j]]
+            y_cols = [col for j, col in enumerate(y_prefix_cols) if y_valid_cols_valid.iloc[i, j]]
+            
+            for x_col_name in x_cols:
+                for y_col_name in y_cols:
+                    records.append((case_id, x_col_name, y_col_name, agg_val))
+
+    if not records:
+        return pd.DataFrame(), {}
+
+    # Create DataFrame more efficiently
+    temp_df = pd.DataFrame(records, columns=["case:concept:name", "x_bin", "y_bin", agg_col])
+
+    # Optimized aggregation using single groupby operation
+    grouped = temp_df.groupby(["x_bin", "y_bin"])
+    agg_result = grouped.agg({
+        agg_col: agg_fn,
+        "case:concept:name": lambda x: set(x)
+    }).reset_index()
+    agg_result.rename(columns={"case:concept:name": "case_set"}, inplace=True)
+
+    # Pivot table creation
+    pivot_df = agg_result.pivot(index="x_bin", columns="y_bin", values=agg_col)
     pivot_df = pivot_df.dropna(how="all", axis=0).dropna(how="all", axis=1)
 
-    # Build cell-case mapping
+    # Build cell-case mapping more efficiently
     valid_x = set(pivot_df.index)
     valid_y = set(pivot_df.columns)
+    
+    # Filter case data and create dictionary in one step
     cell_case_dict = {
-        (row.x_bin, row.y_bin): row.case_set
-        for row in cases_df.itertuples()
-        if row.x_bin in valid_x and row.y_bin in valid_y
+        (row["x_bin"], row["y_bin"]): row["case_set"]
+        for _, row in agg_result.iterrows()
+        if row["x_bin"] in valid_x and row["y_bin"] in valid_y
     }
-
-    # Cleanup
-    if numeric_x:
-        df.drop(columns=["__x_bin_tmp__"], inplace=True)
-    if numeric_y:
-        df.drop(columns=["__y_bin_tmp__"], inplace=True)
 
     return pivot_df, cell_case_dict
