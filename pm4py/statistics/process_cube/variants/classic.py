@@ -131,81 +131,190 @@ def apply(
     case_ids = valid_df["case:concept:name"].values
     agg_values = valid_df[agg_col].values
 
-    # Build records more efficiently using vectorized operations
-    records = []
-    
+    # Build DataFrame directly using vectorized operations - much faster than building records list
     if numeric_x and numeric_y:
-        # Both numeric - simplest case
+        # Both numeric - create DataFrame directly
         x_bins_valid = x_binned[valid_mask]
         y_bins_valid = y_binned[valid_mask]
         
-        for i, (case_id, agg_val, x_bin, y_bin) in enumerate(zip(case_ids, agg_values, x_bins_valid, y_bins_valid)):
-            records.append((case_id, x_bin, y_bin, agg_val))
-            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids,
+            "x_bin": x_bins_valid,
+            "y_bin": y_bins_valid,
+            agg_col: agg_values
+        })
+        
     elif numeric_x and not numeric_y:
-        # X numeric, Y prefix-based
+        # X numeric, Y prefix-based - use more efficient vectorized approach
         x_bins_valid = x_binned[valid_mask]
-        y_prefix_valid = y_prefix_data[valid_mask]
         y_valid_cols_valid = y_valid_cols_mask[valid_mask]
         
-        for i, (case_id, agg_val, x_bin) in enumerate(zip(case_ids, agg_values, x_bins_valid)):
-            y_cols = [col for j, col in enumerate(y_prefix_cols) if y_valid_cols_valid.iloc[i, j]]
-            for y_col_name in y_cols:
-                records.append((case_id, x_bin, y_col_name, agg_val))
+        # Use numpy operations for much faster processing
+        y_valid_array = y_valid_cols_valid.values
+        row_counts = np.sum(y_valid_array, axis=1)
+        total_rows = np.sum(row_counts)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for better performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_bins_expanded = np.empty(total_rows, dtype=object)
+        y_cols_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Fill arrays using vectorized operations
+        idx = 0
+        y_prefix_cols_array = np.array(y_prefix_cols)
+        
+        for i in range(len(case_ids)):
+            if row_counts[i] > 0:
+                valid_y_indices = np.where(y_valid_array[i])[0]
+                n_valid = len(valid_y_indices)
                 
+                case_ids_expanded[idx:idx+n_valid] = case_ids[i]
+                x_bins_expanded[idx:idx+n_valid] = x_bins_valid.iloc[i]
+                y_cols_expanded[idx:idx+n_valid] = y_prefix_cols_array[valid_y_indices]
+                agg_values_expanded[idx:idx+n_valid] = agg_values[i]
+                idx += n_valid
+            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_bins_expanded,
+            "y_bin": y_cols_expanded,
+            agg_col: agg_values_expanded
+        })
+        
     elif not numeric_x and numeric_y:
-        # X prefix-based, Y numeric
-        x_prefix_valid = x_prefix_data[valid_mask]
+        # X prefix-based, Y numeric - use more efficient vectorized approach
         x_valid_cols_valid = x_valid_cols_mask[valid_mask]
         y_bins_valid = y_binned[valid_mask]
         
-        for i, (case_id, agg_val, y_bin) in enumerate(zip(case_ids, agg_values, y_bins_valid)):
-            x_cols = [col for j, col in enumerate(x_prefix_cols) if x_valid_cols_valid.iloc[i, j]]
-            for x_col_name in x_cols:
-                records.append((case_id, x_col_name, y_bin, agg_val))
+        # Use numpy operations for much faster processing
+        x_valid_array = x_valid_cols_valid.values
+        row_counts = np.sum(x_valid_array, axis=1)
+        total_rows = np.sum(row_counts)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for better performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_cols_expanded = np.empty(total_rows, dtype=object)
+        y_bins_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Fill arrays using vectorized operations
+        idx = 0
+        x_prefix_cols_array = np.array(x_prefix_cols)
+        
+        for i in range(len(case_ids)):
+            if row_counts[i] > 0:
+                valid_x_indices = np.where(x_valid_array[i])[0]
+                n_valid = len(valid_x_indices)
                 
+                case_ids_expanded[idx:idx+n_valid] = case_ids[i]
+                x_cols_expanded[idx:idx+n_valid] = x_prefix_cols_array[valid_x_indices]
+                y_bins_expanded[idx:idx+n_valid] = y_bins_valid.iloc[i]
+                agg_values_expanded[idx:idx+n_valid] = agg_values[i]
+                idx += n_valid
+            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_cols_expanded,
+            "y_bin": y_bins_expanded,
+            agg_col: agg_values_expanded
+        })
+        
     else:
-        # Both prefix-based
-        x_prefix_valid = x_prefix_data[valid_mask]
+        # Both prefix-based - most complex case, use highly optimized vectorized approach
         x_valid_cols_valid = x_valid_cols_mask[valid_mask]
-        y_prefix_valid = y_prefix_data[valid_mask]
         y_valid_cols_valid = y_valid_cols_mask[valid_mask]
         
-        for i, (case_id, agg_val) in enumerate(zip(case_ids, agg_values)):
-            x_cols = [col for j, col in enumerate(x_prefix_cols) if x_valid_cols_valid.iloc[i, j]]
-            y_cols = [col for j, col in enumerate(y_prefix_cols) if y_valid_cols_valid.iloc[i, j]]
+        # Use numpy operations for much faster processing
+        x_valid_array = x_valid_cols_valid.values
+        y_valid_array = y_valid_cols_valid.values
+        
+        # Calculate total number of combinations for pre-allocation
+        x_row_counts = np.sum(x_valid_array, axis=1)
+        y_row_counts = np.sum(y_valid_array, axis=1)
+        row_combinations = x_row_counts * y_row_counts
+        total_rows = np.sum(row_combinations)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for maximum performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_cols_expanded = np.empty(total_rows, dtype=object)
+        y_cols_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Use vectorized operations with pre-converted arrays
+        x_prefix_cols_array = np.array(x_prefix_cols)
+        y_prefix_cols_array = np.array(y_prefix_cols)
+        
+        idx = 0
+        for i in range(len(case_ids)):
+            if row_combinations[i] > 0:
+                valid_x_indices = np.where(x_valid_array[i])[0]
+                valid_y_indices = np.where(y_valid_array[i])[0]
+                
+                # Create cartesian product using numpy operations
+                x_mesh, y_mesh = np.meshgrid(valid_x_indices, valid_y_indices, indexing='ij')
+                x_flat = x_mesh.flatten()
+                y_flat = y_mesh.flatten()
+                n_combinations = len(x_flat)
+                
+                # Fill arrays efficiently
+                case_ids_expanded[idx:idx+n_combinations] = case_ids[i]
+                x_cols_expanded[idx:idx+n_combinations] = x_prefix_cols_array[x_flat]
+                y_cols_expanded[idx:idx+n_combinations] = y_prefix_cols_array[y_flat]
+                agg_values_expanded[idx:idx+n_combinations] = agg_values[i]
+                idx += n_combinations
             
-            for x_col_name in x_cols:
-                for y_col_name in y_cols:
-                    records.append((case_id, x_col_name, y_col_name, agg_val))
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_cols_expanded,
+            "y_bin": y_cols_expanded,
+            agg_col: agg_values_expanded
+        })
 
-    if not records:
+    if temp_df.empty:
         return pd.DataFrame(), {}
 
-    # Create DataFrame more efficiently
-    temp_df = pd.DataFrame(records, columns=["case:concept:name", "x_bin", "y_bin", agg_col])
+    # Optimized aggregation using more efficient groupby operations
+    grouped = temp_df.groupby(["x_bin", "y_bin"], sort=False)
+    
+    # Compute aggregations separately for better performance
+    agg_values_result = grouped[agg_col].agg(agg_fn).reset_index()
+    case_sets_result = grouped["case:concept:name"].apply(lambda x: set(x)).reset_index()
+    case_sets_result.rename(columns={"case:concept:name": "case_set"}, inplace=True)
+    
+    # Merge results efficiently
+    agg_result = pd.merge(agg_values_result, case_sets_result, on=["x_bin", "y_bin"])
 
-    # Optimized aggregation using single groupby operation
-    grouped = temp_df.groupby(["x_bin", "y_bin"])
-    agg_result = grouped.agg({
-        agg_col: agg_fn,
-        "case:concept:name": lambda x: set(x)
-    }).reset_index()
-    agg_result.rename(columns={"case:concept:name": "case_set"}, inplace=True)
-
-    # Pivot table creation
-    pivot_df = agg_result.pivot(index="x_bin", columns="y_bin", values=agg_col)
+    # Use pivot_table directly for better performance and handling of missing values
+    pivot_df = temp_df.pivot_table(
+        index="x_bin", 
+        columns="y_bin", 
+        values=agg_col, 
+        aggfunc=agg_fn,
+        dropna=False
+    )
+    
+    # Drop completely empty rows/columns more efficiently
     pivot_df = pivot_df.dropna(how="all", axis=0).dropna(how="all", axis=1)
 
-    # Build cell-case mapping more efficiently
-    valid_x = set(pivot_df.index)
-    valid_y = set(pivot_df.columns)
+    # Build cell-case mapping using vectorized operations
+    valid_x_mask = agg_result["x_bin"].isin(pivot_df.index)
+    valid_y_mask = agg_result["y_bin"].isin(pivot_df.columns)
+    valid_mask = valid_x_mask & valid_y_mask
     
-    # Filter case data and create dictionary in one step
-    cell_case_dict = {
-        (row["x_bin"], row["y_bin"]): row["case_set"]
-        for _, row in agg_result.iterrows()
-        if row["x_bin"] in valid_x and row["y_bin"] in valid_y
-    }
+    valid_agg_result = agg_result[valid_mask]
+    cell_case_dict = dict(zip(
+        zip(valid_agg_result["x_bin"], valid_agg_result["y_bin"]),
+        valid_agg_result["case_set"]
+    ))
 
     return pivot_df, cell_case_dict
