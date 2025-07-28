@@ -90,10 +90,16 @@ def apply(
     if numeric_x:
         # Use manual bins if provided, else auto-generate equal-width bins
         if x_bins_param is not None:
-            x_bins = sorted(x_bins_param)
+            x_bins = sorted(list(set(x_bins_param)))  # Remove duplicates and sort
         else:
             x_min, x_max = df[x_col].min(), df[x_col].max()
-            x_bins = np.linspace(x_min, x_max, max_divisions_x + 1)
+            if x_min == x_max:
+                # Handle case where all values are the same
+                x_bins = [x_min - 0.5, x_max + 0.5]
+            else:
+                x_bins = np.linspace(x_min, x_max, max_divisions_x + 1)
+                # Ensure bins are unique
+                x_bins = np.unique(x_bins)
         
         # Create binned column directly without temporary column
         x_binned = pd.cut(df[x_col], bins=x_bins, include_lowest=True)
@@ -109,10 +115,16 @@ def apply(
     # ------------------------------------------------------
     if numeric_y:
         if y_bins_param is not None:
-            y_bins = sorted(y_bins_param)
+            y_bins = sorted(list(set(y_bins_param)))  # Remove duplicates and sort
         else:
             y_min, y_max = df[y_col].min(), df[y_col].max()
-            y_bins = np.linspace(y_min, y_max, max_divisions_y + 1)
+            if y_min == y_max:
+                # Handle case where all values are the same
+                y_bins = [y_min - 0.5, y_max + 0.5]
+            else:
+                y_bins = np.linspace(y_min, y_max, max_divisions_y + 1)
+                # Ensure bins are unique
+                y_bins = np.unique(y_bins)
         
         y_binned = pd.cut(df[y_col], bins=y_bins, include_lowest=True)
         y_valid_mask = pd.notna(y_binned)
