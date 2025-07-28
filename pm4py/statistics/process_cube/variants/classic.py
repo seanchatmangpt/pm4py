@@ -72,99 +72,261 @@ def apply(
     x_bins_param = exec_utils.get_param_value(Parameters.X_BINS, parameters, None)
     y_bins_param = exec_utils.get_param_value(Parameters.Y_BINS, parameters, None)
 
-    df = feature_table.copy()
-    # ------------------------------------------------------
-    # 1) Determine if X is numeric-based or prefix-based
-    # ------------------------------------------------------
-    if x_col in df.columns:
-        numeric_x = True
-        # Use manual bins if provided, else auto-generate equal-width bins
-        if x_bins_param is not None:
-            x_bins = sorted(x_bins_param)
-        else:
-            x_min, x_max = df[x_col].min(), df[x_col].max()
-            x_bins = np.linspace(x_min, x_max, max_divisions_x + 1)
-            print(x_bins)
-        df["__x_bin_tmp__"] = pd.cut(df[x_col], bins=x_bins, include_lowest=True)
-    else:
-        numeric_x = False
+    # Work with a view instead of copy when possible
+    df = feature_table
+    
+    # Pre-compute column lists and masks for better performance
+    numeric_x = x_col in df.columns
+    numeric_y = y_col in df.columns
+    
+    if not numeric_x:
         x_prefix_cols = [c for c in df.columns if c.startswith(x_col)]
-
-    # ------------------------------------------------------
-    # 2) Determine if Y is numeric-based or prefix-based
-    # ------------------------------------------------------
-    if y_col in df.columns:
-        numeric_y = True
-        if y_bins_param is not None:
-            y_bins = sorted(y_bins_param)
-        else:
-            y_min, y_max = df[y_col].min(), df[y_col].max()
-            y_bins = np.linspace(y_min, y_max, max_divisions_y + 1)
-        df["__y_bin_tmp__"] = pd.cut(df[y_col], bins=y_bins, include_lowest=True)
-    else:
-        numeric_y = False
+    if not numeric_y:
         y_prefix_cols = [c for c in df.columns if c.startswith(y_col)]
 
-    # Build intermediate records
-    records = []
-    for _, row in df.iterrows():
-        case_id = row["case:concept:name"]
-        agg_value = row[agg_col]
-
-        # X bins assignment
-        if numeric_x:
-            xb = row["__x_bin_tmp__"]
-            if pd.isna(xb):
-                continue
-            x_bin_list = [xb]
+    # ------------------------------------------------------
+    # Handle X dimension binning
+    # ------------------------------------------------------
+    if numeric_x:
+        # Use manual bins if provided, else auto-generate equal-width bins
+        if x_bins_param is not None:
+            x_bins = sorted(list(set(x_bins_param)))  # Remove duplicates and sort
         else:
-            x_bin_list = [col for col in x_prefix_cols if pd.notna(row[col]) and row[col] >= 1]
-            if not x_bin_list:
-                continue
+            x_min, x_max = df[x_col].min(), df[x_col].max()
+            if x_min == x_max:
+                # Handle case where all values are the same
+                x_bins = [x_min - 0.5, x_max + 0.5]
+            else:
+                x_bins = np.linspace(x_min, x_max, max_divisions_x + 1)
+                # Ensure bins are unique
+                x_bins = np.unique(x_bins)
+        
+        # Create binned column directly without temporary column
+        x_binned = pd.cut(df[x_col], bins=x_bins, include_lowest=True)
+        x_valid_mask = pd.notna(x_binned)
+    else:
+        # Pre-filter and vectorize prefix-based column selection
+        x_prefix_data = df[x_prefix_cols].fillna(0)
+        x_valid_cols_mask = x_prefix_data >= 1
+        x_valid_mask = x_valid_cols_mask.any(axis=1)
 
-        # Y bins assignment
-        if numeric_y:
-            yb = row["__y_bin_tmp__"]
-            if pd.isna(yb):
-                continue
-            y_bin_list = [yb]
+    # ------------------------------------------------------
+    # Handle Y dimension binning
+    # ------------------------------------------------------
+    if numeric_y:
+        if y_bins_param is not None:
+            y_bins = sorted(list(set(y_bins_param)))  # Remove duplicates and sort
         else:
-            y_bin_list = [col for col in y_prefix_cols if pd.notna(row[col]) and row[col] >= 1]
-            if not y_bin_list:
-                continue
+            y_min, y_max = df[y_col].min(), df[y_col].max()
+            if y_min == y_max:
+                # Handle case where all values are the same
+                y_bins = [y_min - 0.5, y_max + 0.5]
+            else:
+                y_bins = np.linspace(y_min, y_max, max_divisions_y + 1)
+                # Ensure bins are unique
+                y_bins = np.unique(y_bins)
+        
+        y_binned = pd.cut(df[y_col], bins=y_bins, include_lowest=True)
+        y_valid_mask = pd.notna(y_binned)
+    else:
+        y_prefix_data = df[y_prefix_cols].fillna(0)
+        y_valid_cols_mask = y_prefix_data >= 1
+        y_valid_mask = y_valid_cols_mask.any(axis=1)
 
-        # Cross-product
-        for xb in x_bin_list:
-            for yb in y_bin_list:
-                records.append((case_id, xb, yb, agg_value))
+    # Combined validity mask
+    valid_mask = x_valid_mask & y_valid_mask
+    if not valid_mask.any():
+        return pd.DataFrame(), {}
 
-    temp_df = pd.DataFrame(records, columns=["case:concept:name", "x_bin", "y_bin", agg_col])
+    # Filter data to valid rows only
+    valid_df = df[valid_mask]
+    case_ids = valid_df["case:concept:name"].values
+    agg_values = valid_df[agg_col].values
+
+    # Build DataFrame directly using vectorized operations - much faster than building records list
+    if numeric_x and numeric_y:
+        # Both numeric - create DataFrame directly
+        x_bins_valid = x_binned[valid_mask]
+        y_bins_valid = y_binned[valid_mask]
+        
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids,
+            "x_bin": x_bins_valid,
+            "y_bin": y_bins_valid,
+            agg_col: agg_values
+        })
+        
+    elif numeric_x and not numeric_y:
+        # X numeric, Y prefix-based - use more efficient vectorized approach
+        x_bins_valid = x_binned[valid_mask]
+        y_valid_cols_valid = y_valid_cols_mask[valid_mask]
+        
+        # Use numpy operations for much faster processing
+        y_valid_array = y_valid_cols_valid.values
+        row_counts = np.sum(y_valid_array, axis=1)
+        total_rows = np.sum(row_counts)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for better performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_bins_expanded = np.empty(total_rows, dtype=object)
+        y_cols_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Fill arrays using vectorized operations
+        idx = 0
+        y_prefix_cols_array = np.array(y_prefix_cols)
+        
+        for i in range(len(case_ids)):
+            if row_counts[i] > 0:
+                valid_y_indices = np.where(y_valid_array[i])[0]
+                n_valid = len(valid_y_indices)
+                
+                case_ids_expanded[idx:idx+n_valid] = case_ids[i]
+                x_bins_expanded[idx:idx+n_valid] = x_bins_valid.iloc[i]
+                y_cols_expanded[idx:idx+n_valid] = y_prefix_cols_array[valid_y_indices]
+                agg_values_expanded[idx:idx+n_valid] = agg_values[i]
+                idx += n_valid
+            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_bins_expanded,
+            "y_bin": y_cols_expanded,
+            agg_col: agg_values_expanded
+        })
+        
+    elif not numeric_x and numeric_y:
+        # X prefix-based, Y numeric - use more efficient vectorized approach
+        x_valid_cols_valid = x_valid_cols_mask[valid_mask]
+        y_bins_valid = y_binned[valid_mask]
+        
+        # Use numpy operations for much faster processing
+        x_valid_array = x_valid_cols_valid.values
+        row_counts = np.sum(x_valid_array, axis=1)
+        total_rows = np.sum(row_counts)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for better performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_cols_expanded = np.empty(total_rows, dtype=object)
+        y_bins_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Fill arrays using vectorized operations
+        idx = 0
+        x_prefix_cols_array = np.array(x_prefix_cols)
+        
+        for i in range(len(case_ids)):
+            if row_counts[i] > 0:
+                valid_x_indices = np.where(x_valid_array[i])[0]
+                n_valid = len(valid_x_indices)
+                
+                case_ids_expanded[idx:idx+n_valid] = case_ids[i]
+                x_cols_expanded[idx:idx+n_valid] = x_prefix_cols_array[valid_x_indices]
+                y_bins_expanded[idx:idx+n_valid] = y_bins_valid.iloc[i]
+                agg_values_expanded[idx:idx+n_valid] = agg_values[i]
+                idx += n_valid
+            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_cols_expanded,
+            "y_bin": y_bins_expanded,
+            agg_col: agg_values_expanded
+        })
+        
+    else:
+        # Both prefix-based - most complex case, use highly optimized vectorized approach
+        x_valid_cols_valid = x_valid_cols_mask[valid_mask]
+        y_valid_cols_valid = y_valid_cols_mask[valid_mask]
+        
+        # Use numpy operations for much faster processing
+        x_valid_array = x_valid_cols_valid.values
+        y_valid_array = y_valid_cols_valid.values
+        
+        # Calculate total number of combinations for pre-allocation
+        x_row_counts = np.sum(x_valid_array, axis=1)
+        y_row_counts = np.sum(y_valid_array, axis=1)
+        row_combinations = x_row_counts * y_row_counts
+        total_rows = np.sum(row_combinations)
+        
+        if total_rows == 0:
+            return pd.DataFrame(), {}
+        
+        # Pre-allocate arrays for maximum performance
+        case_ids_expanded = np.empty(total_rows, dtype=object)
+        x_cols_expanded = np.empty(total_rows, dtype=object)
+        y_cols_expanded = np.empty(total_rows, dtype=object)
+        agg_values_expanded = np.empty(total_rows, dtype=float)
+        
+        # Use vectorized operations with pre-converted arrays
+        x_prefix_cols_array = np.array(x_prefix_cols)
+        y_prefix_cols_array = np.array(y_prefix_cols)
+        
+        idx = 0
+        for i in range(len(case_ids)):
+            if row_combinations[i] > 0:
+                valid_x_indices = np.where(x_valid_array[i])[0]
+                valid_y_indices = np.where(y_valid_array[i])[0]
+                
+                # Create cartesian product using numpy operations
+                x_mesh, y_mesh = np.meshgrid(valid_x_indices, valid_y_indices, indexing='ij')
+                x_flat = x_mesh.flatten()
+                y_flat = y_mesh.flatten()
+                n_combinations = len(x_flat)
+                
+                # Fill arrays efficiently
+                case_ids_expanded[idx:idx+n_combinations] = case_ids[i]
+                x_cols_expanded[idx:idx+n_combinations] = x_prefix_cols_array[x_flat]
+                y_cols_expanded[idx:idx+n_combinations] = y_prefix_cols_array[y_flat]
+                agg_values_expanded[idx:idx+n_combinations] = agg_values[i]
+                idx += n_combinations
+            
+        temp_df = pd.DataFrame({
+            "case:concept:name": case_ids_expanded,
+            "x_bin": x_cols_expanded,
+            "y_bin": y_cols_expanded,
+            agg_col: agg_values_expanded
+        })
+
     if temp_df.empty:
         return pd.DataFrame(), {}
 
-    # Aggregation
-    agg_df = temp_df.groupby(["x_bin", "y_bin"])[agg_col].agg(agg_fn).reset_index()
-    cases_df = temp_df.groupby(["x_bin", "y_bin"])['case:concept:name'] \
-        .agg(lambda x: set(x)).reset_index().rename(columns={"case:concept:name": "case_set"})
-    merged_df = pd.merge(agg_df, cases_df, on=["x_bin", "y_bin"], how="outer")
+    # Optimized aggregation using more efficient groupby operations
+    grouped = temp_df.groupby(["x_bin", "y_bin"], sort=False)
+    
+    # Compute aggregations separately for better performance
+    agg_values_result = grouped[agg_col].agg(agg_fn).reset_index()
+    case_sets_result = grouped["case:concept:name"].apply(lambda x: set(x)).reset_index()
+    case_sets_result.rename(columns={"case:concept:name": "case_set"}, inplace=True)
+    
+    # Merge results efficiently
+    agg_result = pd.merge(agg_values_result, case_sets_result, on=["x_bin", "y_bin"])
 
-    # Pivot
-    pivot_df = merged_df.pivot(index="x_bin", columns="y_bin", values=agg_col)
+    # Use pivot_table directly for better performance and handling of missing values
+    pivot_df = temp_df.pivot_table(
+        index="x_bin", 
+        columns="y_bin", 
+        values=agg_col, 
+        aggfunc=agg_fn,
+        dropna=False
+    )
+    
+    # Drop completely empty rows/columns more efficiently
     pivot_df = pivot_df.dropna(how="all", axis=0).dropna(how="all", axis=1)
 
-    # Build cell-case mapping
-    valid_x = set(pivot_df.index)
-    valid_y = set(pivot_df.columns)
-    cell_case_dict = {
-        (row.x_bin, row.y_bin): row.case_set
-        for row in cases_df.itertuples()
-        if row.x_bin in valid_x and row.y_bin in valid_y
-    }
-
-    # Cleanup
-    if numeric_x:
-        df.drop(columns=["__x_bin_tmp__"], inplace=True)
-    if numeric_y:
-        df.drop(columns=["__y_bin_tmp__"], inplace=True)
+    # Build cell-case mapping using vectorized operations
+    valid_x_mask = agg_result["x_bin"].isin(pivot_df.index)
+    valid_y_mask = agg_result["y_bin"].isin(pivot_df.columns)
+    valid_mask = valid_x_mask & valid_y_mask
+    
+    valid_agg_result = agg_result[valid_mask]
+    cell_case_dict = dict(zip(
+        zip(valid_agg_result["x_bin"], valid_agg_result["y_bin"]),
+        valid_agg_result["case_set"]
+    ))
 
     return pivot_df, cell_case_dict
