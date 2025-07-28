@@ -141,6 +141,8 @@ def apply(
     # ------------------------------------------------------------------#
     import pm4py
 
+    log = pm4py.convert_to_dataframe(log)
+
     variants = pm4py.get_variants(log, activity_key)
     variant_keys = list(variants.keys())
 
