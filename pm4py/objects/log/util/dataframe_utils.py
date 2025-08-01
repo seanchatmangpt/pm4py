@@ -403,10 +403,13 @@ def select_string_column(
     vals = pandas_utils.format_unique(df[col].unique())
     for val in vals:
         if val is not None:
+            # Convert value to string first to handle all data types
+            val_str = str(val)
+            # Remove non-ASCII characters and spaces for column naming
             new_col = (
                 col
                 + "_"
-                + val.encode("ascii", errors="ignore")
+                + val_str.encode("ascii", errors="ignore")
                 .decode("ascii")
                 .replace(" ", "")
             )
