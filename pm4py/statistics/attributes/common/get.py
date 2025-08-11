@@ -79,18 +79,16 @@ def get_kde_numeric_attribute(values, parameters=None):
         Possible parameters of the algorithm, including:
             graph_points -> number of points to include in the graph
 
-
     Returns
     --------------
     x
-        X-axis values to represent
+        X-axis values to represent (including the exact min and max)
     y
         Y-axis values to represent
     """
     if importlib.util.find_spec("scipy") and importlib.util.find_spec("numpy"):
         from scipy.stats import gaussian_kde
         import numpy as np
-        import pandas as pd
 
         if parameters is None:
             parameters = {}
@@ -98,20 +96,26 @@ def get_kde_numeric_attribute(values, parameters=None):
         graph_points = exec_utils.get_param_value(
             Parameters.GRAPH_POINTS, parameters, 200
         )
-        values = sorted(values)
+        values = np.sort(values)
         density = gaussian_kde(values)
 
-        xs1 = list(
-            np.linspace(min(values), max(values), int(graph_points / 2))
-        )
-        xs2 = list(
-            np.geomspace(
-                max(min(values), 0.000001), max(values), int(graph_points / 2)
-            )
-        )
-        xs = sorted(xs1 + xs2)
+        # ensure we have at least two points for each spacing
+        half = max(int(graph_points // 2), 2)
 
-        return [xs, list(density(xs))]
+        min_val, max_val = values[0], values[-1]
+        eps = 1e-6
+
+        # linear space including both endpoints
+        xs1 = np.linspace(min_val, max_val, half, endpoint=True)
+        # geometric space including both endpoints (avoid zero)
+        xs2 = np.geomspace(max(min_val, eps), max_val, half, endpoint=True)
+
+        # combine, add exact endpoints, dedupe & sort
+        xs = np.unique(
+            np.concatenate([xs1, xs2, [min_val, max_val]])
+        )
+
+        return xs.tolist(), density(xs).tolist()
     else:
         msg = "scipy is not available. graphs cannot be built!"
         logging.error(msg)
