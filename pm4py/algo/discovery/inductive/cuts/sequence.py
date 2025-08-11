@@ -343,7 +343,7 @@ class SequenceCutDFG(SequenceCut[IMDataStructureDFG]):
             z = activities_idx[b]
             j = activities_idx[a] + 1
             while j < z:
-                skippable[j] = False
+                skippable[j] = True
                 j = j + 1
 
         return [

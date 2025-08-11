@@ -26,8 +26,8 @@ class Parameters(Enum):
     CASE_ATTRIBUTES = "case_attributes"
     MANDATORY_ATTRIBUTES = "mandatory_attributes"
     MAX_NO_CASES = "max_no_cases"
-    MIN_DIFFERENT_OCC_STR_ATTR = 5
-    MAX_DIFFERENT_OCC_STR_ATTR = 50
+    MIN_DIFFERENT_OCC_STR_ATTR = "min_different_occ_str_attr"
+    MAX_DIFFERENT_OCC_STR_ATTR = "max_different_occ_str_attr"
     TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
     PARAM_ARTIFICIAL_START_ACTIVITY = constants.PARAM_ARTIFICIAL_START_ACTIVITY
@@ -403,10 +403,13 @@ def select_string_column(
     vals = pandas_utils.format_unique(df[col].unique())
     for val in vals:
         if val is not None:
+            # Convert value to string first to handle all data types
+            val_str = str(val)
+            # Remove non-ASCII characters and spaces for column naming
             new_col = (
                 col
                 + "_"
-                + val.encode("ascii", errors="ignore")
+                + val_str.encode("ascii", errors="ignore")
                 .decode("ascii")
                 .replace(" ", "")
             )
