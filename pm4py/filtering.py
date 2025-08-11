@@ -543,48 +543,28 @@ def filter_time_range(
     :param log: Event log or Pandas DataFrame.
     :param dt1: Left extreme of the interval.
     :param dt2: Right extreme of the interval.
-    :param mode: Modality of filtering ('events', 'traces_contained', 'traces_intersecting').
-                 - 'events': Any event that fits the time frame is retained.
-                 - 'traces_contained': Any trace completely contained in the timeframe is retained.
-                 - 'traces_intersecting': Any trace intersecting with the timeframe is retained.
+    :param mode: Modality of filtering. Supported:
+                 - 'events': keep events within timeframe.
+                 - 'traces_contained': keep traces fully contained in timeframe.
+                 - 'traces_intersecting': keep traces intersecting timeframe.
+                 - 'traces_starting_in': keep traces whose first event is in timeframe.
+                 - 'traces_starting_in_exclude': exclude traces whose first event is in timeframe.
+                 - 'traces_completing_in': keep traces whose last event is in timeframe.
+                 - 'traces_completing_in_exclude': exclude traces whose last event is in timeframe.
     :param timestamp_key: Attribute to be used for the timestamp.
     :param case_id_key: Attribute to be used as case identifier.
     :return: Filtered event log or Pandas DataFrame.
-
-    .. code-block:: python3
-
-        import pm4py
-
-        filtered_dataframe1 = pm4py.filter_time_range(
-            dataframe,
-            '2010-01-01 00:00:00',
-            '2011-01-01 00:00:00',
-            mode='traces_contained',
-            case_id_key='case:concept:name',
-            timestamp_key='time:timestamp'
-        )
-        filtered_dataframe2 = pm4py.filter_time_range(
-            dataframe,
-            '2010-01-01 00:00:00',
-            '2011-01-01 00:00:00',
-            mode='traces_intersecting',
-            case_id_key='case:concept:name',
-            timestamp_key='time:timestamp'
-        )
-        filtered_dataframe3 = pm4py.filter_time_range(
-            dataframe,
-            '2010-01-01 00:00:00',
-            '2011-01-01 00:00:00',
-            mode='events',
-            case_id_key='case:concept:name',
-            timestamp_key='time:timestamp'
-        )
     """
     __event_log_deprecation_warning(log)
 
     properties = get_properties(
         log, timestamp_key=timestamp_key, case_id_key=case_id_key
     )
+
+    # Helper: compute "positive" flag from mode for the new variants
+    def _positive_from_mode(m: str) -> bool:
+        return not (m.endswith("_exclude"))
+
     if check_is_pandas_dataframe(log):
         from pm4py.algo.filtering.pandas.timestamp import timestamp_filter
 
@@ -600,10 +580,23 @@ def filter_time_range(
             return timestamp_filter.filter_traces_intersecting(
                 log, dt1, dt2, parameters=properties
             )
+        elif mode in ("traces_starting_in", "traces_starting_in_exclude"):
+            params = dict(properties)
+            params["positive"] = _positive_from_mode(mode)
+            return timestamp_filter.filter_traces_starting_in_timeframe(
+                log, dt1, dt2, parameters=params
+            )
+        elif mode in ("traces_completing_in", "traces_completing_in_exclude"):
+            params = dict(properties)
+            params["positive"] = _positive_from_mode(mode)
+            return timestamp_filter.filter_traces_completing_in_timeframe(
+                log, dt1, dt2, parameters=params
+            )
         else:
             if constants.SHOW_INTERNAL_WARNINGS:
                 warnings.warn(
-                    f"Mode provided: {mode} is not recognized; original log returned!")
+                    f"Mode provided: {mode} is not recognized; original log returned!"
+                )
             return log
     else:
         from pm4py.algo.filtering.log.timestamp import timestamp_filter
@@ -620,10 +613,23 @@ def filter_time_range(
             return timestamp_filter.filter_traces_intersecting(
                 log, dt1, dt2, parameters=properties
             )
+        elif mode in ("traces_starting_in", "traces_starting_in_exclude"):
+            params = dict(properties)
+            params["positive"] = _positive_from_mode(mode)
+            return timestamp_filter.filter_traces_starting_in_timeframe(
+                log, dt1, dt2, parameters=params
+            )
+        elif mode in ("traces_completing_in", "traces_completing_in_exclude"):
+            params = dict(properties)
+            params["positive"] = _positive_from_mode(mode)
+            return timestamp_filter.filter_traces_completing_in_timeframe(
+                log, dt1, dt2, parameters=params
+            )
         else:
             if constants.SHOW_INTERNAL_WARNINGS:
                 warnings.warn(
-                    f"Mode provided: {mode} is not recognized; original log returned!")
+                    f"Mode provided: {mode} is not recognized; original log returned!"
+                )
             return log
 
 
