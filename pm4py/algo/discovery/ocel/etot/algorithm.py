@@ -23,6 +23,8 @@ def apply(ocel: OCEL,
     """
     Discovers the ET-OT graph from an OCEL
 
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
     Parameters
     ---------------
     ocel

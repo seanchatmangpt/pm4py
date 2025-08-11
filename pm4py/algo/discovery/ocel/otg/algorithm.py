@@ -20,6 +20,8 @@ def apply(ocel: OCEL,
     """
     Discovers an OTG (object-type-graph) from the provided OCEL
 
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
     Parameters
     -----------------
     ocel

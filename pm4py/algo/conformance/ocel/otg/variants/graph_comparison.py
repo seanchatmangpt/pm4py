@@ -28,6 +28,8 @@ def apply(real: Union[OCEL,
     """
     Applies OTG-based conformance checking between a 'real' object (OCEL or OTG) and a 'normative' OTG.
 
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
     Parameters
     -----------------
     real

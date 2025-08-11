@@ -22,6 +22,8 @@ def apply(real: Union[OCEL,
     Applies object-centric conformance checking between the given real object (object-centric event log or DFG)
     and a normative OC-DFG.
 
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
     Parameters
     -----------------
     real

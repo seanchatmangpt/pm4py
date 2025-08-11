@@ -32,6 +32,8 @@ def apply(real: Union[OCEL,
     Applies ET-OT-based conformance checking between a 'real' object (either an OCEL or an ET-OT graph),
     and a normative ET-OT graph.
 
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
     Parameters
     -------------------
     real
