@@ -289,79 +289,36 @@ class LoopCutDFG(LoopCut[IMDataStructureDFG]):
     @classmethod
     def project(
         cls,
-        obj: IMDataStructureDFG,
+        obj: IMDataStructureUVCL,
         groups: List[Collection[Any]],
         parameters: Optional[Dict[str, Any]] = None,
     ) -> List[IMDataStructureDFG]:
-        """
-        Project the original DFG onto the loop cut groups.
-
-        groups[0] is the 'do' part, groups[1:] are one or more 'redo' parts.
-
-        Semantics:
-        - For every group, we keep all intra-group edges with their original weights.
-        - For the 'do' part: start/end activities are the original start/end activities restricted to the group.
-        - For each 'redo' part: start activities are the group nodes that have incoming edges from outside the group;
-          end activities are the group nodes that have outgoing edges to outside the group. We aggregate their
-          frequencies from the boundary edges. If none are found (edge-case), we fall back to marking all nodes
-          as both start and end with weight 1 to keep the sub-DFG well-formed.
-        - Skippability: do-part is NOT skippable (must run at least once in a loop).
-          Every redo-part IS skippable (redo can repeat zero times).
-        """
-        original: DFG = obj.dfg
-
-        # Precompute for convenience/performance
-        edges = original.graph            # Dict[(a,b) -> weight]
-        start_acts = original.start_activities  # Dict[a -> weight]
-        end_acts = original.end_activities      # Dict[a -> weight]
-
-        group_sets = [set(g) for g in groups]
-        dfgs: List[DFG] = []
-        skippable: List[bool] = [False] + [True] * max(0, (len(groups) - 1))
-
-        for idx, g in enumerate(group_sets):
-            sub = DFG()
-
-            # 1) Copy intra-group edges with their weights
-            for (a, b), w in edges.items():
+        dfg = obj.dfg
+        dfgs = []
+        skippable = [False, False]
+        for gind, g in enumerate(groups):
+            dfn = DFG()
+            for a, b in dfg.graph:
                 if a in g and b in g:
-                    sub.graph[(a, b)] = w
-
-            if idx == 0:
-                # 2) DO part: restrict original start/end to the group
-                for a, w in start_acts.items():
+                    dfn.graph[(a, b)] = dfg.graph[(a, b)]
+                if b in dfg.start_activities and a in dfg.end_activities:
+                    skippable[1] = True
+            if gind == 0:
+                for a in dfg.start_activities:
                     if a in g:
-                        sub.start_activities[a] = w
-                for a, w in end_acts.items():
+                        dfn.start_activities[a] = dfg.start_activities[a]
+                    else:
+                        skippable[0] = True
+                for a in dfg.end_activities:
                     if a in g:
-                        sub.end_activities[a] = w
-            else:
-                # 3) REDO part: derive starts/ends from boundary edges
-                start_counts: Dict[Any, int] = {}
-                end_counts: Dict[Any, int] = {}
-
-                # Entries into the group (from outside) -> starts
-                # Exits from the group (to outside) -> ends
-                for (a, b), w in edges.items():
-                    if b in g and a not in g:
-                        start_counts[b] = start_counts.get(b, 0) + w
-                    if a in g and b not in g:
-                        end_counts[a] = end_counts.get(a, 0) + w
-
-                # Fallback to keep the sub-DFG well-formed (very rare, but safe)
-                if not start_counts:
-                    for a in g:
-                        start_counts[a] = 1
-                if not end_counts:
-                    for a in g:
-                        end_counts[a] = 1
-
-                sub.start_activities.update(start_counts)
-                sub.end_activities.update(end_counts)
-
-            dfgs.append(sub)
-
-        # Wrap each projected DFG as an InductiveDFG with correct skippability
+                        dfn.end_activities[a] = dfg.end_activities[a]
+                    else:
+                        skippable[0] = True
+            elif gind == 1:
+                for a in g:
+                    dfn.start_activities[a] = 1
+                    dfn.end_activities[a] = 1
+            dfgs.append(dfn)
         return [
             IMDataStructureDFG(InductiveDFG(dfg=dfgs[i], skip=skippable[i]))
             for i in range(len(dfgs))
