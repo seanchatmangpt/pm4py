@@ -96,6 +96,8 @@ def apply(
     Compute the Align‑ETConformance *precision* where the prefix‑automaton
     is generated from **aligned traces** (model projections).
 
+    Implements: Adriansyah, Arya, et al. "Measuring precision of modeled behavior." Information systems and e-Business Management 13.1 (2015): 37-67.
+
     The only difference with the reference implementation contained in PM4Py
     is that the prefix automaton is built *after* aligning every
     (variant of the) trace with the model; hence each prefix is guaranteed to end
