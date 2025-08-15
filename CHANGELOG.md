@@ -1,6 +1,31 @@
 # Changelog of pm4py
 
 
+# pm4py 2.7.20 (2025.08.XX)
+
+### Added
+* de34c822fbca2a1a0b86515fb7c69d068a0706c6
+  * New timeframe filters
+* 3e5fb309c2af7d696ff8d6e1e3752f2116eb5c02
+  * Polars statistics
+* 07acb5f36c8a40b4b2c8df4e700ba5cf4367795a
+  * Chaotic activities detection
+* d50fb4a492127193c7d8b18f8fccc94e1013b104
+  * Approaches for object-centric conformance checking
+
+### Changed
+
+### Deprecated
+
+### Fixed
+* 7d381f15208ec27800a5eaf6d07c91e8bd4dffeb
+  * bug fixes IMd
+
+### Removed
+
+### Other
+
+
 # pm4py 2.7.19 (2025.06.27)
 
 ### Added
