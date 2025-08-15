@@ -12,6 +12,8 @@
   * Chaotic activities detection
 * d50fb4a492127193c7d8b18f8fccc94e1013b104
   * Approaches for object-centric conformance checking
+* b6190a7b4424f8820a38697f73e2937214ec1b92
+  * Variant of Align-ETConformance faithful to the original paper's conclusions
 
 ### Changed
 
