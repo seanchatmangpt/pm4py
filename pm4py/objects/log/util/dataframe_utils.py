@@ -413,7 +413,9 @@ def select_string_column(
         fea_df = fea_df.merge(crosstab, left_on=case_id_key, right_index=True, how="left")
         # Fill NaN and convert to float32 for all new columns at once
         new_cols = crosstab.columns.tolist()
-        fea_df[new_cols] = fea_df[new_cols].fillna(0).astype(np.float32)
+        for col_name in new_cols:
+            if col_name in fea_df.columns:
+                fea_df[col_name] = fea_df[col_name].fillna(0).astype(np.float32)
     else:
         # Use pivot_table for binary encoding - much faster than loop
         # Create a dummy column for aggregation
@@ -442,9 +444,11 @@ def select_string_column(
             
             # Merge once with all columns
             fea_df = fea_df.merge(pivot, left_on=case_id_key, right_index=True, how="left")
-            # Fill NaN and convert to float32
+            # Fill NaN and convert to float32 for the newly added columns
             new_cols = pivot.columns.tolist()
-            fea_df[new_cols] = fea_df[new_cols].fillna(0).astype(np.float32)
+            for col_name in new_cols:
+                if col_name in fea_df.columns:
+                    fea_df[col_name] = fea_df[col_name].fillna(0).astype(np.float32)
     
     return fea_df
 
