@@ -358,14 +358,12 @@ def select_number_column(
     fea_df
         Feature dataframe (desidered output)
     """
-    df = (
-        df.dropna(subset=[col])
-        .groupby(case_id_key)
-        .last()
-        .reset_index()[[case_id_key, col]]
-    )
+    # More efficient: drop duplicates keeping last instead of groupby
+    df_subset = df[[case_id_key, col]].dropna(subset=[col])
+    df_last = df_subset.drop_duplicates(subset=[case_id_key], keep='last')
+    
     fea_df = fea_df.merge(
-        df, on=[case_id_key], how="left", suffixes=("", "_y")
+        df_last, on=[case_id_key], how="left", suffixes=("", "_y")
     )
     fea_df[col] = fea_df[col].astype(np.float32)
     return fea_df
@@ -400,36 +398,54 @@ def select_string_column(
     fea_df
         Feature dataframe (desidered output)
     """
-    vals = pandas_utils.format_unique(df[col].unique())
-    for val in vals:
-        if val is not None:
-            # Convert value to string first to handle all data types
-            val_str = str(val)
-            # Remove non-ASCII characters and spaces for column naming
-            new_col = (
-                col
-                + "_"
-                + val_str.encode("ascii", errors="ignore")
-                .decode("ascii")
-                .replace(" ", "")
+    # Filter out None values once
+    df_filtered = df[[case_id_key, col]].dropna(subset=[col])
+    
+    if count_occurrences:
+        # Use crosstab for efficient counting
+        crosstab = pd.crosstab(df_filtered[case_id_key], df_filtered[col])
+        # Rename columns efficiently
+        crosstab.columns = [
+            col + "_" + str(c).encode("ascii", errors="ignore").decode("ascii").replace(" ", "")
+            for c in crosstab.columns
+        ]
+        # Merge once with all columns
+        fea_df = fea_df.merge(crosstab, left_on=case_id_key, right_index=True, how="left")
+        # Fill NaN and convert to float32 for all new columns at once
+        new_cols = crosstab.columns.tolist()
+        fea_df[new_cols] = fea_df[new_cols].fillna(0).astype(np.float32)
+    else:
+        # Use pivot_table for binary encoding - much faster than loop
+        # Create a dummy column for aggregation
+        df_filtered = df_filtered.copy()
+        df_filtered['_dummy'] = 1
+        
+        # Get unique values
+        unique_vals = pandas_utils.format_unique(df_filtered[col].unique())
+        unique_vals = [v for v in unique_vals if v is not None]
+        
+        if len(unique_vals) > 0:
+            # Create pivot table
+            pivot = df_filtered.pivot_table(
+                index=case_id_key,
+                columns=col,
+                values='_dummy',
+                aggfunc='max',
+                fill_value=0
             )
             
-            if count_occurrences:
-                # Count the number of occurrences of this value per case
-                counts = df[df[col] == val].groupby(case_id_key).size().reset_index(name='count')
-                fea_df = fea_df.merge(
-                    counts.rename(columns={'count': new_col}),
-                    on=case_id_key,
-                    how="left"
-                )
-                fea_df[new_col] = fea_df[new_col].fillna(0).astype(np.float32)
-            else:
-                # Binary encoding (original behavior)
-                filt_df_cases = pandas_utils.format_unique(
-                    df[df[col] == val][case_id_key].unique()
-                )
-                fea_df[new_col] = fea_df[case_id_key].isin(filt_df_cases)
-                fea_df[new_col] = fea_df[new_col].astype(np.float32)
+            # Rename columns
+            pivot.columns = [
+                col + "_" + str(c).encode("ascii", errors="ignore").decode("ascii").replace(" ", "")
+                for c in pivot.columns
+            ]
+            
+            # Merge once with all columns
+            fea_df = fea_df.merge(pivot, left_on=case_id_key, right_index=True, how="left")
+            # Fill NaN and convert to float32
+            new_cols = pivot.columns.tolist()
+            fea_df[new_cols] = fea_df[new_cols].fillna(0).astype(np.float32)
+    
     return fea_df
 
 
@@ -470,22 +486,39 @@ def get_features_df(
         Parameters.COUNT_OCCURRENCES, parameters, False
     )
 
-    fea_df = pandas_utils.instantiate_dataframe(
-        {
-            case_id_key: sorted(
-                pandas_utils.format_unique(df[case_id_key].unique())
-            )
-        }
-    )
+    # Start with unique case IDs
+    unique_cases = sorted(pandas_utils.format_unique(df[case_id_key].unique()))
+    fea_df = pandas_utils.instantiate_dataframe({case_id_key: unique_cases})
+    
+    # Separate columns by type for batch processing
+    string_columns = []
+    numeric_columns = []
+    
     for col in list_columns:
-        if "obj" in str(df[col].dtype) or "str" in str(df[col].dtype):
-            fea_df = select_string_column(
-                df, fea_df, col, case_id_key=case_id_key, count_occurrences=count_occurrences
-            )
-        elif "float" in str(df[col].dtype) or "int" in str(df[col].dtype):
-            fea_df = select_number_column(
-                df, fea_df, col, case_id_key=case_id_key
-            )
+        dtype_str = str(df[col].dtype)
+        if "obj" in dtype_str or "str" in dtype_str:
+            string_columns.append(col)
+        elif "float" in dtype_str or "int" in dtype_str:
+            numeric_columns.append(col)
+    
+    # Process numeric columns (can be done more efficiently in batch)
+    if numeric_columns:
+        # Process all numeric columns at once
+        df_numeric = df[[case_id_key] + numeric_columns].copy()
+        # Drop duplicates for all numeric columns at once, keeping last
+        df_numeric = df_numeric.groupby(case_id_key).last().reset_index()
+        # Merge once for all numeric columns
+        fea_df = fea_df.merge(df_numeric, on=case_id_key, how="left")
+        # Convert all numeric columns to float32 at once
+        fea_df[numeric_columns] = fea_df[numeric_columns].astype(np.float32)
+    
+    # Process string columns one by one (still needed due to hot encoding)
+    for col in string_columns:
+        fea_df = select_string_column(
+            df, fea_df, col, case_id_key=case_id_key, count_occurrences=count_occurrences
+        )
+    
+    # Sort and optionally remove case ID
     fea_df = fea_df.sort_values(case_id_key)
     if not add_case_identifier_column:
         del fea_df[case_id_key]
