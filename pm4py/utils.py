@@ -29,14 +29,20 @@ class Shared:
     FILTERING_LEVEL_WARNING_SHOWN = False
 
 
+def is_polars_lazyframe(df: Any) -> bool:
+    """Return True if the provided dataframe is a Polars LazyFrame."""
+    df_type = str(type(df)).lower()
+    return "polars" in df_type and "lazyframe" in df_type
+
+
 def format_dataframe(
-    df: pd.DataFrame,
+    df,
     case_id: str = constants.CASE_CONCEPT_NAME,
     activity_key: str = xes_constants.DEFAULT_NAME_KEY,
     timestamp_key: str = xes_constants.DEFAULT_TIMESTAMP_KEY,
     start_timestamp_key: str = xes_constants.DEFAULT_START_TIMESTAMP_KEY,
     timest_format: Optional[str] = None,
-) -> pd.DataFrame:
+) -> Any:
     """
     Formats the dataframe appropriately for process mining purposes.
 
@@ -46,8 +52,8 @@ def format_dataframe(
     :param timestamp_key: Timestamp column.
     :param start_timestamp_key: Start timestamp column.
     :param timest_format: Timestamp format provided to Pandas.
-    :return: A formatted pandas DataFrame.
-    :rtype: pd.DataFrame
+    :return: A formatted dataframe (Pandas DataFrame or Polars LazyFrame).
+    :rtype: Any
 
     .. code-block:: python3
 
@@ -66,6 +72,97 @@ def format_dataframe(
     """
     if timest_format is None:
         timest_format = constants.DEFAULT_TIMESTAMP_PARSE_FORMAT
+
+    if is_polars_lazyframe(df):
+        import polars as pl  # type: ignore[import-untyped]
+
+        lf = df
+        required_columns = (case_id, activity_key, timestamp_key)
+        for col in required_columns:
+            if col not in lf.columns:
+                raise Exception(f"{col} column is not in the dataframe!")
+
+        def drop_if_present(lazy_frame, col_name):
+            if col_name in lazy_frame.columns:
+                lazy_frame = lazy_frame.drop(col_name)
+            return lazy_frame
+
+        if case_id != constants.CASE_CONCEPT_NAME or constants.CASE_CONCEPT_NAME not in lf.columns:
+            lf = drop_if_present(lf, constants.CASE_CONCEPT_NAME)
+            lf = lf.with_columns(
+                pl.col(case_id).alias(constants.CASE_CONCEPT_NAME)
+            )
+        if activity_key != xes_constants.DEFAULT_NAME_KEY or xes_constants.DEFAULT_NAME_KEY not in lf.columns:
+            lf = drop_if_present(lf, xes_constants.DEFAULT_NAME_KEY)
+            lf = lf.with_columns(
+                pl.col(activity_key).alias(xes_constants.DEFAULT_NAME_KEY)
+            )
+        if timestamp_key != xes_constants.DEFAULT_TIMESTAMP_KEY or xes_constants.DEFAULT_TIMESTAMP_KEY not in lf.columns:
+            lf = drop_if_present(lf, xes_constants.DEFAULT_TIMESTAMP_KEY)
+            lf = lf.with_columns(
+                pl.col(timestamp_key).alias(xes_constants.DEFAULT_TIMESTAMP_KEY)
+            )
+
+        if start_timestamp_key in lf.columns:
+            lf = lf.with_columns(
+                pl.col(start_timestamp_key).alias(
+                    xes_constants.DEFAULT_START_TIMESTAMP_KEY
+                )
+            )
+
+        timestamp_targets = [
+            col
+            for col in (
+                xes_constants.DEFAULT_TIMESTAMP_KEY,
+                xes_constants.DEFAULT_START_TIMESTAMP_KEY,
+            )
+            if col in lf.columns
+        ]
+
+        for col in timestamp_targets:
+            dtype = lf.schema.get(col)
+            expr = pl.col(col)
+            if dtype != pl.Datetime:
+                expr = expr.cast(pl.Utf8).str.strptime(
+                    pl.Datetime,
+                    format=timest_format,
+                    strict=False,
+                    exact=False,
+                )
+            expr = expr.dt.replace_time_zone("UTC")
+            lf = lf.with_columns(expr.alias(col))
+
+        lf = lf.filter(
+            pl.col(constants.CASE_CONCEPT_NAME).is_not_null()
+            & pl.col(xes_constants.DEFAULT_NAME_KEY).is_not_null()
+            & pl.col(xes_constants.DEFAULT_TIMESTAMP_KEY).is_not_null()
+        )
+
+        lf = lf.with_columns(
+            pl.col(constants.CASE_CONCEPT_NAME).cast(pl.Utf8),
+            pl.col(xes_constants.DEFAULT_NAME_KEY).cast(pl.Utf8),
+        )
+
+        lf = pandas_utils.insert_index(
+            lf, INDEX_COLUMN, copy_dataframe=False
+        )
+        lf = lf.sort(
+            [
+                constants.CASE_CONCEPT_NAME,
+                xes_constants.DEFAULT_TIMESTAMP_KEY,
+                INDEX_COLUMN,
+            ]
+        )
+        lf = pandas_utils.insert_index(
+            lf, INDEX_COLUMN, copy_dataframe=False
+        )
+        lf = pandas_utils.insert_case_index(
+            lf,
+            CASE_INDEX_COLUMN,
+            copy_dataframe=False,
+        )
+
+        return lf
 
     from pm4py.objects.log.util import dataframe_utils
 
@@ -204,10 +301,21 @@ def rebase(
 
     __event_log_deprecation_warning(log_obj)
 
-    if check_is_pandas_dataframe(log_obj):
+    if is_polars_lazyframe(log_obj):
+        check_pandas_dataframe_columns(log_obj)
+    elif check_is_pandas_dataframe(log_obj):
         check_pandas_dataframe_columns(log_obj)
 
-    if check_is_pandas_dataframe(log_obj):
+    if is_polars_lazyframe(log_obj):
+        return format_dataframe(
+            log_obj,
+            case_id=case_id,
+            activity_key=activity_key,
+            timestamp_key=timestamp_key,
+            start_timestamp_key=start_timestamp_key,
+            timest_format=timest_format,
+        )
+    elif check_is_pandas_dataframe(log_obj):
         return format_dataframe(
             log_obj,
             case_id=case_id,
