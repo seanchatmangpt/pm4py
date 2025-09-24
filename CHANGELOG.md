@@ -6,6 +6,8 @@
 ### Added
 * cc97057cb5ac19c080e37bddb3ccba09d135a94b
   * Polars stats/filters in simplified interface.
+* 82d169c96e2b5d4fc5292755bcdc5c0fca22e220
+  * DFG computation in Polars
 
 ### Changed
 
