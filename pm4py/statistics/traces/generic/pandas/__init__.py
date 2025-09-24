@@ -1,1 +1,1 @@
-from pm4py.statistics.traces.generic.pandas import case_arrival
+from pm4py.statistics.traces.generic.pandas import case_arrival, case_statistics

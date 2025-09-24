@@ -1,4 +1,4 @@
-from pm4py.statistics.overlap import cases, utils
+from pm4py.statistics.overlap import cases, utils, interval_events
 
 from pm4py.util import constants
 import warnings
