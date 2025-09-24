@@ -11,6 +11,12 @@
   * DFG computation in Polars
 * 3d1fcd007fba7fc25970a71d660dbb663f4500ba
   * Performance spectrum computation in Polars
+* 99b56bdf1ea17401c384baf2a3fe6b195405edb4
+  fca1ee8432008436860ad9234185f592f6f408f2
+  e0f2b4d00f0ab6f7292a5a37ca63a74f1a59e04c
+  * different process discovery algorithms on Polars
+* e0f2b4d00f0ab6f7292a5a37ca63a74f1a59e04c
+  * first alignments on Polars lazyframes
 
 ### Changed
 
