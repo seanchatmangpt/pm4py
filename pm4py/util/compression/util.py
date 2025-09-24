@@ -9,6 +9,12 @@ from pm4py.objects.log.obj import EventLog
 from pm4py.util.compression.dtypes import UCL, MCL, UVCL
 
 
+def is_polars_lazyframe(df: Any) -> bool:
+    """Return True if the provided dataframe is a Polars LazyFrame."""
+    df_type = str(type(df)).lower()
+    return "polars" in df_type and "lazyframe" in df_type
+
+
 def project_univariate(
     log: Union[EventLog, pd.DataFrame],
     key: str = "concept:name",
@@ -31,19 +37,36 @@ def project_univariate(
     if type(log) is EventLog:
         return [[e[key] for e in t] for t in log]
     else:
-        log = log.loc[:, [key, df_glue, df_sorting_criterion_key]]
+        if is_polars_lazyframe(log):
+            import polars as pl  # type: ignore[import-untyped]
 
-        cl = list()
-        log = log.sort_values(by=[df_glue, df_sorting_criterion_key])
-        values = log[key].to_numpy().tolist()
-        distinct_ids, start_indexes, case_sizes = np.unique(
-            log[df_glue].to_numpy(), return_index=True, return_counts=True
-        )
-        for i in range(len(distinct_ids)):
-            cl.append(
-                values[start_indexes[i]: start_indexes[i] + case_sizes[i]]
+            log = log.select(
+                pl.col(df_glue), pl.col(key), pl.col(df_sorting_criterion_key)
             )
-        return cl
+            log = log.sort([df_glue, df_sorting_criterion_key])
+
+            grouped = (
+                log.group_by(df_glue, maintain_order=True)
+                .agg(pl.col(key).alias("__acts"))
+                .collect()
+            )
+
+            return grouped["__acts"].to_list()
+        else:
+            # Pandas dataframe part
+            log = log.loc[:, [key, df_glue, df_sorting_criterion_key]]
+
+            cl = list()
+            log = log.sort_values(by=[df_glue, df_sorting_criterion_key])
+            values = log[key].to_numpy().tolist()
+            distinct_ids, start_indexes, case_sizes = np.unique(
+                log[df_glue].to_numpy(), return_index=True, return_counts=True
+            )
+            for i in range(len(distinct_ids)):
+                cl.append(
+                    values[start_indexes[i]: start_indexes[i] + case_sizes[i]]
+                )
+            return cl
     return None
 
 
