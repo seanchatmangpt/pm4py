@@ -7,7 +7,10 @@
 * cc97057cb5ac19c080e37bddb3ccba09d135a94b
   * Polars stats/filters in simplified interface.
 * 82d169c96e2b5d4fc5292755bcdc5c0fca22e220
+  0744e58a58242a73f9edd845e352321d8173ab59
   * DFG computation in Polars
+* 3d1fcd007fba7fc25970a71d660dbb663f4500ba
+  * Performance spectrum computation in Polars
 
 ### Changed
 
