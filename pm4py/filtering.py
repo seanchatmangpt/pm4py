@@ -990,6 +990,9 @@ def filter_paths_performance(
         case_id_key=case_id_key,
     )
     parameters["positive"] = keep
+    parameters["min_performance"] = min_performance
+    parameters["max_performance"] = max_performance
+
     path = tuple(path)
     if _is_dataframe_like(log):
         check_pandas_dataframe_columns(
