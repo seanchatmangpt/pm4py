@@ -36,6 +36,9 @@ def to_dict_records(df):
     list_dictio
         List containing a dictionary for each row
     """
+    if is_polars_lazyframe(df):
+        return df.collect().to_dicts()
+
     return df.to_dict("records")
 
 
@@ -53,6 +56,13 @@ def to_dict_index(df):
     dict
         dict like {index -> {column -> value}}
     """
+    if is_polars_lazyframe(df):
+        collected_df = df.collect()
+        return {
+            idx: row
+            for idx, row in enumerate(collected_df.iter_rows(named=True))
+        }
+
     return df.to_dict("index")
 
 
@@ -79,6 +89,12 @@ def insert_index(
     df
         Dataframe with index
     """
+    if is_polars_lazyframe(df):
+        lf = df
+        if column_name in lf.columns:
+            lf = lf.drop(column_name)
+        return lf.with_row_count(name=column_name)
+
     if copy_dataframe:
         df = df.copy()
 
@@ -114,6 +130,19 @@ def insert_case_index(
     df
         Dataframe with case index
     """
+    if is_polars_lazyframe(df):
+        import polars as pl  # type: ignore[import-untyped]
+
+        lf = df
+        if column_name in lf.columns:
+            lf = lf.drop(column_name)
+        case_map = (
+            lf.select(pl.col(case_id))
+            .unique(maintain_order=True)
+            .with_row_count(name=column_name)
+        )
+        return lf.join(case_map, on=case_id, how="left")
+
     if copy_dataframe:
         df = df.copy()
 
@@ -144,6 +173,16 @@ def insert_ev_in_tr_index(
     df
         Dataframe with index
     """
+    if is_polars_lazyframe(df):
+        import polars as pl  # type: ignore[import-untyped]
+
+        lf = df
+        if column_name in lf.columns:
+            lf = lf.drop(column_name)
+        return lf.with_columns(
+            pl.cumcount().over(case_id).alias(column_name)
+        )
+
     if copy_dataframe:
         df = df.copy()
 
@@ -158,7 +197,14 @@ def format_unique(values):
     except BaseException:
         pass
 
-    values = values.tolist()
+    try:
+        values = values.tolist()
+    except AttributeError:
+        try:
+            values = values.to_list()
+        except AttributeError:
+            values = list(values)
+
     return values
 
 
@@ -189,6 +235,34 @@ def insert_feature_activity_position_in_trace(
     df
         Pandas dataframe
     """
+    if is_polars_lazyframe(df):
+        import polars as pl  # type: ignore[import-untyped]
+
+        lf = insert_ev_in_tr_index(
+            df,
+            case_id=case_id,
+            column_name=constants.DEFAULT_INDEX_IN_TRACE_KEY,
+            copy_dataframe=False,
+        )
+        activities = (
+            lf.select(pl.col(activity_key))
+            .unique()
+            .collect()
+            .get_column(activity_key)
+            .to_list()
+        )
+        for act in activities:
+            column_name = prefix + str(act)
+            if column_name in lf.columns:
+                lf = lf.drop(column_name)
+            lf = lf.with_columns(
+                pl.when(pl.col(activity_key) == act)
+                .then(pl.col(constants.DEFAULT_INDEX_IN_TRACE_KEY))
+                .otherwise(pl.lit(None))
+                .alias(column_name)
+            )
+        return lf
+
     df = insert_ev_in_tr_index(df, case_id=case_id)
     activities = format_unique(df[activity_key].unique())
     for act in activities:
@@ -223,6 +297,62 @@ def insert_case_arrival_finish_rate(
     log
         Pandas dataframe enriched by arrival and finish rate
     """
+    if is_polars_lazyframe(log):
+        import polars as pl  # type: ignore[import-untyped]
+
+        if start_timestamp_column is None:
+            start_timestamp_column = timestamp_column
+
+        lf = log
+        if arrival_rate_column in lf.columns:
+            lf = lf.drop(arrival_rate_column)
+        if finish_rate_column in lf.columns:
+            lf = lf.drop(finish_rate_column)
+
+        arrival = (
+            lf.select(
+                pl.col(case_id_column),
+                pl.col(start_timestamp_column).alias("__start_ts"),
+            )
+            .groupby(case_id_column)
+            .agg(pl.col("__start_ts").min().alias("__start_ts"))
+            .with_columns(
+                pl.col("__start_ts").dt.timestamp().alias("__arrival_seconds")
+            )
+            .sort(["__arrival_seconds", case_id_column])
+            .with_columns(
+                pl.col("__arrival_seconds")
+                .diff()
+                .fill_null(0)
+                .alias(arrival_rate_column)
+            )
+            .select(case_id_column, arrival_rate_column)
+        )
+
+        finish = (
+            lf.select(
+                pl.col(case_id_column),
+                pl.col(timestamp_column).alias("__finish_ts"),
+            )
+            .groupby(case_id_column)
+            .agg(pl.col("__finish_ts").max().alias("__finish_ts"))
+            .with_columns(
+                pl.col("__finish_ts").dt.timestamp().alias("__finish_seconds")
+            )
+            .sort(["__finish_seconds", case_id_column])
+            .with_columns(
+                pl.col("__finish_seconds")
+                .diff()
+                .fill_null(0)
+                .alias(finish_rate_column)
+            )
+            .select(case_id_column, finish_rate_column)
+        )
+
+        lf = lf.join(arrival, on=case_id_column, how="left")
+        lf = lf.join(finish, on=case_id_column, how="left")
+        return lf
+
     if start_timestamp_column is None:
         start_timestamp_column = timestamp_column
 
@@ -285,6 +415,68 @@ def insert_case_service_waiting_time(
     log
         Pandas dataframe with service, waiting and sojourn time
     """
+    if is_polars_lazyframe(log):
+        import polars as pl  # type: ignore[import-untyped]
+
+        if start_timestamp_column is None:
+            start_timestamp_column = timestamp_column
+
+        lf = log
+        for col_name in (
+            diff_start_end_column,
+            service_time_column,
+            sojourn_time_column,
+            waiting_time_column,
+        ):
+            if col_name in lf.columns:
+                lf = lf.drop(col_name)
+
+        lf = lf.with_columns(
+            (
+                (pl.col(timestamp_column) - pl.col(start_timestamp_column))
+                .dt.nanoseconds()
+                / 1_000_000_000
+            ).alias(diff_start_end_column)
+        )
+
+        service = (
+            lf.groupby(case_id_column)
+            .agg(
+                pl.col(diff_start_end_column)
+                .sum()
+                .alias(service_time_column)
+            )
+        )
+
+        sojourn = (
+            lf.groupby(case_id_column)
+            .agg(
+                pl.col(start_timestamp_column)
+                .min()
+                .alias("__case_start"),
+                pl.col(timestamp_column)
+                .max()
+                .alias("__case_end"),
+            )
+            .with_columns(
+                (
+                    (pl.col("__case_end") - pl.col("__case_start"))
+                    .dt.nanoseconds()
+                    / 1_000_000_000
+                ).alias(sojourn_time_column)
+            )
+            .select(case_id_column, sojourn_time_column)
+        )
+
+        lf = lf.join(service, on=case_id_column, how="left")
+        lf = lf.join(sojourn, on=case_id_column, how="left")
+        lf = lf.with_columns(
+            (
+                pl.col(sojourn_time_column) - pl.col(service_time_column)
+            ).alias(waiting_time_column)
+        )
+        return lf
+
     if start_timestamp_column is None:
         start_timestamp_column = timestamp_column
 
@@ -333,6 +525,12 @@ def check_is_pandas_dataframe(log):
     """
     log_type = str(type(log)).lower()
     return "dataframe" in log_type
+
+
+def is_polars_lazyframe(df):
+    """Return True if the provided dataframe is a Polars LazyFrame."""
+    df_type = str(type(df)).lower()
+    return "polars" in df_type and "lazyframe" in df_type
 
 
 def instantiate_dataframe(*args, **kwargs):
