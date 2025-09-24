@@ -1125,7 +1125,12 @@ def get_all_case_durations(
         cd = case_stats_module.get_cases_description(
             log, parameters=properties
         )
-        return sorted([x["caseDuration"] for x in cd.values()])
+        if isinstance(cd, dict):
+            case_durations = [x["caseDuration"] for x in cd.values()]
+        else:
+            case_durations = [x["caseDuration"] for x in cd]
+
+        return sorted(case_durations)
     else:
         from pm4py.statistics.traces.generic.log import case_statistics
 
@@ -1201,7 +1206,12 @@ def get_case_duration(
         cd = case_stats_module.get_cases_description(
             log, parameters=properties
         )
-        return cd[case_id]["caseDuration"]
+        if isinstance(cd, dict):
+            return cd[case_id]["caseDuration"]
+        else:
+            for i in range(len(cd)):
+                if cd[i]["caseid"] == case_id:
+                    return cd[i]["caseDuration"]
     else:
         from pm4py.statistics.traces.generic.log import case_statistics
 
