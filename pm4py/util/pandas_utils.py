@@ -180,7 +180,7 @@ def insert_ev_in_tr_index(
         if column_name in lf.columns:
             lf = lf.drop(column_name)
         return lf.with_columns(
-            pl.cumcount().over(case_id).alias(column_name)
+            (pl.col(case_id).cum_count().over(case_id) - 1).alias(column_name)
         )
 
     if copy_dataframe:
@@ -314,16 +314,19 @@ def insert_case_arrival_finish_rate(
                 pl.col(case_id_column),
                 pl.col(start_timestamp_column).alias("__start_ts"),
             )
-            .groupby(case_id_column)
+            .group_by(case_id_column)
             .agg(pl.col("__start_ts").min().alias("__start_ts"))
             .with_columns(
-                pl.col("__start_ts").dt.timestamp().alias("__arrival_seconds")
+                pl.col("__start_ts")
+                .dt.timestamp()
+                .alias("__arrival_microseconds")
             )
-            .sort(["__arrival_seconds", case_id_column])
+            .sort(["__arrival_microseconds", case_id_column])
             .with_columns(
-                pl.col("__arrival_seconds")
+                pl.col("__arrival_microseconds")
                 .diff()
                 .fill_null(0)
+                .truediv(1_000_000)
                 .alias(arrival_rate_column)
             )
             .select(case_id_column, arrival_rate_column)
@@ -334,16 +337,19 @@ def insert_case_arrival_finish_rate(
                 pl.col(case_id_column),
                 pl.col(timestamp_column).alias("__finish_ts"),
             )
-            .groupby(case_id_column)
+            .group_by(case_id_column)
             .agg(pl.col("__finish_ts").max().alias("__finish_ts"))
             .with_columns(
-                pl.col("__finish_ts").dt.timestamp().alias("__finish_seconds")
+                pl.col("__finish_ts")
+                .dt.timestamp()
+                .alias("__finish_microseconds")
             )
-            .sort(["__finish_seconds", case_id_column])
+            .sort(["__finish_microseconds", case_id_column])
             .with_columns(
-                pl.col("__finish_seconds")
+                pl.col("__finish_microseconds")
                 .diff()
                 .fill_null(0)
+                .truediv(1_000_000)
                 .alias(finish_rate_column)
             )
             .select(case_id_column, finish_rate_column)
@@ -433,14 +439,15 @@ def insert_case_service_waiting_time(
 
         lf = lf.with_columns(
             (
-                (pl.col(timestamp_column) - pl.col(start_timestamp_column))
-                .dt.nanoseconds()
-                / 1_000_000_000
-            ).alias(diff_start_end_column)
+                pl.col(timestamp_column).dt.timestamp()
+                - pl.col(start_timestamp_column).dt.timestamp()
+            )
+            .truediv(1_000_000)
+            .alias(diff_start_end_column)
         )
 
         service = (
-            lf.groupby(case_id_column)
+            lf.group_by(case_id_column)
             .agg(
                 pl.col(diff_start_end_column)
                 .sum()
@@ -449,21 +456,23 @@ def insert_case_service_waiting_time(
         )
 
         sojourn = (
-            lf.groupby(case_id_column)
+            lf.group_by(case_id_column)
             .agg(
                 pl.col(start_timestamp_column)
+                .dt.timestamp()
                 .min()
-                .alias("__case_start"),
+                .alias("__case_start_ts"),
                 pl.col(timestamp_column)
+                .dt.timestamp()
                 .max()
-                .alias("__case_end"),
+                .alias("__case_end_ts"),
             )
             .with_columns(
                 (
-                    (pl.col("__case_end") - pl.col("__case_start"))
-                    .dt.nanoseconds()
-                    / 1_000_000_000
-                ).alias(sojourn_time_column)
+                    pl.col("__case_end_ts") - pl.col("__case_start_ts")
+                )
+                .truediv(1_000_000)
+                .alias(sojourn_time_column)
             )
             .select(case_id_column, sojourn_time_column)
         )
