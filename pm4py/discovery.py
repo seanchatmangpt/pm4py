@@ -22,7 +22,7 @@ from pm4py.util.pandas_utils import (
     check_is_pandas_dataframe,
     check_pandas_dataframe_columns,
 )
-from pm4py.utils import get_properties, __event_log_deprecation_warning
+from pm4py.utils import get_properties, __event_log_deprecation_warning, is_polars_lazyframe
 from pm4py.util import constants, pandas_utils
 import deprecation
 import importlib.util
@@ -77,21 +77,26 @@ def discover_dfg(
         )
         from pm4py.util import constants
 
-        from pm4py.algo.discovery.dfg.adapters.pandas.df_statistics import (
-            get_dfg_graph,
-        )
+        if is_polars_lazyframe(log):
+            from pm4py.algo.discovery.dfg.adapters.polars.df_statistics import get_dfg_graph
+            from pm4py.statistics.start_activities.polars import get as start_activities_module
+            from pm4py.statistics.end_activities.polars import get as end_activities_module
+        else:
+            from pm4py.algo.discovery.dfg.adapters.pandas.df_statistics import (
+                get_dfg_graph,
+            )
+            from pm4py.statistics.start_activities.pandas import (
+                get as start_activities_module,
+            )
+            from pm4py.statistics.end_activities.pandas import (
+                get as end_activities_module,
+            )
 
         dfg = get_dfg_graph(
             log,
             activity_key=activity_key,
             timestamp_key=timestamp_key,
             case_id_glue=case_id_key,
-        )
-        from pm4py.statistics.start_activities.pandas import (
-            get as start_activities_module,
-        )
-        from pm4py.statistics.end_activities.pandas import (
-            get as end_activities_module,
         )
 
         start_activities = start_activities_module.get_start_activities(
@@ -258,9 +263,20 @@ def discover_performance_dfg(
         )
         from pm4py.util import constants
 
-        from pm4py.algo.discovery.dfg.adapters.pandas.df_statistics import (
-            get_dfg_graph,
-        )
+        if is_polars_lazyframe(log):
+            from pm4py.algo.discovery.dfg.adapters.polars.df_statistics import get_dfg_graph
+            from pm4py.statistics.start_activities.polars import get as start_activities_module
+            from pm4py.statistics.end_activities.polars import get as end_activities_module
+        else:
+            from pm4py.algo.discovery.dfg.adapters.pandas.df_statistics import (
+                get_dfg_graph,
+            )
+            from pm4py.statistics.start_activities.pandas import (
+                get as start_activities_module,
+            )
+            from pm4py.statistics.end_activities.pandas import (
+                get as end_activities_module,
+            )
 
         dfg = get_dfg_graph(
             log,
@@ -272,12 +288,6 @@ def discover_performance_dfg(
             business_hours=business_hours,
             business_hours_slot=business_hour_slots,
             workcalendar=workcalendar,
-        )
-        from pm4py.statistics.start_activities.pandas import (
-            get as start_activities_module,
-        )
-        from pm4py.statistics.end_activities.pandas import (
-            get as end_activities_module,
         )
 
         start_activities = start_activities_module.get_start_activities(
