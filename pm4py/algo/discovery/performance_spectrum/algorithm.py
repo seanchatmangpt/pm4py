@@ -1,3 +1,5 @@
+import importlib.util
+
 from pm4py.algo.discovery.performance_spectrum.variants import (
     dataframe,
     log,
@@ -30,6 +32,22 @@ class Variants(Enum):
     LOG = log
     DATAFRAME_DISCONNECTED = dataframe_disconnected
     LOG_DISCONNECTED = log_disconnected
+
+
+if importlib.util.find_spec("polars"):
+    from pm4py.algo.discovery.performance_spectrum.variants import (
+        lazyframe,
+        lazyframe_disconnected,
+    )
+
+    Variants.LAZYFRAME = lazyframe
+    Variants.LAZYFRAME_DISCONNECTED = lazyframe_disconnected
+
+
+def is_polars_lazyframe(df: Any) -> bool:
+    """Return True if the provided dataframe is a Polars LazyFrame."""
+    df_type = str(type(df)).lower()
+    return "polars" in df_type and "lazyframe" in df_type
 
 
 def apply(
@@ -78,7 +96,10 @@ def apply(
 
     if pandas_utils.check_is_pandas_dataframe(log):
         if variant is None:
-            variant = Variants.DATAFRAME
+            if is_polars_lazyframe(log):
+                variant = Variants.LAZYFRAME
+            else:
+                variant = Variants.DATAFRAME
 
         points = exec_utils.get_variant(variant).apply(
             log, list_activities, sample_size, parameters
