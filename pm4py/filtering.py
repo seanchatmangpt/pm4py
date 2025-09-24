@@ -511,7 +511,7 @@ def filter_eventually_follows_relation(
 
         parameters[ltl_checker.Parameters.POSITIVE] = retain
 
-        if check_is_pandas_dataframe(log):
+        if not is_polars_lazyframe(log):
             if retain:
                 cases = set()
             else:
