@@ -613,15 +613,13 @@ def __dotted_attribute_selection(
         check_pandas_dataframe_columns(log)
 
     if attributes is None:
-        from pm4py.util import xes_constants
-        from pm4py.objects.log.util import sorting
-        from pm4py.objects.conversion.log import converter
+        if isinstance(log, EventLog):
+            for index, trace in enumerate(log):
+                trace.attributes["@@index"] = index
+            attributes = ["time:timestamp", "case:@@index", "concept:name"]
+        else:
+            attributes = ["time:timestamp", "@@case_index", "concept:name"]
 
-        log = converter.apply(log, variant=converter.Variants.TO_EVENT_LOG)
-        log = sorting.sort_timestamp(log, xes_constants.DEFAULT_TIMESTAMP_KEY)
-        for index, trace in enumerate(log):
-            trace.attributes["@@index"] = index
-        attributes = ["time:timestamp", "case:@@index", "concept:name"]
     return log, attributes
 
 
