@@ -625,6 +625,89 @@ def check_pandas_dataframe_columns(
     df
         Pandas dataframe
     """
+    if is_polars_lazyframe(df):
+        import polars as pl  # type: ignore[import-untyped]
+
+        columns = df.columns
+        if len(columns) < 3:
+            raise Exception(
+                "the dataframe should (at least) contain a column for the case identifier, a column for the activity and a column for the timestamp."
+            )
+
+        schema = dict(df.schema)
+        str_columns = {
+            col
+            for col, dtype in schema.items()
+            if any(
+                token in str(dtype).lower()
+                for token in ("str", "utf8", "categorical", "enum", "object")
+            )
+        }
+        timest_columns = {
+            col
+            for col, dtype in schema.items()
+            if any(token in str(dtype).lower() for token in ("date", "time", "datetime"))
+        }
+
+        if len(str_columns) < 2:
+            raise Exception(
+                "the dataframe should (at least) contain a column of type string for the case identifier and a column of type string for the activity."
+            )
+
+        if len(timest_columns) < 1:
+            raise Exception("the dataframe should (at least) contain a column of type date")
+
+        def raise_if_missing(column_name):
+            raise Exception(
+                "the specified {} column is not contained in the dataframe. Available columns: {}".format(
+                    column_name,
+                    sorted(list(columns)),
+                )
+            )
+
+        def ensure_no_null(col, label):
+            has_null_df = df.select(
+                pl.col(col).is_null().any().alias("__has_null")
+            ).collect()
+            if bool(has_null_df[0, "__has_null"]):
+                raise Exception(
+                    "the {} column should not contain any empty value.".format(label)
+                )
+
+        if case_id_key is not None:
+            if case_id_key not in columns:
+                raise_if_missing("case ID")
+            if case_id_key not in str_columns:
+                raise Exception("the case ID column should be of type string.")
+            ensure_no_null(case_id_key, "case ID")
+
+        if activity_key is not None:
+            if activity_key not in columns:
+                raise_if_missing("activity")
+            if activity_key not in str_columns:
+                raise Exception("the activity column should be of type string.")
+            ensure_no_null(activity_key, "activity")
+
+        if timestamp_key is not None:
+            if timestamp_key not in columns:
+                raise_if_missing("timestamp")
+            if timestamp_key not in timest_columns:
+                raise Exception(
+                    "the timestamp column should be of type datetime. Use the function pandas.to_datetime"
+                )
+            ensure_no_null(timestamp_key, "timestamp")
+
+        if start_timestamp_key is not None:
+            if start_timestamp_key not in columns:
+                raise_if_missing("start timestamp")
+            if start_timestamp_key not in timest_columns:
+                raise Exception(
+                    "the start timestamp column should be of type datetime. Use the function pandas.to_datetime"
+                )
+            ensure_no_null(start_timestamp_key, "start timestamp")
+
+        return
+
     if len(df.columns) < 3:
         raise Exception(
             "the dataframe should (at least) contain a column for the case identifier, a column for the activity and a column for the timestamp."
@@ -656,11 +739,9 @@ def check_pandas_dataframe_columns(
     if case_id_key is not None:
         if case_id_key not in df.columns:
             raise Exception(
-                "the specified case ID column is not contained in the dataframe. Available columns: " +
-                str(
-                    sorted(
-                        list(
-                            df.columns))))
+                "the specified case ID column is not contained in the dataframe. Available columns: "
+                + str(sorted(list(df.columns)))
+            )
 
         if case_id_key not in str_columns:
             raise Exception("the case ID column should be of type string.")
@@ -673,11 +754,9 @@ def check_pandas_dataframe_columns(
     if activity_key is not None:
         if activity_key not in df.columns:
             raise Exception(
-                "the specified activity column is not contained in the dataframe. Available columns: " +
-                str(
-                    sorted(
-                        list(
-                            df.columns))))
+                "the specified activity column is not contained in the dataframe. Available columns: "
+                + str(sorted(list(df.columns)))
+            )
 
         if activity_key not in str_columns:
             raise Exception("the activity column should be of type string.")
@@ -690,11 +769,9 @@ def check_pandas_dataframe_columns(
     if timestamp_key is not None:
         if timestamp_key not in df.columns:
             raise Exception(
-                "the specified timestamp column is not contained in the dataframe. Available columns: " +
-                str(
-                    sorted(
-                        list(
-                            df.columns))))
+                "the specified timestamp column is not contained in the dataframe. Available columns: "
+                + str(sorted(list(df.columns)))
+            )
 
         if timestamp_key not in timest_columns:
             raise Exception(
@@ -709,11 +786,9 @@ def check_pandas_dataframe_columns(
     if start_timestamp_key is not None:
         if start_timestamp_key not in df.columns:
             raise Exception(
-                "the specified start timestamp column is not contained in the dataframe. Available columns: " +
-                str(
-                    sorted(
-                        list(
-                            df.columns))))
+                "the specified start timestamp column is not contained in the dataframe. Available columns: "
+                + str(sorted(list(df.columns)))
+            )
 
         if start_timestamp_key not in timest_columns:
             raise Exception(
@@ -724,13 +799,6 @@ def check_pandas_dataframe_columns(
             raise Exception(
                 "the start timestamp column should not contain any empty value."
             )
-
-    """if len(set(df.columns).intersection(
-            set([constants.CASE_CONCEPT_NAME, xes_constants.DEFAULT_NAME_KEY,
-                 xes_constants.DEFAULT_TIMESTAMP_KEY]))) < 3:
-        raise Exception(
-            "please format your dataframe accordingly! df = pm4py.format_dataframe(df, case_id='<name of the case ID column>', activity_key='<name of the activity column>', timestamp_key='<name of the timestamp column>')")"""
-
 
 def get_pivot_timestamp_distribution(
         dataframe: pd.DataFrame,
