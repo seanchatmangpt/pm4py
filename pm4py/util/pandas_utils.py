@@ -533,7 +533,7 @@ def check_is_pandas_dataframe(log):
         Is dataframe?
     """
     log_type = str(type(log)).lower()
-    return "dataframe" in log_type
+    return "dataframe" in log_type or "lazyframe" in log_type
 
 
 def is_polars_lazyframe(df):
