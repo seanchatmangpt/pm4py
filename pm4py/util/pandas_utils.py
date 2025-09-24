@@ -800,6 +800,30 @@ def check_pandas_dataframe_columns(
                 "the start timestamp column should not contain any empty value."
             )
 
+
+def get_traces(log, case_id_key, activity_key):
+    if is_polars_lazyframe(log):
+        import polars as pl  # type: ignore[import-untyped]
+
+        collected = (
+            log.select(pl.col(case_id_key), pl.col(activity_key))
+            .group_by(case_id_key, maintain_order=True)
+            .agg(pl.col(activity_key).alias("__acts"))
+            .collect()
+        )
+        traces = [tuple(seq) for seq in collected["__acts"].to_list()]
+    else:
+        # Pandas dataframe management
+        traces = [
+            tuple(x)
+            for x in log.groupby(case_id_key)[activity_key]
+            .agg(list)
+            .to_dict()
+            .values()
+        ]
+    return traces
+
+
 def get_pivot_timestamp_distribution(
         dataframe: pd.DataFrame,
         frequency_alias="M",
