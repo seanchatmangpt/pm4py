@@ -824,6 +824,43 @@ def get_traces(log, case_id_key, activity_key):
     return traces
 
 
+def get_attribute_values_count(log, attribute):
+    if is_polars_lazyframe(log):
+        import importlib.util
+
+        if importlib.util.find_spec("polars") is None:
+            raise RuntimeError(
+                "Polars LazyFrame provided but 'polars' package is not installed."
+            )
+
+        import polars as pl  # type: ignore[import-untyped]
+
+        if attribute not in log.columns:
+            raise Exception(
+                f"Column '{attribute}' is not present in the provided Polars LazyFrame."
+            )
+
+        result = (
+            log.group_by(attribute)
+            .agg(pl.len().alias("__pm4py_count__"))
+            .collect()
+        )
+
+        return {
+            row[attribute]: row["__pm4py_count__"]
+            for row in result.iter_rows(named=True)
+        }
+    else:
+        return log[attribute].value_counts().to_dict()
+
+
+def df_row_count(log):
+    if is_polars_lazyframe(log):
+        return len(log.collect())
+    else:
+        return len(log)
+
+
 def get_pivot_timestamp_distribution(
         dataframe: pd.DataFrame,
         frequency_alias="M",
