@@ -1,7 +1,24 @@
 # Changelog of pm4py
 
 
-# pm4py 2.7.20 (2025.08.XX)
+# pm4py 2.7.21 (2025.09.26)
+
+### Added
+* cc97057cb5ac19c080e37bddb3ccba09d135a94b
+  * Polars stats/filters in simplified interface.
+
+### Changed
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
+### Other
+
+
+# pm4py 2.7.20 (2025.08.31)
 
 ### Added
 * de34c822fbca2a1a0b86515fb7c69d068a0706c6
