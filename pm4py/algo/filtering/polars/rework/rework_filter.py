@@ -90,7 +90,7 @@ def apply_activity_set(
         Parameters.CASE_ID_KEY, parameters, CASE_CONCEPT_NAME
     )
     activity_key = exec_utils.get_param_value(
-        Parameters.ACTIVITY_KEY, parameters, constants.DEFAULT_NAME_KEY
+        Parameters.ACTIVITY_KEY, parameters, xes_constants.DEFAULT_NAME_KEY
     )
     min_occurrences = exec_utils.get_param_value(
         Parameters.MIN_OCCURRENCES, parameters, 2

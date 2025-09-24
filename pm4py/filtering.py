@@ -37,6 +37,18 @@ def _is_dataframe_like(obj):
     return check_is_pandas_dataframe(obj) or is_polars_lazyframe(obj)
 
 
+def _normalize_sequence_argument(value):
+    """Normalize a prefix/suffix input into the list-of-list structure expected by Polars filters."""
+    if isinstance(value, str):
+        return [[value]]
+    if isinstance(value, (list, tuple)):
+        if value and all(isinstance(elem, (list, tuple)) for elem in value):
+            return [list(elem) if isinstance(elem, tuple) else list(elem) for elem in value]
+        if all(isinstance(elem, str) for elem in value):
+            return [list(value)]
+    return [[str(value)]]
+
+
 def filter_log_relative_occurrence_event_attribute(
     log: Union[EventLog, pd.DataFrame],
     min_relative_stake: float,
@@ -904,6 +916,7 @@ def filter_activities_rework(
         case_id_key=case_id_key,
     )
     parameters["min_occurrences"] = min_occurrences
+    is_polars = is_polars_lazyframe(log)
     if _is_dataframe_like(log):
         check_pandas_dataframe_columns(
             log,
@@ -913,6 +926,13 @@ def filter_activities_rework(
         )
         filtering_pkg = _get_dataframe_filtering_package(log)
         rework_filter = filtering_pkg.rework.rework_filter
+
+        if is_polars:
+            if hasattr(rework_filter, "apply_activity_set"):
+                return rework_filter.apply_activity_set(
+                    log, {activity}, parameters=parameters
+                )
+            return rework_filter.apply(log, parameters=parameters)
 
         return rework_filter.apply(log, activity, parameters=parameters)
     else:
@@ -1171,8 +1191,13 @@ def filter_prefixes(
         )
         filtering_pkg = _get_dataframe_filtering_package(log)
         prefix_filter = filtering_pkg.prefixes.prefix_filter
+        prefixes_arg = (
+            _normalize_sequence_argument(activity)
+            if is_polars_lazyframe(log)
+            else activity
+        )
 
-        return prefix_filter.apply(log, activity, parameters=parameters)
+        return prefix_filter.apply(log, prefixes_arg, parameters=parameters)
     else:
         from pm4py.algo.filtering.log.prefixes import prefix_filter
 
@@ -1241,8 +1266,13 @@ def filter_suffixes(
         )
         filtering_pkg = _get_dataframe_filtering_package(log)
         suffix_filter = filtering_pkg.suffixes.suffix_filter
+        suffixes_arg = (
+            _normalize_sequence_argument(activity)
+            if is_polars_lazyframe(log)
+            else activity
+        )
 
-        return suffix_filter.apply(log, activity, parameters=parameters)
+        return suffix_filter.apply(log, suffixes_arg, parameters=parameters)
     else:
         from pm4py.algo.filtering.log.suffixes import suffix_filter
 
