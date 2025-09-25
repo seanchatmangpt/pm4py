@@ -58,8 +58,15 @@ def apply(
     # Check if any prefix matches
     prefix_conditions = []
     for prefix in prefixes:
-        prefix_len = len(prefix)
-        condition = pl.col("activities").list.slice(0, prefix_len).list.to_struct() == pl.Series([prefix]).list.to_struct()[0]
+        prefix_list = list(prefix)
+        prefix_len = len(prefix_list)
+        if prefix_len == 0:
+            condition = pl.lit(True)
+        else:
+            condition = (
+                pl.col("activities").list.slice(0, prefix_len)
+                == pl.lit(prefix_list)
+            )
         prefix_conditions.append(condition)
     
     if prefix_conditions:

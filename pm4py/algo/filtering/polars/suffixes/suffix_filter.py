@@ -54,8 +54,15 @@ def apply(
     # Check if any suffix matches
     suffix_conditions = []
     for suffix in suffixes:
-        suffix_len = len(suffix)
-        condition = pl.col("activities").list.tail(suffix_len).list.to_struct() == pl.Series([suffix]).list.to_struct()[0]
+        suffix_list = list(suffix)
+        suffix_len = len(suffix_list)
+        if suffix_len == 0:
+            condition = pl.lit(True)
+        else:
+            condition = (
+                pl.col("activities").list.tail(suffix_len)
+                == pl.lit(suffix_list)
+            )
         suffix_conditions.append(condition)
     
     if suffix_conditions:
