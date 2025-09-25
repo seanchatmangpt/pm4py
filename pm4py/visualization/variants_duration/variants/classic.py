@@ -178,8 +178,10 @@ def apply(
         for activity, x_pos in variant_node_positions[variant].items():
             node_id = f"n{uuid.uuid4().hex[:12]}"
             activity_node_ids[activity] = node_id
+            label = activity.replace(" ", "\\n")  # literal backslash-n for Graphviz
+
             lines.append(
-                f'  {node_id} [label="{activity.replace(" ", "\n")}", shape=box, style="filled,rounded", '
+                f'  {node_id} [label="{label}", shape=box, style="filled,rounded", '
                 f'fillcolor="{color}", width={node_width}, height={node_height}, '
                 f'pos="{x_pos},{y_pos}!", fontsize="8pt", fixedsize=true];'
             )
