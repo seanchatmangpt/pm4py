@@ -8,7 +8,6 @@ if pm4_constants.ENABLE_INTERNAL_IMPORTS:
         end_activities,
         eventually_follows,
         ocel,
-        overlap,
         passed_time,
         process_cube,
         rework,
@@ -19,3 +18,8 @@ if pm4_constants.ENABLE_INTERNAL_IMPORTS:
         util,
         variants
     )
+
+import importlib.util
+
+if importlib.util.find_spec("intervaltree"):
+    from pm4py.statistics import overlap
