@@ -1426,7 +1426,10 @@ def get_process_cube(
         }
     )
     """
-    from pm4py.statistics.process_cube import algorithm
+    if is_polars_lazyframe(feature_table):
+        from pm4py.statistics.process_cube.polars import algorithm
+    else:
+        from pm4py.statistics.process_cube.pandas import algorithm
 
     return algorithm.apply(
         feature_table,
