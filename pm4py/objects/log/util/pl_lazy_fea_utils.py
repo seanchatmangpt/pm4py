@@ -26,6 +26,14 @@ def _scalar_from_lazy(lf: pl.LazyFrame, expr: pl.Expr) -> Any:
     return result.to_series(0)[0]
 
 
+def _lazy_schema(lf: pl.LazyFrame) -> pl.Schema:
+    return lf.collect_schema()
+
+
+def _lazy_columns(lf: pl.LazyFrame) -> List[str]:
+    return _lazy_schema(lf).names()
+
+
 def _is_numeric_dtype(dtype: pl.DataType) -> bool:
     dtype_str = str(dtype).lower()
     if any(token in dtype_str for token in ("int", "uint", "float")):
@@ -51,6 +59,9 @@ def automatic_feature_selection_df(
     if parameters is None:
         parameters = {}
 
+    schema = _lazy_schema(df)
+    available_columns = set(schema.names())
+
     case_id_key = exec_utils.get_param_value(
         Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME
     )
@@ -63,7 +74,6 @@ def automatic_feature_selection_df(
         Parameters.ACTIVITY_KEY, parameters, xes_constants.DEFAULT_NAME_KEY
     )
 
-    available_columns = set(df.columns)
     default_mandatory = available_columns.intersection(
         {case_id_key, activity_key, timestamp_key}
     )
@@ -81,7 +91,6 @@ def automatic_feature_selection_df(
         Parameters.MAX_DIFFERENT_OCC_STR_ATTR, parameters, 50
     )
 
-    schema = df.schema
     other_attributes_to_retain = set()
 
     total_cases = _scalar_from_lazy(df, pl.col(case_id_key).n_unique())
@@ -117,7 +126,7 @@ def automatic_feature_selection_df(
 
     attributes_to_retain = mandatory_set.union(other_attributes_to_retain)
     selected_columns = [
-        col_name for col_name in df.columns if col_name in attributes_to_retain
+        col_name for col_name in schema.names() if col_name in attributes_to_retain
     ]
 
     return df.select(selected_columns)
@@ -209,7 +218,7 @@ def get_features_df(
 
     fea_df = df.select(pl.col(case_id_key)).unique().sort(case_id_key)
 
-    schema = df.schema
+    schema = _lazy_schema(df)
     numeric_columns: List[str] = []
     string_columns: List[str] = []
 
@@ -260,7 +269,7 @@ def automatic_feature_extraction_df(
     )
 
     fea_sel_df = automatic_feature_selection_df(df, parameters=parameters)
-    columns = set(fea_sel_df.columns)
+    columns = set(_lazy_columns(fea_sel_df))
 
     if case_id_key in columns:
         columns.remove(case_id_key)
