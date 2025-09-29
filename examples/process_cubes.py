@@ -1,5 +1,5 @@
 import pm4py
-from pm4py.statistics.process_cube import algorithm as process_cube_builder
+from pm4py.statistics.process_cube.pandas import algorithm as process_cube_builder
 import traceback
 
 
