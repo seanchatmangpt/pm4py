@@ -13,7 +13,7 @@ from pm4py.util.pandas_utils import (
     check_is_pandas_dataframe,
     check_pandas_dataframe_columns,
 )
-from pm4py.utils import get_properties, constants, pandas_utils
+from pm4py.utils import get_properties, constants, pandas_utils, is_polars_lazyframe
 
 
 def split_train_test(
@@ -255,6 +255,8 @@ def extract_features_dataframe(
         )
 
     data, feature_names = log_to_features.apply(log, parameters=parameters)
+    if is_polars_lazyframe(data):
+        return data
 
     return pandas_utils.instantiate_dataframe(data, columns=feature_names)
 
