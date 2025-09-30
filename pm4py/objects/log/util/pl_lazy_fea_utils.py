@@ -153,6 +153,78 @@ def select_number_column(
     )
 
 
+def _collect_categorical_values(
+    df: pl.LazyFrame, columns: List[str]
+) -> Dict[str, List[Any]]:
+    """Collects formatted unique values for the provided categorical columns."""
+
+    collected: Dict[str, List[Any]] = {}
+    for col in columns:
+        unique_values = (
+            df.select(pl.col(col))
+            .drop_nulls(subset=[col])
+            .unique()
+            .collect()
+            .get_column(col)
+            .to_list()
+        )
+        formatted = [
+            value for value in pandas_utils.format_unique(unique_values) if value is not None
+        ]
+        if formatted:
+            collected[col] = formatted
+
+    return collected
+
+
+def _select_string_columns(
+    df: pl.LazyFrame,
+    fea_df: pl.LazyFrame,
+    columns: List[str],
+    case_id_key: str,
+    count_occurrences: bool,
+) -> pl.LazyFrame:
+    """Adds one-hot or count encoded columns for the provided categorical attributes."""
+
+    if not columns:
+        return fea_df
+
+    unique_values_map = _collect_categorical_values(df, columns)
+    if not unique_values_map:
+        return fea_df
+
+    agg_exprs: List[pl.Expr] = []
+    fill_exprs: List[pl.Expr] = []
+
+    for column, unique_values in unique_values_map.items():
+        for value in unique_values:
+            column_name = _sanitize_feature_name(column, value)
+
+            comparison = pl.col(column).eq(value).fill_null(False)
+
+            if count_occurrences:
+                agg_expr = comparison.cast(pl.Int64).sum().alias(column_name)
+            else:
+                agg_expr = comparison.cast(pl.Int8).max().alias(column_name)
+
+            agg_exprs.append(agg_expr)
+            fill_exprs.append(
+                pl.col(column_name).cast(pl.Float32).fill_null(0.0)
+            )
+
+    feature_chunk = (
+        df.select(
+            [pl.col(case_id_key)] + [pl.col(col) for col in unique_values_map.keys()]
+        )
+        .group_by(case_id_key)
+        .agg(agg_exprs)
+        # Materialize all encoded columns in one go to minimize separate joins.
+        .with_columns(fill_exprs)
+    )
+
+    return fea_df.join(feature_chunk, on=case_id_key, how="left")
+
+
 def select_string_column(
     df: pl.LazyFrame,
     fea_df: pl.LazyFrame,
@@ -161,39 +233,31 @@ def select_string_column(
     count_occurrences: bool = False,
 ) -> pl.LazyFrame:
     """Adds one-hot or count encoded columns for a categorical attribute."""
-    df_filtered = df.select(pl.col(case_id_key), pl.col(col)).drop_nulls(subset=[col])
 
-    unique_values = (
-        df_filtered.select(pl.col(col).unique()).collect().get_column(col).to_list()
+    return _select_string_columns(
+        df,
+        fea_df,
+        [col],
+        case_id_key=case_id_key,
+        count_occurrences=count_occurrences,
     )
-    unique_values = [v for v in pandas_utils.format_unique(unique_values) if v is not None]
 
-    if not unique_values:
-        return fea_df
 
-    agg_exprs = []
-    new_columns = []
+def select_string_columns(
+    df: pl.LazyFrame,
+    fea_df: pl.LazyFrame,
+    columns: List[str],
+    case_id_key: str = constants.CASE_CONCEPT_NAME,
+    count_occurrences: bool = False,
+) -> pl.LazyFrame:
+    """Adds one-hot or count encoded columns for the provided categorical attributes."""
 
-    for value in unique_values:
-        column_name = _sanitize_feature_name(col, value)
-        new_columns.append(column_name)
-
-        comparison = pl.col(col).eq(value)
-        if count_occurrences:
-            agg_exprs.append(
-                comparison.cast(pl.Int64).sum().alias(column_name)
-            )
-        else:
-            agg_exprs.append(
-                comparison.any().cast(pl.Int8).alias(column_name)
-            )
-
-    feature_chunk = df_filtered.group_by(case_id_key).agg(agg_exprs)
-
-    fea_df = fea_df.join(feature_chunk, on=case_id_key, how="left")
-
-    return fea_df.with_columns(
-        [pl.col(col_name).fill_null(0).cast(pl.Float32) for col_name in new_columns]
+    return _select_string_columns(
+        df,
+        fea_df,
+        columns,
+        case_id_key=case_id_key,
+        count_occurrences=count_occurrences,
     )
 
 
@@ -236,14 +300,13 @@ def get_features_df(
             df, fea_df, col, case_id_key=case_id_key
         )
 
-    for col in string_columns:
-        fea_df = select_string_column(
-            df,
-            fea_df,
-            col,
-            case_id_key=case_id_key,
-            count_occurrences=count_occurrences,
-        )
+    fea_df = select_string_columns(
+        df,
+        fea_df,
+        string_columns,
+        case_id_key=case_id_key,
+        count_occurrences=count_occurrences,
+    )
 
     fea_df = fea_df.sort(case_id_key)
     if not add_case_identifier_column:
