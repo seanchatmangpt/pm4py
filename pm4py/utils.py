@@ -749,24 +749,79 @@ def project_on_event_attribute(
 
     output = []
     if check_is_pandas_dataframe(log):
-        check_pandas_dataframe_columns(log)
-        from pm4py.streaming.conversion import from_pandas
-
-        parameters = {from_pandas.Parameters.ACTIVITY_KEY: attribute_key}
-        if case_id_key is not None:
-            parameters[from_pandas.Parameters.CASE_ID_KEY] = case_id_key
-        it = from_pandas.apply(log, parameters=parameters)
-        for trace in it:
-            output.append(
-                [
-                    (
-                        x[xes_constants.DEFAULT_NAME_KEY]
-                        if xes_constants.DEFAULT_NAME_KEY is not None
-                        else None
-                    )
-                    for x in trace
-                ]
+        if is_polars_lazyframe(log):
+            check_pandas_dataframe_columns(
+                log, activity_key=attribute_key, case_id_key=case_id_key
             )
+
+            import polars as pl  # type: ignore[import-untyped]
+
+            case_column = (
+                case_id_key if case_id_key is not None else constants.CASE_CONCEPT_NAME
+            )
+            if case_column not in log.columns:
+                raise Exception(
+                    f"The specified case identifier column '{case_column}' is not present in the Polars LazyFrame."
+                )
+
+            activity_column = (
+                attribute_key if attribute_key is not None else xes_constants.DEFAULT_NAME_KEY
+            )
+            has_activity_column = (
+                activity_column is not None and activity_column in log.columns
+            )
+
+            index_column = constants.DEFAULT_INDEX_KEY
+            lf = log
+            if index_column not in lf.columns:
+                index_column = "__pm4py_row_index__"
+                lf = lf.with_row_count(index_column)
+
+            sort_columns = [case_column]
+            if xes_constants.DEFAULT_TIMESTAMP_KEY in lf.columns:
+                sort_columns.append(xes_constants.DEFAULT_TIMESTAMP_KEY)
+            if index_column in lf.columns:
+                sort_columns.append(index_column)
+
+            lf_sorted = lf.sort(sort_columns)
+
+            if has_activity_column:
+                lf_selected = lf_sorted.select(
+                    pl.col(case_column).alias("__pm_case__"),
+                    pl.col(activity_column).alias("__pm_attr__"),
+                )
+            else:
+                lf_selected = lf_sorted.select(
+                    pl.col(case_column).alias("__pm_case__"),
+                    pl.lit(None).alias("__pm_attr__"),
+                )
+
+            aggregated = (
+                lf_selected.group_by("__pm_case__", maintain_order=True)
+                .agg(pl.col("__pm_attr__").alias("__pm_attr__"))
+                .collect()
+            )
+
+            output.extend(aggregated["__pm_attr__"].to_list())
+        else:
+            check_pandas_dataframe_columns(log)
+            from pm4py.streaming.conversion import from_pandas
+
+            parameters = {from_pandas.Parameters.ACTIVITY_KEY: attribute_key}
+            if case_id_key is not None:
+                parameters[from_pandas.Parameters.CASE_ID_KEY] = case_id_key
+            it = from_pandas.apply(log, parameters=parameters)
+            for trace in it:
+                output.append(
+                    [
+                        (
+                            x[xes_constants.DEFAULT_NAME_KEY]
+                            if xes_constants.DEFAULT_NAME_KEY is not None
+                            else None
+                        )
+                        for x in trace
+                    ]
+                )
     else:
         for trace in log:
             output.append(
