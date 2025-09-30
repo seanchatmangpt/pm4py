@@ -9,11 +9,11 @@ def execute_script():
     dataframe = pl.LazyFrame(dataframe)
 
     # builds a complete feature table, including the case ID as first column
-    enriched_df = pm4py.extract_outcome_enriched_dataframe(dataframe)
-    feature_table = pm4py.extract_features_dataframe(enriched_df, include_case_id=True)
+    enriched_df = pl.LazyFrame(pm4py.extract_outcome_enriched_dataframe(dataframe).collect())
+    feature_table = pm4py.extract_features_dataframe(enriched_df, include_case_id=True).collect()
 
     parameters = {}
-    parameters["aggregation_function"] = "mean"
+    parameters["aggregation_function"] = "max"
 
     try:
         # builds a first process cube

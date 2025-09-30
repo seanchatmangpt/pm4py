@@ -12,6 +12,13 @@ class OutcomeMeasurement:
     SUCCESS = 0
     FAILED = 0
 
+
+def polars_process_cubes():
+    from examples import polars_process_cubes
+    print("\n\npolars_process_cubes")
+    polars_process_cubes.execute_script()
+
+
 def inductive_miner_dfg_lc():
     from examples import inductive_miner_dfg_lc
     print("\n\ninductive_miner_dfg_lc")
@@ -1009,6 +1016,9 @@ def main():
     print_versions()
 
     if EXECUTE_EXAMPLES:
+        if importlib.util.find_spec("polars"):
+            execute_script(polars_process_cubes)
+            input()
         execute_script(log_to_fit_precise_pn)
         execute_script(inductive_miner_dfg_lc)
         execute_script(log_projection_dfg_variant)
