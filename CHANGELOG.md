@@ -17,12 +17,32 @@
   * different process discovery algorithms on Polars
 * e0f2b4d00f0ab6f7292a5a37ca63a74f1a59e04c
   * first alignments on Polars lazyframes
+* c1a45f25f91f28e98a71660b023e18f05b872cc4
+  * porting project_on_event_attribute util to Polars
+* 47dab1429c5e9775984b7e20f0a2af465d1cc53e
+  * miscellaneous process discovery on Polars lazy
+* e00af66654565b70bc6e3ac8cb6ec2ff380e1b97
+  * batch detection on Polars lazy
+* 53af236f39b8fd865011a08cc51ff803d00402d8
+  * MSD for Polars lazyframes
+* 1f4c041a5f5c90934548b17c0a77ea0d990741c0
+  * footprints on Polars
+* e92447af5b33dd1fbf1f9174ea78f51933309b06
+  * Polars feature extraction
+* 3b4afd4cb8fcb07ffad9f91b74bad011d455eb46
+  * process cubes in Polars
 
 ### Changed
+* bd96b5cfda406c3d5cc654acb8bef57c6e13acaf
+  * example for process cubes
 
 ### Deprecated
 
 ### Fixed
+* 1bb9fa3abb223c944413013298e686c7a1c9b48f
+  * Bug fix filter_paths_performance
+* 3ce5fbe917742a3a1d717a81ca14c96d7611968a
+  * Fix Python-3.11-specific issue on variants duration graph visualization
 
 ### Removed
 
