@@ -1018,7 +1018,6 @@ def main():
     if EXECUTE_EXAMPLES:
         if importlib.util.find_spec("polars"):
             execute_script(polars_process_cubes)
-            input()
         execute_script(log_to_fit_precise_pn)
         execute_script(inductive_miner_dfg_lc)
         execute_script(log_projection_dfg_variant)
