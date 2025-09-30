@@ -1455,8 +1455,38 @@ def correlation_miner(
         df, activity_key=activity_key, timestamp_key=timestamp_key
     )
 
-    first_activity = df[activity_key].iloc[0]
-    last_activity = df[activity_key].iloc[-1]
+    if is_polars_lazyframe(df):
+        if importlib.util.find_spec("polars") is None:
+            raise RuntimeError(
+                "Polars LazyFrame provided but 'polars' package is not installed."
+            )
+
+        import polars as pl  # type: ignore[import-untyped]
+
+        if activity_key not in df.columns:
+            raise Exception(
+                f"Column '{activity_key}' is not present in the provided Polars LazyFrame."
+            )
+
+        first_row = (
+            df.select(pl.col(activity_key))
+            .head(1)
+            .collect()
+        )
+        if first_row.height == 0:
+            raise ValueError("The provided Polars LazyFrame must contain at least one event.")
+        first_activity = first_row[activity_key].to_list()[0]
+
+        last_row = (
+            df.select(pl.col(activity_key))
+            .tail(1)
+            .collect()
+        )
+        last_activity = last_row[activity_key].to_list()[0]
+    else:
+        # code for Pandas dataframes
+        first_activity = df[activity_key].iloc[0]
+        last_activity = df[activity_key].iloc[-1]
 
     from pm4py.algo.discovery.correlation_mining import (
         algorithm as correlation_miner,

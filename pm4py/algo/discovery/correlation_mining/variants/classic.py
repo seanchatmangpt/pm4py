@@ -7,6 +7,7 @@ from pm4py.algo.discovery.correlation_mining import util as cm_util
 import numpy as np
 from typing import Optional, Dict, Any, Union, Tuple
 from pm4py.objects.log.obj import EventLog, EventStream
+from pm4py.utils import is_polars_lazyframe
 import pandas as pd
 
 
@@ -192,10 +193,11 @@ def preprocess_log(log, activities=None, parameters=None):
     )
 
     if pandas_utils.check_is_pandas_dataframe(log):
-        # keep only the two columns before conversion
-        log = log[
-            list(set([activity_key, timestamp_key, start_timestamp_key]))
-        ]
+        if not is_polars_lazyframe(log):
+            # keep only the two columns before conversion
+            log = log[
+                list(set([activity_key, timestamp_key, start_timestamp_key]))
+            ]
 
     parameters["deepcopy"] = False
     parameters["include_case_attributes"] = False
