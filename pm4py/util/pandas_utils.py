@@ -91,7 +91,8 @@ def insert_index(
     """
     if is_polars_lazyframe(df):
         lf = df
-        if column_name in lf.columns:
+        existing_columns = set(_lazyframe_column_names(lf))
+        if column_name in existing_columns:
             lf = lf.drop(column_name)
         return lf.with_row_count(name=column_name)
 
@@ -134,7 +135,8 @@ def insert_case_index(
         import polars as pl  # type: ignore[import-untyped]
 
         lf = df
-        if column_name in lf.columns:
+        existing_columns = set(_lazyframe_column_names(lf))
+        if column_name in existing_columns:
             lf = lf.drop(column_name)
         case_map = (
             lf.select(pl.col(case_id))
@@ -177,7 +179,8 @@ def insert_ev_in_tr_index(
         import polars as pl  # type: ignore[import-untyped]
 
         lf = df
-        if column_name in lf.columns:
+        existing_columns = set(_lazyframe_column_names(lf))
+        if column_name in existing_columns:
             lf = lf.drop(column_name)
         return lf.with_columns(
             (pl.col(case_id).cum_count().over(case_id) - 1).alias(column_name)
@@ -251,16 +254,19 @@ def insert_feature_activity_position_in_trace(
             .get_column(activity_key)
             .to_list()
         )
+        existing_columns = set(_lazyframe_column_names(lf))
         for act in activities:
             column_name = prefix + str(act)
-            if column_name in lf.columns:
+            if column_name in existing_columns:
                 lf = lf.drop(column_name)
+                existing_columns.discard(column_name)
             lf = lf.with_columns(
                 pl.when(pl.col(activity_key) == act)
                 .then(pl.col(constants.DEFAULT_INDEX_IN_TRACE_KEY))
                 .otherwise(pl.lit(None))
                 .alias(column_name)
             )
+            existing_columns.add(column_name)
         return lf
 
     df = insert_ev_in_tr_index(df, case_id=case_id)
@@ -304,9 +310,11 @@ def insert_case_arrival_finish_rate(
             start_timestamp_column = timestamp_column
 
         lf = log
-        if arrival_rate_column in lf.columns:
+        existing_columns = set(_lazyframe_column_names(lf))
+        if arrival_rate_column in existing_columns:
             lf = lf.drop(arrival_rate_column)
-        if finish_rate_column in lf.columns:
+            existing_columns.discard(arrival_rate_column)
+        if finish_rate_column in existing_columns:
             lf = lf.drop(finish_rate_column)
 
         arrival = (
@@ -428,14 +436,16 @@ def insert_case_service_waiting_time(
             start_timestamp_column = timestamp_column
 
         lf = log
+        existing_columns = set(_lazyframe_column_names(lf))
         for col_name in (
             diff_start_end_column,
             service_time_column,
             sojourn_time_column,
             waiting_time_column,
         ):
-            if col_name in lf.columns:
+            if col_name in existing_columns:
                 lf = lf.drop(col_name)
+                existing_columns.discard(col_name)
 
         lf = lf.with_columns(
             (
@@ -542,6 +552,16 @@ def is_polars_lazyframe(df):
     return "polars" in df_type and "lazyframe" in df_type
 
 
+def _lazyframe_schema(df):
+    """Return the Polars schema without triggering expensive resolution via .columns/.schema."""
+    return df.collect_schema()
+
+
+def _lazyframe_column_names(df):
+    """Return column names for a Polars LazyFrame without collecting the frame."""
+    return _lazyframe_schema(df).names()
+
+
 def instantiate_dataframe(*args, **kwargs):
     return DATAFRAME.DataFrame(*args, **kwargs)
 
@@ -628,13 +648,14 @@ def check_pandas_dataframe_columns(
     if is_polars_lazyframe(df):
         import polars as pl  # type: ignore[import-untyped]
 
-        columns = df.columns
+        schema = _lazyframe_schema(df)
+        columns = list(schema.names())
+        column_set = set(columns)
         if len(columns) < 3:
             raise Exception(
                 "the dataframe should (at least) contain a column for the case identifier, a column for the activity and a column for the timestamp."
             )
 
-        schema = dict(df.schema)
         str_columns = {
             col
             for col, dtype in schema.items()
@@ -675,21 +696,21 @@ def check_pandas_dataframe_columns(
                 )
 
         if case_id_key is not None:
-            if case_id_key not in columns:
+            if case_id_key not in column_set:
                 raise_if_missing("case ID")
             if case_id_key not in str_columns:
                 raise Exception("the case ID column should be of type string.")
             ensure_no_null(case_id_key, "case ID")
 
         if activity_key is not None:
-            if activity_key not in columns:
+            if activity_key not in column_set:
                 raise_if_missing("activity")
             if activity_key not in str_columns:
                 raise Exception("the activity column should be of type string.")
             ensure_no_null(activity_key, "activity")
 
         if timestamp_key is not None:
-            if timestamp_key not in columns:
+            if timestamp_key not in column_set:
                 raise_if_missing("timestamp")
             if timestamp_key not in timest_columns:
                 raise Exception(
@@ -698,7 +719,7 @@ def check_pandas_dataframe_columns(
             ensure_no_null(timestamp_key, "timestamp")
 
         if start_timestamp_key is not None:
-            if start_timestamp_key not in columns:
+            if start_timestamp_key not in column_set:
                 raise_if_missing("start timestamp")
             if start_timestamp_key not in timest_columns:
                 raise Exception(
@@ -835,7 +856,8 @@ def get_attribute_values_count(log, attribute):
 
         import polars as pl  # type: ignore[import-untyped]
 
-        if attribute not in log.columns:
+        available_columns = set(_lazyframe_column_names(log))
+        if attribute not in available_columns:
             raise Exception(
                 f"Column '{attribute}' is not present in the provided Polars LazyFrame."
             )

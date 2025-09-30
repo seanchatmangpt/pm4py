@@ -1449,7 +1449,10 @@ def apply(
                 fea_df = dataframe_utils.get_features_df(
                     log, columns, parameters=parameters
                 )
-            feature_names = list(fea_df.columns)
+            if is_polars_lazyframe(fea_df):
+                feature_names = list(fea_df.collect_schema().names())
+            else:
+                feature_names = list(fea_df.columns)
         else:
             if is_polars_lazyframe(log):
                 from pm4py.objects.log.util import pl_lazy_fea_utils
@@ -1458,7 +1461,10 @@ def apply(
                 fea_df = dataframe_utils.automatic_feature_extraction_df(
                     log, parameters=parameters
                 )
-            feature_names = list(fea_df.columns)
+            if is_polars_lazyframe(fea_df):
+                feature_names = list(fea_df.collect_schema().names())
+            else:
+                feature_names = list(fea_df.columns)
         return fea_df, feature_names
     else:
         enable_all = exec_utils.get_param_value(
