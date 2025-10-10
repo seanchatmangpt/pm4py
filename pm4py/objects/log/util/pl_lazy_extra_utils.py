@@ -1,7 +1,5 @@
 """Utilities for enriching event data stored in Polars LazyFrames."""
 
-from __future__ import annotations
-
 from enum import Enum
 from typing import Optional, Dict, Any
 
