@@ -1,7 +1,7 @@
 # Changelog of pm4py
 
 
-# pm4py 2.7.21 (2025.09.26)
+# pm4py 2.7.21 (2025.10.10)
 
 ### Added
 * cc97057cb5ac19c080e37bddb3ccba09d135a94b
@@ -43,6 +43,10 @@
   * Bug fix filter_paths_performance
 * 3ce5fbe917742a3a1d717a81ca14c96d7611968a
   * Fix Python-3.11-specific issue on variants duration graph visualization
+* b4df572e46ff17eae0446b84bfa930e9da0af2dd
+  * fixed citation for structural equation metric
+* 66121b4920a1ce2c345858127032eaf54a8595a5
+  * space management in Pandas feature extraction
 
 ### Removed
 
