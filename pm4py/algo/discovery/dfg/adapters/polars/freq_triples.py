@@ -1,7 +1,5 @@
 """Polars implementation for extracting DFG frequency triples."""
 
-from __future__ import annotations
-
 from typing import Dict, Tuple
 
 import polars as pl

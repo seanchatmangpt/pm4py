@@ -1,7 +1,5 @@
 """Polars LazyFrame implementation of the standard performance spectrum variant."""
 
-from __future__ import annotations
-
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 

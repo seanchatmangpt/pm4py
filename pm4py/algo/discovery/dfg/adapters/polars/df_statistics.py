@@ -1,7 +1,5 @@
 """Polars implementation of dataframe-based DFG statistics utilities."""
 
-from __future__ import annotations
-
 from typing import Dict, List, Optional, Tuple, Union
 
 import polars as pl
