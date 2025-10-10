@@ -29,18 +29,18 @@ def execute_script():
 
         # using the results in `cell_case_dict`, we can filter the dataframe on a given cell.
         # for example,
-
-        filt_df1 = dataframe[dataframe["case:concept:name"].isin(cell_case_dict[('concept:name_T17CheckreportYtostopindication', 'org:resource_Resource01')])]
+        filt_df1 = dataframe[dataframe["case:concept:name"].isin(cell_case_dict[('concept:name_T17 Check report Y to stop indication_y', 'org:resource_Resource01_x')])]
         print(filt_df1)
     except:
         traceback.print_exc()
+        #input()
 
     try:
         # let's build another process cube!
         # as rows, I want the presence (or not) of the activity 'T06 Determine necessity of stop advice'
         # as columns, I want the channel used to submit the request
 
-        cube_df2, cell_case_dict2 = process_cube_builder.apply(feature_table, x_col="concept:name_T06Determinenecessityofstopadvice", y_col="case:channel", agg_col="@@sojourn_time")
+        cube_df2, cell_case_dict2 = process_cube_builder.apply(feature_table, x_col="concept:name_T06 Determine necessity of stop advice_y", y_col="case:channel", agg_col="@@sojourn_time")
 
         print(cube_df2)
         #print(cell_case_dict2)
@@ -49,11 +49,12 @@ def execute_script():
         # for example, let's filter on the cases reaching the 'Desk' channel and containing zero occurrences
         # of the activity 'T06 Determine necessity of stop advice'
 
-        cell = [x for x in cell_case_dict2 if x[1] == 'case:channel_Desk' and x[0].left < 0 < x[0].right][0]
+        cell = [x for x in cell_case_dict2 if x[1] == 'case:channel_Desk_x' and x[0].left < 0 < x[0].right][0]
         filt_df2 = dataframe[dataframe["case:concept:name"].isin(cell_case_dict2[cell])]
         #print(filt_df2)
     except:
         traceback.print_exc()
+        #input()
 
     try:
         # let's try to build another process cube
@@ -72,6 +73,7 @@ def execute_script():
         print(filt_df3)
     except:
         traceback.print_exc()
+        #input()
 
     try:
         # let's try to build another process cube
@@ -93,6 +95,7 @@ def execute_script():
         print(filt_df3)
     except:
         traceback.print_exc()
+        #input()
 
 
 if __name__ == "__main__":
