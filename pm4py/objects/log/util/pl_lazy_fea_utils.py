@@ -89,6 +89,9 @@ def automatic_feature_selection_df(
     max_different_occ_str_attr = exec_utils.get_param_value(
         Parameters.MAX_DIFFERENT_OCC_STR_ATTR, parameters, 50
     )
+    consider_all_attributes = exec_utils.get_param_value(
+        Parameters.CONSIDER_ALL_ATTRIBUTES, parameters, True
+    )
 
     other_attributes_to_retain = set()
 
@@ -105,7 +108,7 @@ def automatic_feature_selection_df(
         )
         cases_with_value = int(cases_with_value or 0)
 
-        if cases_with_value != total_cases:
+        if cases_with_value != total_cases and not consider_all_attributes:
             continue
 
         if _is_numeric_dtype(dtype):
@@ -199,7 +202,7 @@ def _select_string_columns(
         for value in unique_values:
             column_name = _sanitize_feature_name(column, value)
 
-            comparison = pl.col(column).eq(value).fill_null(False)
+            comparison = pl.col(column).eq(value)
 
             if count_occurrences:
                 agg_expr = comparison.cast(pl.Int64).sum().alias(column_name)
@@ -208,7 +211,7 @@ def _select_string_columns(
 
             agg_exprs.append(agg_expr)
             fill_exprs.append(
-                pl.col(column_name).cast(pl.Float32).fill_null(0.0)
+                pl.col(column_name).cast(pl.Float32)
             )
 
     feature_chunk = (
