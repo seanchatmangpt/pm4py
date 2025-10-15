@@ -262,6 +262,7 @@ from pm4py.analysis import (
 )
 from pm4py.stats import (
     get_start_activities,
+    get_process_cube,
     get_end_activities,
     get_event_attributes,
     get_event_attribute_values,
