@@ -5,10 +5,16 @@
 ### Added
 
 ### Changed
+* ab5dc93321918c267d51a66a161d4105f6838e05
+  * improvement format_dataframe for Polars
 
 ### Deprecated
 
 ### Fixed
+* 1d0d186d1ec7d68bec44866a0d02001b49bd4222
+  * bug fix temporal profile on Polars
+* 47a6b7fa5dfe2c0be078e41c3d4338ec6093b8f4
+  * fixed fea extraction and process cube
 
 ### Removed
 
