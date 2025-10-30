@@ -259,26 +259,36 @@ def apply_log(
         )
         parameters[Parameters.BEST_WORST_COST_INTERNAL] = best_worst_cost
 
-    thm = thread_utils.Pm4pyThreadManager()
+    is_dijkstra = str(variant) in {"Variants.VERSION_DIJKSTRA_LESS_MEMORY", "Variants.VERSION_DIJKSTRA_NO_HEURISTICS"}
+    thm = thread_utils.Pm4pyThreadManager(is_threaded=(is_dijkstra and constants.DEFAULT_IS_THREADING_MANAGEMENT_ENABLED))
 
-    f = lambda x, y: (y.append(apply_trace(
-        x,
-        petri_net,
-        initial_marking,
-        final_marking,
-        parameters=copy(parameters),
-        variant=variant,
-    )), progress.update() if progress is not None else None)
+    all_alignments = [None] * len(one_tr_per_var)
 
-    all_alignments = []
-    for trace in one_tr_per_var:
+    def _compute(idx, trace, params, results):
+        results[idx] = apply_trace(
+            trace,
+            petri_net,
+            initial_marking,
+            final_marking,
+            parameters=params,
+            variant=variant,
+        )
+        if progress is not None:
+            progress.update()
+
+    for idx, trace in enumerate(one_tr_per_var):
         this_max_align_time = min(
             max_align_time_case,
             (max_align_time - (time.time() - start_time)) * 0.5,
         )
         parameters[Parameters.PARAM_MAX_ALIGN_TIME_TRACE] = this_max_align_time
-
-        thm.submit(f, trace, all_alignments)
+        thm.submit(
+            _compute,
+            idx,
+            trace,
+            copy(parameters),
+            all_alignments,
+        )
 
     thm.join()
 

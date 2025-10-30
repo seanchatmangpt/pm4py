@@ -332,13 +332,17 @@ def align_fake_log_stop_marking(
 def __align_log_wo_multiprocessing_stop_marking(
     fake_log, net, marking, final_marking, progress, parameters=None
 ):
-    align_intermediate_result = []
+    align_intermediate_result = [None] * len(fake_log)
 
     thm = thread_utils.Pm4pyThreadManager()
-    f = lambda x, y: (y.append(__align_trace_stop_marking(x, net, marking, final_marking, parameters=parameters)), progress.update() if progress is not None else None)
 
-    for i in range(len(fake_log)):
-        thm.submit(f, fake_log[i], align_intermediate_result)
+    def _compute(idx, trace, results):
+        results[idx] = __align_trace_stop_marking(trace, net, marking, final_marking, parameters=parameters)
+        if progress is not None:
+            progress.update()
+
+    for idx, trace in enumerate(fake_log):
+        thm.submit(_compute, idx, trace, align_intermediate_result)
 
     thm.join()
 

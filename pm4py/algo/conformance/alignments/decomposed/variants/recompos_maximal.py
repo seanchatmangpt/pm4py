@@ -212,11 +212,15 @@ def apply_log(log, list_nets, parameters=None):
 
     all_alignments = [None] * len(variants_to_process)  # Pre-allocate result list
 
-    thm = thread_utils.Pm4pyThreadManager()
-    f = lambda x, y, z: (z.insert(x[2], apply_trace(x[1], y, parameters=parameters)), progress.update() if progress is not None else None)
+    thm = thread_utils.Pm4pyThreadManager(is_threaded=False)
+    def _compute(variant_info, nets, results):
+        idx = variant_info[2]
+        results[idx] = apply_trace(variant_info[1], nets, parameters=parameters)
+        if progress is not None:
+            progress.update()
 
     for variant_info in variants_to_process:
-        thm.submit(f, variant_info, list_nets, all_alignments)
+        thm.submit(_compute, variant_info, list_nets, all_alignments)
 
     thm.join()
 
