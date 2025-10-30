@@ -24,6 +24,7 @@ def apply(
     integrality = exec_utils.get_param_value(
         Parameters.INTEGRALITY, parameters, None
     )
+    method = exec_utils.get_param_value(Parameters.METHOD, parameters, "highs")
     bounds = exec_utils.get_param_value(Parameters.BOUNDS, parameters, None)
 
     sol = linprog(
@@ -34,6 +35,7 @@ def apply(
         b_eq=beq,
         integrality=integrality,
         bounds=bounds,
+        method=method,
     )
 
     return sol
