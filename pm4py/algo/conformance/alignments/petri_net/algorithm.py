@@ -7,7 +7,7 @@ from pm4py.util.xes_constants import DEFAULT_NAME_KEY, DEFAULT_TRACEID_KEY
 from pm4py.objects.log.obj import Trace, Event
 import time
 from pm4py.util.lp import solver
-from pm4py.util import exec_utils
+from pm4py.util import exec_utils, thread_utils
 from enum import Enum
 import sys
 from pm4py.util.constants import (
@@ -259,6 +259,17 @@ def apply_log(
         )
         parameters[Parameters.BEST_WORST_COST_INTERNAL] = best_worst_cost
 
+    thm = thread_utils.Pm4pyThreadManager()
+
+    f = lambda x, y: (y.append(apply_trace(
+        x,
+        petri_net,
+        initial_marking,
+        final_marking,
+        parameters=copy(parameters),
+        variant=variant,
+    )), progress.update() if progress is not None else None)
+
     all_alignments = []
     for trace in one_tr_per_var:
         this_max_align_time = min(
@@ -266,18 +277,10 @@ def apply_log(
             (max_align_time - (time.time() - start_time)) * 0.5,
         )
         parameters[Parameters.PARAM_MAX_ALIGN_TIME_TRACE] = this_max_align_time
-        all_alignments.append(
-            apply_trace(
-                trace,
-                petri_net,
-                initial_marking,
-                final_marking,
-                parameters=copy(parameters),
-                variant=variant,
-            )
-        )
-        if progress is not None:
-            progress.update()
+
+        thm.submit(f, trace, all_alignments)
+
+    thm.join()
 
     alignments = __form_alignments(variants_idxs, all_alignments)
     __close_progress_bar(progress)

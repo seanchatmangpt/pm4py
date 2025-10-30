@@ -8,7 +8,8 @@ from pm4py.objects.petri_net.utils.align_utils import (
     get_visible_transitions_eventually_enabled_by_marking,
 )
 from pm4py.util import exec_utils
-from pm4py.util import xes_constants
+from pm4py.util import xes_constants, pandas_utils, thread_utils
+from pm4py.utils import is_polars_lazyframe
 import importlib.util
 from enum import Enum
 from pm4py.util import constants
@@ -82,7 +83,7 @@ def apply(
             "trying to apply Align-ETConformance on a Petri net that is not a easy sound net!!"
         )
 
-    if type(log) is not pd.DataFrame:
+    if not pandas_utils.check_is_pandas_dataframe(log):
         log = log_converter.apply(
             log,
             variant=log_converter.Variants.TO_EVENT_LOG,
@@ -157,11 +158,17 @@ def apply(
     )
     diff = trans_en_ini_marking.difference(start_activities)
     if type(log) is EventLog:
-        sum_at += len(log) * len(trans_en_ini_marking)
-        sum_ee += len(log) * len(diff)
+        n_traces = len(log)
+    elif is_polars_lazyframe(log):
+        import polars as pl
+        n_traces_result = log.select(pl.col(case_id_key).n_unique()).collect()
+        n_traces = 0
+        if n_traces_result.height > 0 and n_traces_result.width > 0:
+            n_traces = int(n_traces_result.to_series(0)[0] or 0)
     else:
-        sum_at += log[case_id_key].nunique() * len(trans_en_ini_marking)
-        sum_ee += log[case_id_key].nunique() * len(diff)
+        n_traces = int(log[case_id_key].nunique())
+    sum_at += n_traces * len(trans_en_ini_marking)
+    sum_ee += n_traces * len(diff)
     # end fix
 
     if sum_at > 0:
@@ -326,13 +333,14 @@ def __align_log_wo_multiprocessing_stop_marking(
     fake_log, net, marking, final_marking, progress, parameters=None
 ):
     align_intermediate_result = []
+
+    thm = thread_utils.Pm4pyThreadManager()
+    f = lambda x, y: (y.append(__align_trace_stop_marking(x, net, marking, final_marking, parameters=parameters)), progress.update() if progress is not None else None)
+
     for i in range(len(fake_log)):
-        res = __align_trace_stop_marking(
-            fake_log[i], net, marking, final_marking, parameters=parameters
-        )
-        align_intermediate_result.append(res)
-        if progress is not None:
-            progress.update()
+        thm.submit(f, fake_log[i], align_intermediate_result)
+
+    thm.join()
 
     return align_intermediate_result
 
