@@ -1,1 +1,1 @@
-from pm4py.objects.ocel.importer.sqlite.variants import pandas_importer
+from pm4py.objects.ocel.importer.sqlite.variants import pandas_importer, ocel20
