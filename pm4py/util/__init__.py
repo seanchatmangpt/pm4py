@@ -18,5 +18,6 @@ from pm4py.util import (
     typing,
     variants_util,
     vis_utils,
-    xes_constants
+    xes_constants,
+    deprecation
 )

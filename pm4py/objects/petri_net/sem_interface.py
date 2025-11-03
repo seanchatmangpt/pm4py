@@ -1,4 +1,4 @@
-import deprecation
+from pm4py.util import deprecation
 
 
 class Semantics(object):
