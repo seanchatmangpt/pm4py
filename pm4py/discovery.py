@@ -1507,8 +1507,17 @@ def discover_otg(
 
     Published in: https://publications.rwth-aachen.de/record/1014107
 
-    The OTG summarizes how object types are related across different interaction graphs extracted from the OCEL.
-    The default variant applies the classic OTG discovery algorithm.
+    An OTG summarizes how object types are related across different interaction graphs extracted from the OCEL.
+    Specifically, an OTG is a tuple containing:
+    - The set of object types
+    - The edges along with the frequency, where each edge is (object_type1, relationship, object_type2).
+
+    Relationship can be:
+    * object_interaction (objects related in some event)
+    * object_descendants (lifecycle of the first event starts before the other object)
+    * object_inheritance (lifecycle of the first object ends exactly when the second one starts)
+    * object_cobirth (objects start their lifecycle in the same event)
+    * object_codeath (objects end their lifecycle in the sae event)
 
     :param ocel: Object-centric event log.
     :param variant: Variant of the OTG discovery algorithm to use (default: classic variant).
@@ -1546,7 +1555,11 @@ def discover_etot(
     Published in: https://publications.rwth-aachen.de/record/1014107
 
     The ET-OT graph captures the relationships between event types and object types along with their frequencies.
-    The default variant applies the classic ET-OT discovery algorithm.
+    Specifically, an ET-OT graph is a tuple consisting of:
+    - Set of activities
+    - Set of object types
+    - Set of relationships, where an edge (a, ot) indicates that events of type a are associated with objects of type ot
+    - A dictionary associating each relationship to a weight (frequency)
 
     :param ocel: Object-centric event log.
     :param variant: Variant of the ET-OT discovery algorithm to use (default: classic variant).

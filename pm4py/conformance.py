@@ -1400,6 +1400,15 @@ def conformance_ocdfg(
     """
     Performs OC-DFG-based conformance checking between an object-centric event log (or OC-DFG) and a normative OC-DFG.
 
+    An object-centric directly-follows graph is expressed as a dictionary containing the following properties:
+    - activities: complete set of activities derived from the object-centric event log
+    - object_types: complete set of object types derived from the object-centric event log
+    - edges: dictionary connecting each object type to a set of directly-followed arcs between activities
+    - activities_indep: dictionary linking each activity, regardless of the object type
+    - activities_ot: dictionary linking each object type to another dictionary
+    - start_activities: dictionary linking each object type to start activities
+    - end_activities: dictionary linking each object type to end activities
+
     Published in: https://publications.rwth-aachen.de/record/1014107
 
     :param ocel: Object-centric event log or OC-DFG representing the real behavior.
@@ -1431,6 +1440,18 @@ def conformance_otg(
 ) -> Dict[str, Any]:
     """
     Performs OTG-based conformance checking between an object-centric event log (or OTG) and a normative OTG.
+
+    An OTG summarizes how object types are related across different interaction graphs extracted from the OCEL.
+    Specifically, an OTG is a tuple containing:
+    - The set of object types
+    - The edges along with the frequency, where each edge is (object_type1, relationship, object_type2).
+
+    Relationship can be:
+    * object_interaction (objects related in some event)
+    * object_descendants (lifecycle of the first event starts before the other object)
+    * object_inheritance (lifecycle of the first object ends exactly when the second one starts)
+    * object_cobirth (objects start their lifecycle in the same event)
+    * object_codeath (objects end their lifecycle in the sae event)
 
     Published in: https://publications.rwth-aachen.de/record/1014107
 
@@ -1476,6 +1497,13 @@ def conformance_etot(
 ) -> Dict[str, Any]:
     """
     Performs ET-OT-based conformance checking between an object-centric event log (or ET-OT graph) and a normative ET-OT graph.
+
+    The ET-OT graph captures the relationships between event types and object types along with their frequencies.
+    Specifically, an ET-OT graph is a tuple consisting of:
+    - Set of activities
+    - Set of object types
+    - Set of relationships, where an edge (a, ot) indicates that events of type a are associated with objects of type ot
+    - A dictionary associating each relationship to a weight (frequency)
 
     Published in: https://publications.rwth-aachen.de/record/1014107
 
