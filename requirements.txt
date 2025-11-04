@@ -7,6 +7,5 @@ lxml
 matplotlib
 pytz
 tqdm
-pydotplus
 wheel
 setuptools
