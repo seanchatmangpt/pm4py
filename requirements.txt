@@ -10,4 +10,3 @@ tqdm
 pydotplus
 wheel
 setuptools
-intervaltree
