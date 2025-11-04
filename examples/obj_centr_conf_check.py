@@ -1,9 +1,4 @@
 import pm4py
-from pm4py.algo.discovery.ocel.otg import algorithm as otg_discovery
-from pm4py.algo.discovery.ocel.etot import algorithm as etot_discovery
-from pm4py.algo.conformance.ocel.ocdfg import algorithm as ocdfg_conformance
-from pm4py.algo.conformance.ocel.otg import algorithm as otg_conformance
-from pm4py.algo.conformance.ocel.etot import algorithm as etot_conformance
 
 
 def execute_script():
@@ -17,26 +12,22 @@ def execute_script():
     # object-centric DFG from OCEL2
     ocdfg2 = pm4py.discover_ocdfg(ocel2)
     # OTG (object-type-graph) from OCEL2
-    otg2 = otg_discovery.apply(ocel2)
+    otg2 = pm4py.discover_otg(ocel2)
     # ETOT (ET-OT graph) from OCEL2
-    etot2 = etot_discovery.apply(ocel2)
+    etot2 = pm4py.discover_etot(ocel2)
 
     # conformance checking
     print("== OCDFG")
-    diagn_ocdfg = ocdfg_conformance.apply(ocel1, ocdfg2)
+    diagn_ocdfg = pm4py.conformance_ocdfg(ocel1, ocdfg2)
     print(diagn_ocdfg)
 
     print("\n\n== OTG")
-    diagn_otg = otg_conformance.apply(ocel1, otg2)
+    diagn_otg = pm4py.conformance_otg(ocel1, otg2)
     print(diagn_otg)
 
     print("\n\n== ETOT")
-    diagn_etot = etot_conformance.apply(ocel1, etot2)
+    diagn_etot = pm4py.conformance_etot(ocel1, etot2)
     print(diagn_etot)
-
-
-if __name__ == "__main__":
-    execute_script()
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Union, Optional, Tuple, Set
 from pm4py.objects.log.obj import EventLog, Trace, Event
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.process_tree.obj import ProcessTree
+from pm4py.objects.ocel.obj import OCEL
 from pm4py.util import xes_constants, constants
 from pm4py.utils import get_properties, __event_log_deprecation_warning
 from pm4py.util.pandas_utils import (
@@ -1388,3 +1389,112 @@ def conformance_log_skeleton(
         )
 
     return result
+
+
+def conformance_ocdfg(
+    ocel: Union[OCEL, Dict[str, Any]],
+    model: Dict[str, Any],
+    variant=None,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Performs OC-DFG-based conformance checking between an object-centric event log (or OC-DFG) and a normative OC-DFG.
+
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
+    :param ocel: Object-centric event log or OC-DFG representing the real behavior.
+    :param model: Normative OC-DFG obtained from discovery.
+    :param variant: Variant of the OC-DFG conformance algorithm to use (default: graph comparison).
+    :param parameters: Optional variant-specific parameters.
+    :return: Dictionary containing conformance diagnostics.
+    :rtype: ``Dict[str, Any]``
+
+    .. code-block:: python3
+
+        import pm4py
+
+        diagnostics = pm4py.conformance_ocdfg(ocel, ocdfg_model)
+    """
+    from pm4py.algo.conformance.ocel.ocdfg import algorithm as ocdfg_conformance
+
+    if variant is None:
+        variant = ocdfg_conformance.Variants.GRAPH_COMPARISON
+
+    return ocdfg_conformance.apply(ocel, model, variant=variant, parameters=parameters)
+
+
+def conformance_otg(
+    ocel: Union[OCEL, Tuple[Set[str], Dict[Tuple[str, str, str], int]]],
+    model: Tuple[Set[str], Dict[Tuple[str, str, str], int]],
+    variant=None,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Performs OTG-based conformance checking between an object-centric event log (or OTG) and a normative OTG.
+
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
+    :param ocel: Object-centric event log or OTG capturing the real behavior.
+    :param model: Normative OTG, typically discovered from a reference log.
+    :param variant: Variant of the OTG conformance algorithm to use (default: graph comparison).
+    :param parameters: Optional variant-specific parameters.
+    :return: Dictionary containing OTG conformance diagnostics.
+    :rtype: ``Dict[str, Any]``
+
+    .. code-block:: python3
+
+        import pm4py
+
+        diagnostics = pm4py.conformance_otg(ocel, otg_model)
+    """
+    from pm4py.algo.conformance.ocel.otg import algorithm as otg_conformance
+
+    if variant is None:
+        variant = otg_conformance.Variants.GRAPH_COMPARISON
+
+    return otg_conformance.apply(ocel, model, variant=variant, parameters=parameters)
+
+
+def conformance_etot(
+    ocel: Union[
+        OCEL,
+        Tuple[
+            Set[str],
+            Set[str],
+            Set[Tuple[str, str]],
+            Dict[Tuple[str, str], int],
+        ],
+    ],
+    model: Tuple[
+        Set[str],
+        Set[str],
+        Set[Tuple[str, str]],
+        Dict[Tuple[str, str], int],
+    ],
+    variant=None,
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Performs ET-OT-based conformance checking between an object-centric event log (or ET-OT graph) and a normative ET-OT graph.
+
+    Published in: https://publications.rwth-aachen.de/record/1014107
+
+    :param ocel: Object-centric event log or ET-OT graph capturing the real behavior.
+    :param model: Normative ET-OT graph, typically discovered from a reference log.
+    :param variant: Variant of the ET-OT conformance algorithm to use (default: graph comparison).
+    :param parameters: Optional variant-specific parameters.
+    :return: Dictionary containing ET-OT conformance diagnostics.
+    :rtype: ``Dict[str, Any]``
+
+    .. code-block:: python3
+
+        import pm4py
+
+        diagnostics = pm4py.conformance_etot(ocel, etot_model)
+    """
+    from pm4py.algo.conformance.ocel.etot import algorithm as etot_conformance
+
+    if variant is None:
+        variant = etot_conformance.Variants.GRAPH_COMPARISON
+
+    return etot_conformance.apply(ocel, model, variant=variant, parameters=parameters)
