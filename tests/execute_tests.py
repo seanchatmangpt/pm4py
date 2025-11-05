@@ -449,8 +449,8 @@ def main():
     print("pm4py version: " + str(pm4py.__version__))
     print("Python version: " + str(sys.version))
 
-    # Exit code logic: 0 if pass ratio > 98%, else 1
-    if pass_ratio > 0.98:
+    # Exit code logic: 0 if all tests passed, else 1
+    if EXECUTE_TESTS and total_fails_including_imports == 0:
         #print("exiting with system code 0")
         sys.exit(0)
     else:
