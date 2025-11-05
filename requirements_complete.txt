@@ -20,3 +20,4 @@ six
 tqdm
 tzdata
 wheel
+pulp
