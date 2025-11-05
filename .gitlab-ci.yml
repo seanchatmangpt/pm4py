@@ -22,6 +22,13 @@ test_scripts:
     - cd tests
     - python execute_tests.py
   # If execute_tests.py returns non-zero, job fails.
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+      when: always
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - when: never
+      # This job is run in merge requests
 
 example_scripts:
   stage: test
@@ -37,6 +44,11 @@ example_scripts:
     - cd examples
     - python execute_everything.py
   # If execute_everything.py returns non-zero, job fails.
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+      when: always
+    - when: never
+      # do not run this job in merge requests
 
 linting_scripts:
   stage: test
@@ -53,3 +65,8 @@ linting_scripts:
     - cd files
     - python flake8_score.py
   # If flake8_score.py returns non-zero, job fails.
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+      when: always
+    - when: never
+      # do not run this job in merge requests
