@@ -21,3 +21,5 @@ tqdm
 tzdata
 wheel
 pulp
+scikit-learn
+workalendar

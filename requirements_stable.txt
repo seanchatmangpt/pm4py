@@ -21,3 +21,5 @@ tqdm==4.67.1
 tzdata==2025.2
 wheel==0.45.1
 pulp==3.3.0
+scikit-learn==1.7.2
+workalendar==17.0.0

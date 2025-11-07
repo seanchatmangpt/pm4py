@@ -10,3 +10,5 @@ tqdm
 wheel
 setuptools
 pulp
+scikit-learn
+workalendar

@@ -7,10 +7,12 @@ import importlib.util
 
 
 EXECUTE_EXAMPLES = True
+PRINT_FAILURE_TRACES = True
 
 class OutcomeMeasurement:
     SUCCESS = 0
     FAILED = 0
+    FAILURE_TRACES = []
 
 
 def polars_process_cubes():
@@ -954,17 +956,23 @@ def execute_script(f):
         OutcomeMeasurement.SUCCESS += 1
     except ImportError:
         import time
-        traceback.print_exc()
+        trace = traceback.format_exc()
+        print(trace)
         OutcomeMeasurement.FAILED += 1
+        OutcomeMeasurement.FAILURE_TRACES.append(trace)
         time.sleep(3)
     except KeyError:
         import time
-        traceback.print_exc()
+        trace = traceback.format_exc()
+        print(trace)
         OutcomeMeasurement.FAILED += 1
+        OutcomeMeasurement.FAILURE_TRACES.append(trace)
         time.sleep(3)
     except:
-        traceback.print_exc()
+        trace = traceback.format_exc()
+        print(trace)
         OutcomeMeasurement.FAILED += 1
+        OutcomeMeasurement.FAILURE_TRACES.append(trace)
         input("\npress INPUT if you want to continue")
 
 
@@ -1166,10 +1174,15 @@ def main():
     else:
         pass_ratio = 0.0
 
+    if PRINT_FAILURE_TRACES:
+        for i, trace in enumerate(OutcomeMeasurement.FAILURE_TRACES):
+            print(f"Failure {i}:")
+            print(trace)
+
     print(f"Overall pass ratio: {round(pass_ratio * 100, 2)}%")
 
-    # If pass ratio is above 90%, exit code is 0; otherwise 1
-    if pass_ratio > 0.9:
+    # If pass ratio is 100%, exit code is 0; otherwise 1
+    if pass_ratio == 1:
         #print("exiting with code 0")
         sys.exit(0)
     else:
