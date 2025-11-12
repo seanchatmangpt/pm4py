@@ -2,22 +2,32 @@ workflow:
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
+    - if: $CI_COMMIT_BRANCH == "integration"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
+      when: manual
     - when: never
 
 stages:
   - test
 
-test_scripts:
-  stage: test
+default:
   image: python:3.12
   variables:
     PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  cache:
+    key: pip-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
   before_script:
+    - mkdir -p "$PIP_CACHE_DIR"
     - apt-get update -y
     - apt-get install -y graphviz
     - pip install -r requirements_stable.txt
+
+test_scripts:
+  stage: test
   script:
     - cd tests
     - python execute_tests.py
@@ -25,50 +35,44 @@ test_scripts:
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
+    - if: $CI_COMMIT_BRANCH == "integration"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
+      when: manual
     - when: never
       # This job is run in merge requests
 
 example_scripts:
   stage: test
-  image: python:3.12
-  variables:
-    PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
-  before_script:
-    - apt-get update -y
-    - apt-get install -y graphviz
-    - pip install -r requirements_stable.txt
-    - pip install .
   script:
+    - pip install .
     - cd examples
     - python execute_everything.py
   # If execute_everything.py returns non-zero, job fails.
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
+    - if: $CI_COMMIT_BRANCH == "integration"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
+      when: manual
     - when: never
       # This job is run in merge requests
 
 linting_scripts:
   stage: test
-  image: python:3.12
-  variables:
-    PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
-  before_script:
-    - apt-get update -y
-    - apt-get install -y graphviz
-    - pip install -r requirements_stable.txt
+  script:
     - pip install .
     - pip install flake8
-  script:
     - cd files
     - python flake8_score.py
   # If flake8_score.py returns non-zero, job fails.
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
+    - if: $CI_COMMIT_BRANCH == "integration"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
+      when: manual
     - when: never
       # do not run this job in merge requests
