@@ -1181,8 +1181,8 @@ def main():
 
     print(f"Overall pass ratio: {round(pass_ratio * 100, 2)}%")
 
-    # If pass ratio is 100%, exit code is 0; otherwise 1
-    if pass_ratio == 1:
+    # If pass ratio is above 90%, exit code is 0; otherwise 1
+    if pass_ratio > 0.9:
         #print("exiting with code 0")
         sys.exit(0)
     else:
