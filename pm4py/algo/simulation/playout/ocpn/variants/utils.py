@@ -33,6 +33,7 @@ class Parameters(Enum):
     EVENT_TIMESTAMP = constants.PARAM_EVENT_TIMESTAMP
     OBJECT_ID = constants.PARAM_OBJECT_ID
     OBJECT_TYPE = constants.PARAM_OBJECT_TYPE
+    OBJECTS_UNIQUE_PER_TRACE = "objects_unique_per_trace"
 
 def feasible_traces_to_ocel(
     feasible_traces_iter, all_transitions, id_to_obj_type, parameters
@@ -72,6 +73,9 @@ def feasible_traces_to_ocel(
     event_timestamp = exec_utils.get_param_value(
         Parameters.EVENT_TIMESTAMP, parameters, constants.DEFAULT_EVENT_TIMESTAMP
     )
+    objects_unique_per_trace = exec_utils.get_param_value(
+        Parameters.OBJECTS_UNIQUE_PER_TRACE, parameters, False
+    )
     # Convert all found traces to OCEL format
 
     # Create the OCEL object
@@ -83,6 +87,9 @@ def feasible_traces_to_ocel(
     event_id_counter = 0
     # assigns to each event an increased timestamp from 1970
     curr_timestamp = 10000000
+    
+    if objects_unique_per_trace:
+        object_id_counter = 0
 
     # convert trace to set of events, objects, and relations
     for trace in feasible_traces_iter:
@@ -108,6 +115,8 @@ def feasible_traces_to_ocel(
                 # Create objects and relations
                 for obj_id in object_ids:
                     obj_type = id_to_obj_type[obj_id]
+                    if objects_unique_per_trace:
+                            obj_id = f"{obj_id}_{object_id_counter}"
 
                     # Add object
                     if obj_id not in all_objects_seen:
@@ -126,6 +135,8 @@ def feasible_traces_to_ocel(
                             object_type_column: obj_type,
                         }
                     )
+        if objects_unique_per_trace:
+            object_id_counter += 1
 
     # Convert to dfs
     events_df = pd.DataFrame(events_list)

@@ -41,6 +41,7 @@ class Parameters(Enum):
     MAX_BINDINGS_PER_ACTIVITY = "maxBindingsPerActivity"
     BRANCHING_FACTOR_TRANSITIONS = "branchingFactorTransitions"
     BRANCHING_FACTOR_BINDINGS = "branchingFactorBindings"
+    OBJECTS_UNIQUE_PER_TRACE = "objects_unique_per_trace"
     RETURN_TRACES = "return_traces"
     EXISTS_TRACE = "exists_trace"
     OCPETRINET_SEMANTICS = "ocpetrinet_semantics"
@@ -73,6 +74,7 @@ def apply(
         Parameters of the algorithm:
             Parameters.MAX_BINDINGS_PER_ACTIVITY -> Maximum bindings per activity (mandatory)
             Parameters.EXISTS_TRACE -> If True, return a boolean indicating if at least one trace exists instead of an OCEL
+            Parameters.OBJECTS_UNIQUE_PER_TRACE: If True, objects in the resulting OCEL are make unique per trace (default: False)
             Parameters.RETURN_TRACES -> If True, return traces instead of OCEL
             Parameters.BRANCHING_FACTOR_TRANSITIONS -> Maximum number of transitions to explore from a single
                 state (default: sys.maxsize, i.e., no limit). If set to a float, it will be stochastically rounded to an integer for every state.
