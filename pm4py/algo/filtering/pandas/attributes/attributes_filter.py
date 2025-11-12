@@ -22,6 +22,7 @@ class Parameters(Enum):
     STREAM_FILTER_KEY2 = "stream_filter_key2"
     STREAM_FILTER_VALUE2 = "stream_filter_value2"
     KEEP_ONCE_PER_CASE = "keep_once_per_case"
+    KEEP_NAN_VALUES = "keep_nan_values"
 
 
 def apply_numeric_events(
@@ -45,6 +46,7 @@ def apply_numeric_events(
         Possible parameters of the algorithm:
             Parameters.ATTRIBUTE_KEY => indicates which attribute to filter
             positive => keep or remove events?
+            Parameters.KEEP_NAN_VALUES -> Specifies if the filter should keep NAN values for the selected attribute. Default is False
 
     Returns
     --------------
@@ -60,11 +62,19 @@ def apply_numeric_events(
     positive = exec_utils.get_param_value(
         Parameters.POSITIVE, parameters, True
     )
+    keep_nan = exec_utils.get_param_value(
+        Parameters.KEEP_NAN_VALUES, parameters, False
+    )
 
     if positive:
-        ret = df[(df[attribute_key] >= int1) & (df[attribute_key] <= int2)]
+        event_filter = (df[attribute_key] >= int1) & (df[attribute_key] <= int2)
     else:
-        ret = df[(df[attribute_key] < int1) | (df[attribute_key] > int2)]
+        event_filter = (df[attribute_key] < int1) | (df[attribute_key] > int2)
+
+    if keep_nan:
+        event_filter = event_filter | df[attribute_key].isna()
+
+    ret = df[event_filter]
 
     ret.attrs = copy(df.attrs) if hasattr(df, "attrs") else {}
     return ret
@@ -91,6 +101,7 @@ def apply_numeric(
         Possible parameters of the algorithm:
             Parameters.ATTRIBUTE_KEY => indicates which attribute to filter
             Parameters.POSITIVE => keep or remove traces with such events?
+            Parameters.KEEP_NAN_VALUES -> Specifies if the filter should keep NAN values for the selected attribute. Default is False
 
     Returns
     --------------
@@ -109,6 +120,9 @@ def apply_numeric(
     positive = exec_utils.get_param_value(
         Parameters.POSITIVE, parameters, True
     )
+    keep_nan = exec_utils.get_param_value(
+        Parameters.KEEP_NAN_VALUES, parameters, False
+    )
 
     # stream_filter_key is helpful to filter on cases containing an event with an attribute
     # in the specified value set, but such events shall have an activity in
@@ -126,9 +140,11 @@ def apply_numeric(
         Parameters.STREAM_FILTER_VALUE2, parameters, None
     )
 
-    filtered_df_by_ev = df[
-        (df[attribute_key] >= int1) & (df[attribute_key] <= int2)
-    ]
+    event_filter = (df[attribute_key] >= int1) & (df[attribute_key] <= int2)
+    if keep_nan:
+        event_filter = event_filter | df[attribute_key].isna()
+    filtered_df_by_ev = df[event_filter]
+
     if stream_filter_key1 is not None:
         filtered_df_by_ev = filtered_df_by_ev[
             filtered_df_by_ev[stream_filter_key1] == stream_filter_value1
@@ -168,6 +184,8 @@ def apply_events(
             Parameters.ATTRIBUTE_KEY -> Attribute we want to filter
             Parameters.POSITIVE -> Specifies if the filter should be applied including traces (positive=True) or
             excluding traces (positive=False)
+            Parameters.KEEP_NAN_VALUES -> Specifies if the filter should keep NAN values for the selected attribute. Default is False
+
     Returns
     ----------
     df
@@ -182,11 +200,18 @@ def apply_events(
     positive = exec_utils.get_param_value(
         Parameters.POSITIVE, parameters, True
     )
+    keep_nan = exec_utils.get_param_value(
+        Parameters.KEEP_NAN_VALUES, parameters, False
+    )
+
+    event_filter = df[attribute_key].isin(values)
+    if keep_nan:
+        event_filter = event_filter | df[attribute_key].isna()
 
     if positive:
-        ret = df[df[attribute_key].isin(values)]
+        ret = df[event_filter]
     else:
-        ret = df[~df[attribute_key].isin(values)]
+        ret = df[~event_filter]
 
     ret.attrs = copy(df.attrs) if hasattr(df, "attrs") else {}
     return ret
@@ -212,6 +237,8 @@ def apply(
             Parameters.ATTRIBUTE_KEY -> Attribute we want to filter
             Parameters.POSITIVE -> Specifies if the filter should be applied including traces (positive=True) or
             excluding traces (positive=False)
+            Parameters.KEEP_NAN_VALUES -> Specifies if the filter should keep NAN values for the selected attribute. Default is False
+
     Returns
     ----------
     df
@@ -229,6 +256,9 @@ def apply(
     positive = exec_utils.get_param_value(
         Parameters.POSITIVE, parameters, True
     )
+    keep_nan = exec_utils.get_param_value(
+        Parameters.KEEP_NAN_VALUES, parameters, False
+    )
 
     return filter_df_on_attribute_values(
         df,
@@ -236,6 +266,7 @@ def apply(
         case_id_glue=case_id_glue,
         attribute_key=attribute_key,
         positive=positive,
+        keep_nan_values=keep_nan
     )
 
 
@@ -245,6 +276,7 @@ def filter_df_on_attribute_values(
     case_id_glue="case:concept:name",
     attribute_key="concept:name",
     positive=True,
+    keep_nan_values=False,
 ):
     """
     Filter dataframe on attribute values
@@ -262,6 +294,8 @@ def filter_df_on_attribute_values(
     positive
         Specifies if the filtered should be applied including traces (positive=True) or excluding traces
         (positive=False)
+    keep_nan_values
+        Specifies if the filter should keep NAN values for the selected attribute
 
     Returns
     ----------
@@ -270,7 +304,12 @@ def filter_df_on_attribute_values(
     """
     if values is None:
         values = []
-    filtered_df_by_ev = df[df[attribute_key].isin(values)]
+
+    event_filter = df[attribute_key].isin(values)
+    if keep_nan_values:
+        event_filter = event_filter | df[attribute_key].isna()
+    filtered_df_by_ev = df[event_filter]
+
     i1 = df.set_index(case_id_glue).index
     i2 = filtered_df_by_ev.set_index(case_id_glue).index
     if positive:
