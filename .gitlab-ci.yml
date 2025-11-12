@@ -11,11 +11,12 @@ workflow:
 stages:
   - test
 
+variables:
+  PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
 default:
   image: python:3.12
-  variables:
-    PM4PY_DEFAULT_ENABLE_VISUALIZATIONS_VIEW: "False"
-    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   cache:
     key: pip-${CI_COMMIT_REF_SLUG}
     paths:
