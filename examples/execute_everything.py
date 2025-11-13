@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import importlib.util
+import argparse
 
 
 
@@ -1008,8 +1009,22 @@ def print_versions():
     print(pm4py.util.pandas_utils.DATAFRAME)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog='Example Tests',
+        description='Runs example tests')
+
+    # some libraries can not be installed in the pipeline, so some tests are disabled in pipelines
+    parser.add_argument('-p', '--pipeline',
+                        action='store_true')
+
+    args = parser.parse_args()
+    return args.pipeline
+
 def main():
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))))
+
+    in_pipeline = parse_args()
 
     import pm4py
     import numpy
@@ -1041,7 +1056,8 @@ def main():
         execute_script(simplified_interface)
         execute_script(bpmn_js_visualization)
         execute_script(read_write_ocel)
-        execute_script(discovery_data_petri_net)
+        if not in_pipeline:
+            execute_script(discovery_data_petri_net)
         execute_script(data_petri_nets)
         execute_script(inhibitor_reset_arcs)
         execute_script(logs_petri_visual_comparison)
@@ -1072,10 +1088,12 @@ def main():
         execute_script(ocel20_import_export)
         execute_script(revised_playout)
         execute_script(timestamp_case_grouping_filter)
-        execute_script(trace_clustering)
+        if not in_pipeline:
+            execute_script(trace_clustering)
         execute_script(validation_ocel20_relational)
         execute_script(interval_events_overlap)
-        execute_script(kneighb_regression)
+        if not in_pipeline:
+            execute_script(kneighb_regression)
         execute_script(log_to_int_tree_open_paths)
         execute_script(concept_drift)
         execute_script(dfg_align_metrics)
@@ -1095,7 +1113,8 @@ def main():
         execute_script(ocel_validation)
         execute_script(process_tree_frequency_annotation)
         execute_script(tree_manual_generation)
-        execute_script(workalendar_example)
+        if not in_pipeline:
+            execute_script(workalendar_example)
         execute_script(merging_case_relations)
         execute_script(activity_position)
         execute_script(link_analysis_vbfa)
@@ -1134,7 +1153,8 @@ def main():
         execute_script(manual_log_generation)
         execute_script(token_replay_imdf)
         execute_script(decisiontree_trivial_example)
-        execute_script(decisiontree_align_example)
+        if not in_pipeline:
+            execute_script(decisiontree_align_example)
         execute_script(transition_system_test)
         execute_script(heu_miner_test)
         execute_script(dfg_min_ex_log)
