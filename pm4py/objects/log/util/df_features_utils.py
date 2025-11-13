@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Set
 
 import numpy as np
 import pandas as pd
@@ -6,6 +6,33 @@ import pandas as pd
 from pm4py.objects.log.util.dataframe_utils import Parameters
 from pm4py.util import constants, exec_utils, pandas_utils
 from pm4py.util import xes_constants
+
+
+def _sanitize_feature_name(
+    prefix: str, value: Any, used_names: Optional[Set[str]] = None
+) -> str:
+    """
+    Build a deterministic feature column name and ensure uniqueness when requested.
+    """
+    sanitized = (
+        str(value)
+        .encode("ascii", errors="ignore")
+        .decode("ascii")
+    )
+    if sanitized == "":
+        sanitized = "value"
+    base_name = f"{prefix}_{sanitized}"
+
+    if used_names is None:
+        return base_name
+
+    candidate = base_name
+    suffix = 1
+    while candidate in used_names:
+        candidate = f"{base_name}__{suffix}"
+        suffix += 1
+    used_names.add(candidate)
+    return candidate
 
 
 def automatic_feature_selection_df(df, parameters=None):
@@ -161,25 +188,23 @@ def select_string_column(
     """
     # Filter out None values once
     df_filtered = df[[case_id_key, col]].dropna(subset=[col])
+    existing_cols = set(fea_df.columns)
 
     if count_occurrences:
         # Use crosstab for efficient counting
         crosstab = pd.crosstab(df_filtered[case_id_key], df_filtered[col])
-        # Rename columns efficiently
-        crosstab.columns = [
-            col
-            + "_"
-            + str(c)
-            .encode("ascii", errors="ignore")
-            .decode("ascii")
-            for c in crosstab.columns
-        ]
+        # Rename columns efficiently while avoiding duplicates
+        rename_map = {
+            original: _sanitize_feature_name(col, original, existing_cols)
+            for original in crosstab.columns
+        }
+        crosstab = crosstab.rename(columns=rename_map)
         # Merge once with all columns
         fea_df = fea_df.merge(
             crosstab, left_on=case_id_key, right_index=True, how="left"
         )
         # Fill NaN and convert to float32 for all new columns at once
-        new_cols = crosstab.columns.tolist()
+        new_cols = list(rename_map.values())
         if new_cols:
             fea_df[new_cols] = fea_df[new_cols].astype(np.float32)
     else:
@@ -202,22 +227,19 @@ def select_string_column(
                 aggfunc="max",
             )
 
-            # Rename columns
-            pivot.columns = [
-                col
-                + "_"
-                + str(c)
-                .encode("ascii", errors="ignore")
-                .decode("ascii")
-                for c in pivot.columns
-            ]
+            # Rename columns (ensuring uniqueness when sanitization collides)
+            rename_map = {
+                original: _sanitize_feature_name(col, original, existing_cols)
+                for original in pivot.columns
+            }
+            pivot = pivot.rename(columns=rename_map)
 
             # Merge once with all columns
             fea_df = fea_df.merge(
                 pivot, left_on=case_id_key, right_index=True, how="left"
             )
             # Fill NaN only for cases having at least one value and convert to float32
-            new_cols = pivot.columns.tolist()
+            new_cols = list(rename_map.values())
             if new_cols:
                 mask = (
                     fea_df[case_id_key].isin(cases_with_values)
