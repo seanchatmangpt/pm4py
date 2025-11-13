@@ -4,7 +4,7 @@ workflow:
       when: always
     - if: $CI_COMMIT_BRANCH == "integration"
       when: always
-    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
     - when: never
 
@@ -31,15 +31,15 @@ test_scripts:
   stage: test
   script:
     - cd tests
-    - python execute_tests.py
+    - python execute_tests.py --pipeline
   # If execute_tests.py returns non-zero, job fails.
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
     - if: $CI_COMMIT_BRANCH == "integration"
       when: manual
-    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
-      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
     - when: never
       # This job is run in merge requests
 
@@ -48,15 +48,15 @@ example_scripts:
   script:
     - pip install .
     - cd examples
-    - python execute_everything.py
+    - python execute_everything.py --pipeline
   # If execute_everything.py returns non-zero, job fails.
   rules:
     - if: $CI_COMMIT_BRANCH == "staging"
       when: always
     - if: $CI_COMMIT_BRANCH == "integration"
       when: manual
-    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
-      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
     - when: never
       # This job is run in merge requests
 
@@ -73,7 +73,7 @@ linting_scripts:
       when: always
     - if: $CI_COMMIT_BRANCH == "integration"
       when: manual
-    - if: $CI_COMMIT_BRANCH == "387-ci-cd-test-cases"
-      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
     - when: never
       # do not run this job in merge requests

@@ -1038,6 +1038,8 @@ def main():
 
     print_versions()
 
+    skipped = 0
+
     if EXECUTE_EXAMPLES:
         if importlib.util.find_spec("polars"):
             execute_script(polars_process_cubes)
@@ -1058,6 +1060,8 @@ def main():
         execute_script(read_write_ocel)
         if not in_pipeline:
             execute_script(discovery_data_petri_net)
+        else:
+            skipped += 1
         execute_script(data_petri_nets)
         execute_script(inhibitor_reset_arcs)
         execute_script(logs_petri_visual_comparison)
@@ -1090,10 +1094,14 @@ def main():
         execute_script(timestamp_case_grouping_filter)
         if not in_pipeline:
             execute_script(trace_clustering)
+        else:
+            skipped += 1
         execute_script(validation_ocel20_relational)
         execute_script(interval_events_overlap)
         if not in_pipeline:
             execute_script(kneighb_regression)
+        else:
+            skipped += 1
         execute_script(log_to_int_tree_open_paths)
         execute_script(concept_drift)
         execute_script(dfg_align_metrics)
@@ -1115,6 +1123,8 @@ def main():
         execute_script(tree_manual_generation)
         if not in_pipeline:
             execute_script(workalendar_example)
+        else:
+            skipped += 1
         execute_script(merging_case_relations)
         execute_script(activity_position)
         execute_script(link_analysis_vbfa)
@@ -1155,6 +1165,8 @@ def main():
         execute_script(decisiontree_trivial_example)
         if not in_pipeline:
             execute_script(decisiontree_align_example)
+        else:
+            skipped += 1
         execute_script(transition_system_test)
         execute_script(heu_miner_test)
         execute_script(dfg_min_ex_log)
@@ -1187,6 +1199,8 @@ def main():
 
     print("\n\nExamples executed correctly: %d\tExamples failed: %d\t" % (OutcomeMeasurement.SUCCESS, OutcomeMeasurement.FAILED))
 
+    print(f"Skipped {skipped} examples.")
+
     # Compute the total and pass ratio
     total_runs = OutcomeMeasurement.SUCCESS + OutcomeMeasurement.FAILED
     if total_runs > 0:
@@ -1202,7 +1216,7 @@ def main():
     print(f"Overall pass ratio: {round(pass_ratio * 100, 2)}%")
 
     # If pass ratio is above 90%, exit code is 0; otherwise 1
-    if pass_ratio > 0.9:
+    if pass_ratio == 1:
         #print("exiting with code 0")
         sys.exit(0)
     else:
