@@ -1,25 +1,4 @@
-'''
-    PM4Py â€“ A Process Mining Library for Python
-Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschrÃ¤nkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Set
 
 import polars as pl
 
@@ -28,7 +7,9 @@ from pm4py.util import constants, exec_utils, pandas_utils
 from pm4py.util import xes_constants
 
 
-def _sanitize_feature_name(prefix: str, value: Any) -> str:
+def _sanitize_feature_name(
+    prefix: str, value: Any, used_names: Optional[Set[str]] = None
+) -> str:
     sanitized = (
         str(value)
         .encode("ascii", errors="ignore")
@@ -36,7 +17,18 @@ def _sanitize_feature_name(prefix: str, value: Any) -> str:
     )
     if not sanitized:
         sanitized = "value"
-    return f"{prefix}_{sanitized}"
+    base_name = f"{prefix}_{sanitized}"
+
+    if used_names is None:
+        return base_name
+
+    candidate = base_name
+    suffix = 1
+    while candidate in used_names:
+        candidate = f"{base_name}__{suffix}"
+        suffix += 1
+    used_names.add(candidate)
+    return candidate
 
 
 def _scalar_from_lazy(lf: pl.LazyFrame, expr: pl.Expr) -> Any:
@@ -218,10 +210,11 @@ def _select_string_columns(
 
     agg_exprs: List[pl.Expr] = []
     fill_exprs: List[pl.Expr] = []
+    used_names: Set[str] = set(_lazy_columns(fea_df))
 
     for column, unique_values in unique_values_map.items():
         for value in unique_values:
-            column_name = _sanitize_feature_name(column, value)
+            column_name = _sanitize_feature_name(column, value, used_names)
 
             comparison = pl.col(column).eq(value)
 
