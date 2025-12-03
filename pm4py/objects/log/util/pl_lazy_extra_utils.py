@@ -116,6 +116,26 @@ def compute_extra_columns(
         Parameters.COMPUTE_EXTRA_TEMPORAL_FEATURES, parameters, True
     )
 
+    # Determine columns that will be added
+    columns_to_add = ["@@count", "@@case_throughput"]
+    if compute_extra_temporal_features:
+        columns_to_add.extend([
+            "@@case_start_year",
+            "@@case_start_ymonth",
+            "@@case_start_month",
+            "@@case_start_week",
+            "@@case_end_year",
+            "@@case_end_ymonth",
+            "@@case_end_month",
+            "@@case_end_week",
+        ])
+
+    # Remove existing columns to avoid duplicates
+    existing_columns = set(dataframe.columns)
+    columns_to_drop = [col for col in columns_to_add if col in existing_columns]
+    if columns_to_drop:
+        dataframe = dataframe.drop(columns_to_drop)
+
     df = dataframe.with_columns(pl.lit(1).alias("@@count"))
 
     case_features = _prepare_case_features(
