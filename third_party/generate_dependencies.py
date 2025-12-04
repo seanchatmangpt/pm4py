@@ -19,7 +19,7 @@ def get_version(package):
     r.raise_for_status()
     data = r.json()
 
-    # optional: keep your debug dump
+    # your debug dump
     #json.dump(data, open("temp2.txt", "w"), indent=2)
 
     # ---- license (same as before) ----
@@ -28,7 +28,6 @@ def get_version(package):
         if classi.startswith("License ::"):
             license = classi.split(":: ")[-1]
 
-    # ---- pick version depending on INCLUDE_BETAS ----
     releases = data.get("releases", {})
 
     versions = []
@@ -36,31 +35,53 @@ def get_version(package):
         try:
             versions.append(Version(s))
         except InvalidVersion:
-            # skip weird tags that don't conform to PEP 440
+            # skip weird/non-PEP 440 tags
             continue
 
     if not versions:
         # fallback: behave like before, use info["version"]
         version = data["info"]["version"]
-    else:
-        versions.sort(reverse=True)
+        time.sleep(0.1)
+        return package, url, version, license
 
-        stable_versions = [v for v in versions if not v.is_prerelease]
-        prerelease_versions = [v for v in versions if v.is_prerelease]
+    versions.sort(reverse=True)
 
-        chosen = None
+    # latest stable (non-pre-release)
+    stable_versions = [v for v in versions if not v.is_prerelease]
+    latest_stable = stable_versions[0] if stable_versions else None
 
-        if INCLUDE_BETAS and prerelease_versions:
-            # pick the newest pre-release (beta/rc/alpha)
-            chosen = prerelease_versions[0]
+    # latest beta/RC (pre-release; you can restrict to 'b' and 'rc')
+    prereleases = [v for v in versions if v.is_prerelease]
+
+    # Only beta and rc; drop alphas if you don't want them
+    beta_rc_versions = [
+        v for v in prereleases
+        if v.pre is not None and v.pre[0] in ("b", "rc")
+    ]
+    latest_beta_rc = beta_rc_versions[0] if beta_rc_versions else None
+
+    # ---- version choice logic with INCLUDE_BETAS ----
+    if not INCLUDE_BETAS:
+        # always stable if possible
+        if latest_stable is not None:
+            chosen = latest_stable
         else:
-            # pick newest stable if possible, otherwise whatever is newest
-            if stable_versions:
-                chosen = stable_versions[0]
-            else:
-                chosen = versions[0]
+            # no stable versions, fall back to newest overall
+            chosen = versions[0]
+    else:
+        # prefer beta/rc only if it is *newer* than latest stable
+        if latest_beta_rc is not None and latest_stable is not None:
+            chosen = latest_beta_rc if latest_beta_rc > latest_stable else latest_stable
+        elif latest_beta_rc is not None:
+            # no stable, but we do have beta/rc
+            chosen = latest_beta_rc
+        elif latest_stable is not None:
+            chosen = latest_stable
+        else:
+            # extremely weird case: only unparseable vs; fall back
+            chosen = versions[0]
 
-        version = str(chosen)
+    version = str(chosen)
 
     time.sleep(0.1)
     return package, url, version, license
