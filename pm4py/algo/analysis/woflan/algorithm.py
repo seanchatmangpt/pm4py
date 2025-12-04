@@ -573,11 +573,12 @@ def step_7(woflan_object, return_asap_when_unsound=False):
             woflan_object.get_net(),
         )
     )
-    if len(check_for_improper_conditions(woflan_object.get_mcg())) == 0:
+    improper = check_for_improper_conditions(woflan_object.get_mcg())
+    if len(improper) == 0:
         woflan_object.diagnostic_messages.append("No improper coditions.")
         if woflan_object.print_diagnostics:
             print("No improper conditions.")
-        if woflan_object.get_left:
+        if woflan_object.get_left():
             return step_8(
                 woflan_object,
                 return_asap_when_unsound=return_asap_when_unsound,
@@ -588,16 +589,9 @@ def step_7(woflan_object, return_asap_when_unsound=False):
                 return_asap_when_unsound=return_asap_when_unsound,
             )
     else:
-        woflan_object.diagnostic_messages.append(
-            "Improper WPD. The following are the improper conditions: {}.".format(
-                check_for_improper_conditions(
-                    woflan_object.get_mcg())))
+        woflan_object.diagnostic_messages.append("Improper WPD. The following are the improper conditions: {}.".format(improper))
         if woflan_object.print_diagnostics:
-            print(
-                "Improper WPD. The following are the improper conditions: {}.".format(
-                    check_for_improper_conditions(woflan_object.get_mcg())
-                )
-            )
+            print("Improper WPD. The following are the improper conditions: {}.".format(improper))
         if return_asap_when_unsound:
             return False
         return step_9(
@@ -606,14 +600,9 @@ def step_7(woflan_object, return_asap_when_unsound=False):
 
 
 def step_8(woflan_object, return_asap_when_unsound=False):
-    if check_for_substates(woflan_object.get_mcg()):
-        return step_10(
-            woflan_object, return_asap_when_unsound=return_asap_when_unsound
-        )
-    else:
-        return step_10(
-            woflan_object, return_asap_when_unsound=return_asap_when_unsound
-        )
+    return step_10(
+        woflan_object, return_asap_when_unsound=return_asap_when_unsound
+    )
 
 
 def step_9(woflan_object, return_asap_when_unsound=False):
