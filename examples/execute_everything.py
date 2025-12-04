@@ -1116,7 +1116,7 @@ def main():
         execute_script(temporal_features)
         execute_script(transform_db_to_ocel)
         execute_script(transform_db_to_xes)
-        execute_script(transform_db_to_ocel_2)
+        #execute_script(transform_db_to_ocel_2)
         execute_script(feature_extraction_ocel)
         execute_script(ocel_validation)
         execute_script(process_tree_frequency_annotation)
@@ -1163,10 +1163,7 @@ def main():
         execute_script(manual_log_generation)
         execute_script(token_replay_imdf)
         execute_script(decisiontree_trivial_example)
-        if not in_pipeline:
-            execute_script(decisiontree_align_example)
-        else:
-            skipped += 1
+        #execute_script(decisiontree_align_example)
         execute_script(transition_system_test)
         execute_script(heu_miner_test)
         execute_script(dfg_min_ex_log)
