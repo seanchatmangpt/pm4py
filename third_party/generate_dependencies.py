@@ -5,7 +5,7 @@ import requests
 import json
 import importlib.util
 from copy import deepcopy
-
+from packaging.version import Version, InvalidVersion
 
 REMOVE_DEPS_AT_END = True
 UPDATE_DOCKERFILE = True
@@ -16,15 +16,52 @@ INCLUDE_BETAS = False
 def get_version(package):
     url = "https://pypi.org/pypi/" + package + "/json"
     r = requests.get(url)
-    res0 = r.text
-    dictio = r.json()
-    #json.dump(dictio, open("temp2.txt", "w"), indent=2)
+    r.raise_for_status()
+    data = r.json()
+
+    # optional: keep your debug dump
+    #json.dump(data, open("temp2.txt", "w"), indent=2)
+
+    # ---- license (same as before) ----
     license = "Unspecified"
-    for classi in dictio["info"]["classifiers"]:
+    for classi in data["info"].get("classifiers", []):
         if classi.startswith("License ::"):
             license = classi.split(":: ")[-1]
-    version = dictio["info"]["version"]
-    #print(package, url, version, license)
+
+    # ---- pick version depending on INCLUDE_BETAS ----
+    releases = data.get("releases", {})
+
+    versions = []
+    for s in releases.keys():
+        try:
+            versions.append(Version(s))
+        except InvalidVersion:
+            # skip weird tags that don't conform to PEP 440
+            continue
+
+    if not versions:
+        # fallback: behave like before, use info["version"]
+        version = data["info"]["version"]
+    else:
+        versions.sort(reverse=True)
+
+        stable_versions = [v for v in versions if not v.is_prerelease]
+        prerelease_versions = [v for v in versions if v.is_prerelease]
+
+        chosen = None
+
+        if INCLUDE_BETAS and prerelease_versions:
+            # pick the newest pre-release (beta/rc/alpha)
+            chosen = prerelease_versions[0]
+        else:
+            # pick newest stable if possible, otherwise whatever is newest
+            if stable_versions:
+                chosen = stable_versions[0]
+            else:
+                chosen = versions[0]
+
+        version = str(chosen)
+
     time.sleep(0.1)
     return package, url, version, license
 
