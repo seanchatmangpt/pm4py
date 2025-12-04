@@ -196,7 +196,7 @@ def select_number_column(
     )
 
     return (
-        fea_df.join(df_numeric, on=case_id_key, how="left", suffix="_right")
+        fea_df.join(df_numeric, on=case_id_key, how="left", coalesce=True)
         .with_columns(pl.col(col).cast(pl.Float32))
     )
 
@@ -305,7 +305,7 @@ def _select_string_columns(
         .with_columns(fill_exprs)
     )
 
-    return fea_df.join(feature_chunk, on=case_id_key, how="left", suffix="_right")
+    return fea_df.join(feature_chunk, on=case_id_key, how="left", coalesce=True)
 
 
 def select_string_column(
