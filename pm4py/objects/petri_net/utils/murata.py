@@ -23,7 +23,6 @@ Contact: info@processintelligence.solutions
 from pm4py.util.lp import solver
 from pm4py.util import constants
 from pm4py.objects.petri_net.utils.petri_utils import remove_place
-from copy import copy
 from typing import Tuple
 import warnings
 import importlib.util
@@ -58,7 +57,11 @@ def apply_reduction(
         Final marking
     """
     places = sorted(list(net.places), key=lambda x: x.name)
+    place_index = {p: i for i, p in enumerate(places)}
+    n_places = len(places)
+
     redundant = set()
+
     for place in places:
         # Skip places in the initial or final markings
         if place in im or place in fm:
@@ -70,53 +73,55 @@ def apply_reduction(
         bub = []
 
         # first constraint
-        constraint = [0] * (len(net.places) + 1)
+        constraint = [0] * (n_places + 1)
         for p2 in im:
             if p2 not in redundant:
                 if p2 == place:
-                    constraint[places.index(p2)] = im[p2]
+                    constraint[place_index[p2]] = im[p2]
                 else:
-                    constraint[places.index(p2)] = -im[p2]
+                    constraint[place_index[p2]] = -im[p2]
         constraint[-1] = -1
         Aeq.append(constraint)
         beq.append(0)
 
         # second constraints
         for trans in net.transitions:
-            constraint = [0] * (len(net.places) + 1)
+            constraint = [0] * (n_places + 1)
 
             for arc in trans.in_arcs:
                 p2 = arc.source
                 if p2 not in redundant:
                     if p2 == place:
-                        constraint[places.index(p2)] = arc.weight
+                        constraint[place_index[p2]] = arc.weight
                     else:
-                        constraint[places.index(p2)] = -arc.weight
+                        constraint[place_index[p2]] = -arc.weight
+
             constraint[-1] = -1
             Aub.append(constraint)
             bub.append(0)
 
-        # third constraints
+        # third constraints (FIXED SIGNS)
         for trans in net.transitions:
-            constraint = [0] * (len(net.places) + 1)
+            constraint = [0] * (n_places + 1)
 
             for arc in trans.out_arcs:
                 p2 = arc.target
                 if p2 not in redundant:
+                    # FIX: candidate place must have +weight, other places -weight
+                    # (the previous implementation inverted these signs)
                     if p2 == place:
-                        constraint[places.index(p2)] = -arc.weight
+                        constraint[place_index[p2]] = arc.weight
                     else:
-                        constraint[places.index(p2)] = arc.weight
+                        constraint[place_index[p2]] = -arc.weight
+
             Aub.append(constraint)
             bub.append(0)
 
         # fourth constraint
-        for p2 in net.places:
+        for p2 in places:
             if p2 not in redundant:
-                constraint = [0] * (len(net.places) + 1)
-
-                constraint[places.index(p2)] = -1
-
+                constraint = [0] * (n_places + 1)
+                constraint[place_index[p2]] = -1
                 Aub.append(constraint)
                 if p2 == place:
                     bub.append(-1)
@@ -124,13 +129,13 @@ def apply_reduction(
                     bub.append(0)
 
         # fifth constraint
-        constraint = [0] * (len(net.places) + 1)
+        constraint = [0] * (n_places + 1)
         constraint[-1] = -1
         Aub.append(constraint)
         bub.append(0)
 
-        c = [1] * (len(net.places) + 1)
-        integrality = [1] * (len(net.places) + 1)
+        c = [1] * (n_places + 1)
+        integrality = [1] * (n_places + 1)
 
         proposed_solver = solver.SCIPY
         if importlib.util.find_spec("pulp"):
@@ -157,7 +162,6 @@ def apply_reduction(
             redundant.add(place)
 
     for place in redundant:
-        # Remove the redundant place from the net
         net = remove_place(net, place)
 
     return net, im, fm
