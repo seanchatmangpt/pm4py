@@ -114,17 +114,20 @@ def apply(
         eve_idx[evid] = len(eve_idx)
 
     for change in legacy_object["ocel:objectChanges"]:
+        field = change.get("ocel:field")
+        if field is None or field not in change:
+            continue
         oid = change["ocel:oid"]
         obj = json_object["objects"][obj_idx[oid]]
 
         norm_value = clean_dataframes.normalize_value(
-            change[change["ocel:field"]]
+            change[field]
         )
         if clean_dataframes.is_null(norm_value):
             continue
         obj.setdefault("attributes", []).append(
             {
-                "name": change["ocel:field"],
+                "name": field,
                 "time": change["ocel:timestamp"],
                 "value": norm_value,
             }
