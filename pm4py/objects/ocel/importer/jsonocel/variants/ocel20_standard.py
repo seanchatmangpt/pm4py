@@ -1,4 +1,4 @@
-from pm4py.util import exec_utils
+from pm4py.util import exec_utils, dt_parsing
 from pm4py.objects.ocel.obj import OCEL
 from typing import Optional, Dict, Any
 from pm4py.objects.ocel.util import filtering_utils
@@ -11,6 +11,42 @@ import json
 
 class Parameters(Enum):
     ENCODING = "encoding"
+
+
+def _parse_attr_value(value, attr_type, parser):
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip().lower() == "null":
+        return None
+
+    attr_type = "" if attr_type is None else str(attr_type).lower()
+    if "date" in attr_type or "time" in attr_type:
+        try:
+            return parser.apply(value)
+        except BaseException:
+            from dateutil.parser import parse
+
+            try:
+                return parse(value)
+            except BaseException:
+                return value
+    if "float" in attr_type or "double" in attr_type:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+    if "int" in attr_type:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+    if "bool" in attr_type:
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in ("true", "false"):
+                return lowered == "true"
+        return bool(value)
+    return value
 
 
 def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
@@ -41,6 +77,20 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
     json_obj = json.load(F)
     F.close()
 
+    event_attr_types = {}
+    for et in json_obj.get("eventTypes", []):
+        event_attr_types[et["name"]] = {
+            x["name"]: x["type"] for x in et.get("attributes", [])
+        }
+
+    object_attr_types = {}
+    for ot in json_obj.get("objectTypes", []):
+        object_attr_types[ot["name"]] = {
+            x["name"]: x["type"] for x in ot.get("attributes", [])
+        }
+
+    parser = dt_parsing.parser.get()
+
     legacy_obj = {}
     legacy_obj["ocel:events"] = {}
     legacy_obj["ocel:objects"] = {}
@@ -52,8 +102,12 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
         dct["ocel:timestamp"] = eve["time"]
         dct["ocel:vmap"] = {}
         if "attributes" in eve and eve["attributes"]:
+            type_map = event_attr_types.get(eve["type"], {})
             dct["ocel:vmap"] = {
-                x["name"]: x["value"] for x in eve["attributes"]
+                x["name"]: _parse_attr_value(
+                    x["value"], type_map.get(x["name"]), parser
+                )
+                for x in eve["attributes"]
             }
         dct["ocel:typedOmap"] = []
         if "relationships" in eve and eve["relationships"]:
@@ -71,19 +125,23 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
         dct["ocel:type"] = obj["type"]
         dct["ocel:ovmap"] = {}
         if "attributes" in obj and obj["attributes"]:
+            type_map = object_attr_types.get(obj["type"], {})
             for x in obj["attributes"]:
+                value = _parse_attr_value(
+                    x["value"], type_map.get(x["name"]), parser
+                )
                 if x["name"] in dct["ocel:ovmap"]:
                     legacy_obj["ocel:objectChanges"].append(
                         {
                             "ocel:oid": obj["id"],
                             "ocel:type": obj["type"],
                             "ocel:field": x["name"],
-                            x["name"]: x["value"],
+                            x["name"]: value,
                             "ocel:timestamp": x["time"],
                         }
                     )
                 else:
-                    dct["ocel:ovmap"][x["name"]] = x["value"]
+                    dct["ocel:ovmap"][x["name"]] = value
         dct["ocel:o2o"] = []
         if "relationships" in obj and obj["relationships"]:
             dct["ocel:o2o"] = [
