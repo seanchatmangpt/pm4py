@@ -158,9 +158,12 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
             ]
         if len(object_changes) == 0:
             object_changes = None
+        else:
+            object_changes = object_changes.copy()
+        objects = objects.copy()
         del objects[changed_field]
     else:
-        objects = object_types_coll
+        objects = object_types_coll.copy()
         object_changes = None
 
     if event_timestamp in objects:
