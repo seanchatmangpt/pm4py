@@ -126,22 +126,44 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
         dct["ocel:ovmap"] = {}
         if "attributes" in obj and obj["attributes"]:
             type_map = object_attr_types.get(obj["type"], {})
+            attrs_by_name = {}
             for x in obj["attributes"]:
                 value = _parse_attr_value(
                     x["value"], type_map.get(x["name"]), parser
                 )
-                if x["name"] in dct["ocel:ovmap"]:
+                time_raw = x.get("time")
+                if time_raw is None:
+                    time_key = None
+                    time_val = None
+                elif str(time_raw).startswith("1970-01-01T00:00:00") or str(
+                    time_raw
+                ) == "0":
+                    time_key = None
+                    time_val = time_raw
+                else:
+                    try:
+                        time_val = parser.apply(time_raw)
+                        time_key = time_val
+                    except BaseException:
+                        time_val = time_raw
+                        time_key = time_raw
+                attrs_by_name.setdefault(x["name"], []).append(
+                    (time_key, time_val, value)
+                )
+
+            for name, entries in attrs_by_name.items():
+                base_time_key, base_time_val, base_value = entries[0]
+                dct["ocel:ovmap"][name] = base_value
+                for time_key, time_val, value in entries[1:]:
                     legacy_obj["ocel:objectChanges"].append(
                         {
                             "ocel:oid": obj["id"],
                             "ocel:type": obj["type"],
-                            "ocel:field": x["name"],
-                            x["name"]: value,
-                            "ocel:timestamp": x["time"],
+                            "ocel:field": name,
+                            name: value,
+                            "ocel:timestamp": time_val,
                         }
                     )
-                else:
-                    dct["ocel:ovmap"][x["name"]] = value
         dct["ocel:o2o"] = []
         if "relationships" in obj and obj["relationships"]:
             dct["ocel:o2o"] = [
