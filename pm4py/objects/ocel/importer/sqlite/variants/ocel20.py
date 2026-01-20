@@ -251,9 +251,8 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
         o2o=O2O,
         parameters=parameters,
     )
+
     ocel = ocel_consistency.apply(ocel, parameters=parameters)
-    ocel = filtering_utils.propagate_relations_filtering(
-        ocel, parameters=parameters
-    )
+    ocel = filtering_utils.propagate_relations_filtering(ocel, parameters=parameters)
 
     return ocel
