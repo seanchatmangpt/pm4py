@@ -27,6 +27,20 @@ class Parameters(Enum):
     EXCEPT_IF_INVALID = "except_if_invalid"
 
 
+def _normalize_id_series(series: pd.Series) -> pd.Series:
+    if series is None:
+        return series
+    if pd.api.types.is_float_dtype(series):
+        non_null = series.dropna()
+        if len(non_null) > 0 and ((non_null % 1) == 0).all():
+            series = series.astype("Int64")
+            return series.astype("string")
+    if pd.api.types.is_numeric_dtype(series):
+        return series.astype("string")
+    series = series.astype("string")
+    return series.str.replace(r"\\.0$", "", regex=True)
+
+
 def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
     if parameters is None:
         parameters = {}
@@ -79,6 +93,8 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
 
     EVENTS = pd.read_sql("SELECT * FROM event", conn)
     OBJECTS = pd.read_sql("SELECT * FROM object", conn)
+    EVENTS["ocel_id"] = _normalize_id_series(EVENTS["ocel_id"])
+    OBJECTS["ocel_id"] = _normalize_id_series(OBJECTS["ocel_id"])
 
     etypes = sorted(pandas_utils.format_unique(EVENTS["ocel_type"].unique()))
     otypes = sorted(pandas_utils.format_unique(OBJECTS["ocel_type"].unique()))
@@ -109,6 +125,7 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
         df = df.rename(
             columns={"ocel_id": event_id, "ocel_time": event_timestamp}
         )
+        df[event_id] = _normalize_id_series(df[event_id])
         event_types_coll.append(df)
 
     for ot in otypes:
@@ -117,6 +134,7 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
         df = df.rename(
             columns={"ocel_id": object_id, "ocel_time": event_timestamp}
         )
+        df[object_id] = _normalize_id_series(df[object_id])
         object_types_coll.append(df)
 
     event_types_coll = pandas_utils.concat(event_types_coll)
@@ -178,6 +196,8 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
             "ocel_qualifier": qualifier_field,
         }
     )
+    E2O[event_id] = _normalize_id_series(E2O[event_id])
+    E2O[object_id] = _normalize_id_series(E2O[object_id])
     E2O[event_activity] = E2O[event_id].map(events_id_type)
     E2O[event_timestamp] = E2O[event_id].map(events_timestamp)
     E2O[object_type] = E2O[object_id].map(objects_id_type)
@@ -190,6 +210,11 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
             "ocel_qualifier": qualifier_field,
         }
     )
+    if len(O2O) > 0:
+        O2O[object_id] = _normalize_id_series(O2O[object_id])
+        O2O[object_id + "_2"] = _normalize_id_series(
+            O2O[object_id + "_2"]
+        )
     if len(O2O) == 0:
         O2O = None
 
