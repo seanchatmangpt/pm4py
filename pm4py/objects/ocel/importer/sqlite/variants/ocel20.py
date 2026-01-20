@@ -34,7 +34,7 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
     import sqlite3
 
     validation = exec_utils.get_param_value(
-        Parameters.VALIDATION, parameters, True
+        Parameters.VALIDATION, parameters, False
     )
     except_if_invalid = exec_utils.get_param_value(
         Parameters.EXCEPT_IF_INVALID, parameters, False
@@ -72,14 +72,8 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None):
 
     if validation:
         satisfied, unsatisfied = ocel20_rel_validation.apply(file_path)
-        if unsatisfied:
-            if pm4_constants.SHOW_INTERNAL_WARNINGS:
-                warnings.warn(
-                    "There are unsatisfied OCEL 2.0 constraints in the given relational database: " +
-                    str(unsatisfied))
-
-            if except_if_invalid:
-                raise Exception("OCEL 2.0 validation failed.")
+        if unsatisfied and except_if_invalid:
+            raise Exception("OCEL 2.0 validation failed.")
 
     conn = sqlite3.connect(file_path)
 
