@@ -99,7 +99,8 @@ def apply_standard_cost_function_to_alignment(align: List) -> int:
 
 def empty_sequence_accepted(pt: ProcessTree) -> bool:
     alignment = calculate_optimal_alignment(pt, Trace())
-    return alignment["cost"] < STD_MODEL_LOG_MOVE_COST
+    cost = apply_standard_cost_function_to_alignment(alignment)
+    return cost < STD_MODEL_LOG_MOVE_COST
 
 
 def calculate_optimal_alignment(
