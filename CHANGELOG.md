@@ -3,10 +3,27 @@
 # pm4py 2.7.22 (2025.XX.YY)
 
 ### Added
-
+* 865063cead75f630fa806adab2bd7835149ebffd
+  * CI/CD test cases
+* 78a2b4516fce5b7d089093e62ba38de37ecc5c2e
+  * added test case for Woflan
+* 8787819fd54cdb7893fe7261406004e94ae805c6
+  * added MURATA test cases
+  
 ### Changed
 * ab5dc93321918c267d51a66a161d4105f6838e05
   * improvement format_dataframe for Polars
+* 4293158672bbcf10a9cce0b0b33ee42ee1ac846f
+  * performance improvement WOFLAN
+* a8482a2f0609e943c3184db59077733283f7b0e9
+  * keep NAN values in attributes
+* 681107a108ffb2c51a2367e2f8e09d7f33815aec
+  ce8585807fbc3ca6640f8032a4eecca12923d202
+  7a8baf1d7bd665258695c62019f97fe4a919535c
+  03be978c75b9f804fe64d8fed57732e0197c419f
+  * updates for Numpy 2.4 and Pandas 3.x
+* f70e9a6fb45357f1d65d75e620e515714253ccc3
+  * revised BPMN layouting (nicer)
 
 ### Deprecated
 
@@ -15,10 +32,44 @@
   * bug fix temporal profile on Polars
 * 47a6b7fa5dfe2c0be078e41c3d4338ec6093b8f4
   * fixed fea extraction and process cube
+* 403861b6637a338fca3034e978ecf25470bc8c24
+  * bug fixes Heuristics Net to Petri Net conversion
+* 72ef9a29e377d1d36c842a6109e6477005949133
+  * bug fix alignments approximation on process trees
+* 52c8f3c2e96b99641d544f5a8763c5868ebfaf83
+  677e6f700f3bfa1df6990a19118c7df205223b58
+  b4ee504e6a20c0cca42530943cfa2d0821854168
+  a44a70bea4af654994e0e624923f9fc8d361ee8a
+  d7cf2dbc5c40372fa775894c531a8864f57ef178
+  d29139419ffc2169c5f7b247a04051ca3617184d
+  b52f2b9e01b47c9aba50d9ee70dfcf20ca1107dc
+  4f6d52a6d56373ebdde40bc078e14a972d86c677
+  413236077caa978f304e8b23c2e6524fe55031ef
+  56d13ad9f586415a36020233d81dd513f053209f
+  ff2e22815ffc7e469edae17bc9d111cb44e98b45
+  bffd377abb3304a7650296724fef96dc9fdb2036
+  * bug fixes OCEL 2.0 importing/exporting
+* c611e9957ad78003053477677798ef56819e8182
+  * Incorrectly calculating cycle time and waiting time
+* 6f11809aaf1748460ef08afeb018b54adfa313b4
+  * bug fix DECLARE discovery/conformance
+* a34c250c4c135bb3470d030efa3ea43ca8311444
+  5486e7fc7fa69a453c45f4dc117a094651c147ea
+  * bug fixes Murata
+* 14fb5321da7de2bb04a1df4bd455427c4d183985
+  * LTL checking filtering bug fix
+* a3fd52911d1f8bd19932369b00f8874c4185db4f
+  * paths performance filter bug fix
+* 44c93eb2441a03f1df17b6a7ee4bd77185dede8d
+  64beb6f9d45e0580124ec5d3391410f1dd88658b
+  * fixed extended Cyclomatic and Cardoso metrics
 
 ### Removed
 
 ### Other
+* 12c17ca6e287143f41d782e086f83dc8627ea1f3
+  d8ea730cc526f5e36dc99f5d0c347156ba504c28
+  * update generate dependencies script
 
 
 # pm4py 2.7.21 (2025.10.10)
