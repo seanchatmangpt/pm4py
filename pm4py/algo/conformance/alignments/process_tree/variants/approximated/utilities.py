@@ -111,7 +111,7 @@ def calculate_optimal_alignment(
     align_variant = exec_utils.get_param_value(
         Parameters.CLASSIC_ALIGNMENTS_VARIANT,
         parameters,
-        Variants.VERSION_STATE_EQUATION_A_STAR,
+        Variants.VERSION_DIJKSTRA_NO_HEURISTICS,
     )
     conversion_version = exec_utils.get_param_value(
         Parameters.CONVERSION_VERSION,
