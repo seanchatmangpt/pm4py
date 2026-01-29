@@ -10,54 +10,14 @@ from math import sqrt
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
-
-def build_prefix_onehot_remaining_time(log, activity_key, timestamp_key):
-    activities = sorted(
-        {event[activity_key] for trace in log for event in trace if activity_key in event}
-    )
-    activity_to_index = {activity: idx for idx, activity in enumerate(activities)}
-
-    feature = []
-    target = []
-    case_ids = []
-
-    for trace_index, trace in enumerate(log):
-        if len(trace) < 2:
-            continue
-        if timestamp_key not in trace[-1]:
-            continue
-        end_time = trace[-1][timestamp_key]
-        trace_id = trace.attributes.get(
-            xes_constants.DEFAULT_TRACEID_KEY, trace_index
-        )
-        seen = set()
-        for idx, event in enumerate(trace):
-            if activity_key not in event:
-                continue
-            activity = event[activity_key]
-            if idx == 0:
-                seen.add(activity)
-                continue
-            if timestamp_key not in event:
-                seen.add(activity)
-                continue
-            row = [0] * len(activities)
-            for seen_activity in seen:
-                row[activity_to_index[seen_activity]] = 1
-            remaining = (end_time - event[timestamp_key]).total_seconds()
-            feature.append(row)
-            target.append(remaining)
-            case_ids.append(trace_id)
-            seen.add(activity)
-
-    return feature, target, case_ids, activities, activity_to_index
+from prefix_feature_extraction import build_prefix_features_remaining_time
 
 
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "One-hot encode every prefix (length >= 2) of each trace using the "
-            "activities up to the penultimate event, with remaining time to case end as target."
+            "Encode every prefix of each trace using the activities and paths up to the "
+            "penultimate event, plus time-based features, with remaining time to case end as target."
         )
     )
     parser.add_argument(
@@ -84,11 +44,19 @@ def main():
     args = parser.parse_args()
 
     log = pm4py.read_xes(args.log_path, return_legacy_log_object=True)
-    feature, target, case_ids, activities, activity_to_index = build_prefix_onehot_remaining_time(
+    (
+        feature,
+        target,
+        case_ids,
+        activities,
+        activity_to_index,
+        paths,
+        _,
+    ) = build_prefix_features_remaining_time(
         log, args.activity_key, args.timestamp_key
     )
     if not feature:
-        raise SystemExit("No prefixes of length >= 2 with timestamps found in the log.")
+        raise SystemExit("No prefixes with timestamps found in the log.")
 
     X_train, X_test, y_train, y_test, case_train, case_test = train_test_split(
         feature, target, case_ids, test_size=0.2, random_state=42
@@ -122,8 +90,9 @@ def main():
     print(f"Activity key: {args.activity_key}")
     print(f"Timestamp key: {args.timestamp_key}")
     print(f"Activities: {len(activities)}")
+    print(f"Paths: {len(paths)}")
     print(f"Samples (prefixes): {len(feature)}")
-    print(f"Feature dimension: {len(activities)}")
+    print(f"Feature dimension: {len(activities) + len(paths) + 3}")
     print(f"Train size: {len(X_train)}")
     print(f"Test size: {len(X_test)}")
     print(f"Per-case MAE (hours): {mae_hours:.4f}")
