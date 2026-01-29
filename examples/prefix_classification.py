@@ -8,42 +8,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
-
-def build_prefix_onehot(log, activity_key):
-    activities = sorted(
-        {event[activity_key] for trace in log for event in trace if activity_key in event}
-    )
-    activity_to_index = {activity: idx for idx, activity in enumerate(activities)}
-
-    feature = []
-    target = []
-
-    for trace in log:
-        if len(trace) < 2:
-            continue
-        seen = set()
-        for idx, event in enumerate(trace):
-            if activity_key not in event:
-                continue
-            activity = event[activity_key]
-            if idx == 0:
-                seen.add(activity)
-                continue
-            row = [0] * len(activities)
-            for seen_activity in seen:
-                row[activity_to_index[seen_activity]] = 1
-            feature.append(row)
-            target.append(activity_to_index[activity])
-            seen.add(activity)
-
-    return feature, target, activities, activity_to_index
+from prefix_feature_extraction import build_prefix_features_next_activity
 
 
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "One-hot encode every prefix (length >= 2) of each trace using the "
-            "activities up to the penultimate event, with the last event as class."
+            "Encode every prefix of each trace using the activities and paths up to the "
+            "penultimate event, plus time-based features, with the next event as class."
         )
     )
     parser.add_argument(
@@ -58,6 +30,11 @@ def main():
         help=f"Event attribute to use as activity (default: {xes_constants.DEFAULT_NAME_KEY})",
     )
     parser.add_argument(
+        "--timestamp-key",
+        default=xes_constants.DEFAULT_TIMESTAMP_KEY,
+        help=f"Event attribute to use as timestamp (default: {xes_constants.DEFAULT_TIMESTAMP_KEY})",
+    )
+    parser.add_argument(
         "--show-sample",
         action="store_true",
         help="Print the first 5 feature rows and targets",
@@ -65,11 +42,18 @@ def main():
     args = parser.parse_args()
 
     log = pm4py.read_xes(args.log_path, return_legacy_log_object=True)
-    feature, target, activities, activity_to_index = build_prefix_onehot(
-        log, args.activity_key
+    (
+        feature,
+        target,
+        activities,
+        activity_to_index,
+        paths,
+        _,
+    ) = build_prefix_features_next_activity(
+        log, args.activity_key, args.timestamp_key
     )
     if not feature:
-        raise SystemExit("No prefixes of length >= 2 found in the log.")
+        raise SystemExit("No prefixes found in the log.")
 
     class_counts = Counter(target)
     min_class = min(class_counts.values()) if class_counts else 0
@@ -92,8 +76,9 @@ def main():
     print(f"Log path: {args.log_path}")
     print(f"Activity key: {args.activity_key}")
     print(f"Activities: {len(activities)}")
+    print(f"Paths: {len(paths)}")
     print(f"Samples (prefixes): {len(feature)}")
-    print(f"Feature dimension: {len(activities)}")
+    print(f"Feature dimension: {len(activities) + len(paths) + 3}")
     print(f"Target classes: {len(activity_to_index)}")
     print(f"Train size: {len(X_train)}")
     print(f"Test size: {len(X_test)}")
