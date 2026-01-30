@@ -55,6 +55,8 @@ def compute_class_geometry_metrics(
     if n_samples == 0:
         return {}
 
+    mean_embedding = np.mean(X, axis=0, keepdims=True)
+    X = X - mean_embedding
     norms = np.linalg.norm(X, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
     Xn = X / norms
