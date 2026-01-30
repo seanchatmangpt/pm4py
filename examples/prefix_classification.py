@@ -5,11 +5,42 @@ from collections import Counter
 
 import pm4py
 from pm4py.util import xes_constants
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 
 from prefix_feature_extraction import build_prefix_features_next_activity
+
+
+def select_components_by_cumulative_variance(
+    explained_variance_ratio, threshold=0.93
+):
+    cumulative = 0.0
+    for idx, ratio in enumerate(explained_variance_ratio):
+        cumulative += ratio
+        if cumulative >= threshold:
+            return idx + 1
+    return len(explained_variance_ratio)
+
+
+def fit_pca_with_variance_threshold(features, threshold=0.93):
+    if not features:
+        raise ValueError("No features provided for PCA fitting.")
+    max_components = min(len(features), len(features[0]))
+    if max_components <= 1:
+        pca = PCA(n_components=1)
+        pca.fit(features)
+        return 1, pca
+    pca_full = PCA(n_components=max_components, random_state=42)
+    pca_full.fit(features)
+    n_components = select_components_by_cumulative_variance(
+        pca_full.explained_variance_ratio_.tolist(), threshold=threshold
+    )
+    pca = PCA(n_components=n_components, random_state=42)
+    pca.fit(features)
+    return n_components, pca
 
 
 def sample_training_data(features, targets, percentage, rng):
@@ -22,7 +53,7 @@ def sample_training_data(features, targets, percentage, rng):
     return sampled_features, sampled_targets
 
 
-def train_classifier(features, targets):
+def train_classifier_random_forest(features, targets):
     clf = RandomForestClassifier(
         n_estimators=300, random_state=42, n_jobs=-1, class_weight="balanced"
     )
@@ -30,8 +61,22 @@ def train_classifier(features, targets):
     return clf
 
 
-def evaluate_classifier(model, features, targets):
+def train_pca_knn_classifier(features, targets):
+    n_components, pca = fit_pca_with_variance_threshold(features, threshold=0.93)
+    reduced = pca.transform(features)
+    knn = KNeighborsClassifier(n_neighbors=1)
+    knn.fit(reduced, targets)
+    return {"pca": pca, "model": knn, "n_components": n_components}
+
+
+def evaluate_classifier_random_forest(model, features, targets):
     predictions = model.predict(features)
+    return accuracy_score(targets, predictions)
+
+
+def evaluate_pca_knn_classifier(model_bundle, features, targets):
+    reduced = model_bundle["pca"].transform(features)
+    predictions = model_bundle["model"].predict(reduced)
     return accuracy_score(targets, predictions)
 
 
@@ -108,11 +153,17 @@ def main():
         X_sampled, y_sampled = sample_training_data(
             X_train, y_train, percentage, rng
         )
-        clf = train_classifier(X_sampled, y_sampled)
-        accuracy = evaluate_classifier(clf, X_test, y_test)
+        clf = train_classifier_random_forest(X_sampled, y_sampled)
+        accuracy = evaluate_classifier_random_forest(clf, X_test, y_test)
+        pca_knn = train_pca_knn_classifier(X_sampled, y_sampled)
+        pca_accuracy = evaluate_pca_knn_classifier(pca_knn, X_test, y_test)
         print(f"Training sample %: {percentage}")
         print(f"Train size (sampled): {len(X_sampled)}")
-        print(f"Test accuracy: {accuracy:.4f}")
+        print(f"RF test accuracy: {accuracy:.4f}")
+        print(
+            f"PCA+kNN (k=1) test accuracy: {pca_accuracy:.4f} "
+            f"(components: {pca_knn['n_components']})"
+        )
 
     if args.show_sample:
         print("Sample features (first 5 rows):")

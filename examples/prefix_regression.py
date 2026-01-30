@@ -6,12 +6,43 @@ from math import sqrt
 
 import pm4py
 from pm4py.util import xes_constants
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 
 from prefix_feature_extraction import build_prefix_features_remaining_time
+
+
+def select_components_by_cumulative_variance(
+    explained_variance_ratio, threshold=0.93
+):
+    cumulative = 0.0
+    for idx, ratio in enumerate(explained_variance_ratio):
+        cumulative += ratio
+        if cumulative >= threshold:
+            return idx + 1
+    return len(explained_variance_ratio)
+
+
+def fit_pca_with_variance_threshold(features, threshold=0.93):
+    if not features:
+        raise ValueError("No features provided for PCA fitting.")
+    max_components = min(len(features), len(features[0]))
+    if max_components <= 1:
+        pca = PCA(n_components=1)
+        pca.fit(features)
+        return 1, pca
+    pca_full = PCA(n_components=max_components, random_state=42)
+    pca_full.fit(features)
+    n_components = select_components_by_cumulative_variance(
+        pca_full.explained_variance_ratio_.tolist(), threshold=threshold
+    )
+    pca = PCA(n_components=n_components, random_state=42)
+    pca.fit(features)
+    return n_components, pca
 
 
 def sample_training_data(features, targets, percentage, rng):
@@ -32,9 +63,15 @@ def train_regressor(features, targets):
     return reg
 
 
-def evaluate_regressor(model, features, targets, case_ids):
-    predictions = model.predict(features)
+def train_pca_knn_regressor(features, targets):
+    n_components, pca = fit_pca_with_variance_threshold(features, threshold=0.93)
+    reduced = pca.transform(features)
+    reg = KNeighborsRegressor(n_neighbors=1)
+    reg.fit(reduced, targets)
+    return {"pca": pca, "model": reg, "n_components": n_components}
 
+
+def compute_regression_metrics(targets, predictions, case_ids):
     abs_errors = [abs(y_true - y_hat) for y_true, y_hat in zip(targets, predictions)]
     sq_errors = [(y_true - y_hat) ** 2 for y_true, y_hat in zip(targets, predictions)]
 
@@ -55,6 +92,17 @@ def evaluate_regressor(model, features, targets, case_ids):
         "rmse_hours": rmse / 3600.0,
         "r2": r2_score(targets, predictions),
     }
+
+
+def evaluate_regressor(model, features, targets, case_ids):
+    predictions = model.predict(features)
+    return compute_regression_metrics(targets, predictions, case_ids)
+
+
+def evaluate_pca_knn_regressor(model_bundle, features, targets, case_ids):
+    reduced = model_bundle["pca"].transform(features)
+    predictions = model_bundle["model"].predict(reduced)
+    return compute_regression_metrics(targets, predictions, case_ids)
 
 
 def main():
@@ -125,11 +173,22 @@ def main():
         )
         reg = train_regressor(X_sampled, y_sampled)
         metrics = evaluate_regressor(reg, X_test, y_test, case_test)
+        pca_knn = train_pca_knn_regressor(X_sampled, y_sampled)
+        pca_metrics = evaluate_pca_knn_regressor(
+            pca_knn, X_test, y_test, case_test
+        )
         print(f"Training sample %: {percentage}")
         print(f"Train size (sampled): {len(X_sampled)}")
         print(f"Per-case MAE (hours): {metrics['mae_hours']:.4f}")
         print(f"Per-case RMSE (hours): {metrics['rmse_hours']:.4f}")
         print(f"R2: {metrics['r2']:.4f}")
+        print(
+            "PCA+kNN (k=1) "
+            f"MAE (hours): {pca_metrics['mae_hours']:.4f} "
+            f"RMSE (hours): {pca_metrics['rmse_hours']:.4f} "
+            f"R2: {pca_metrics['r2']:.4f} "
+            f"(components: {pca_knn['n_components']})"
+        )
 
     if args.show_sample:
         print("Sample features (first 5 rows):")
