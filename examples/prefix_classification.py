@@ -3,6 +3,7 @@ import argparse
 import random
 from collections import Counter
 
+import numpy as np
 import pm4py
 from pm4py.util import xes_constants
 from sklearn.decomposition import PCA
@@ -41,6 +42,82 @@ def fit_pca_with_variance_threshold(features, threshold=0.93):
     pca = PCA(n_components=n_components, random_state=42)
     pca.fit(features)
     return n_components, pca
+
+
+def compute_class_geometry_metrics(
+    features, labels, rng, max_queries=1000, k_values=(5, 10)
+):
+    if features is None:
+        return {}
+    X = np.asarray(features, dtype=float)
+    y = np.asarray(labels)
+    n_samples = X.shape[0]
+    if n_samples == 0:
+        return {}
+
+    norms = np.linalg.norm(X, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    Xn = X / norms
+
+    unique_labels = list(dict.fromkeys(labels))
+    centroids = {}
+    for label in unique_labels:
+        idx = np.where(y == label)[0]
+        if idx.size == 0:
+            continue
+        centroid = Xn[idx].mean(axis=0)
+        c_norm = np.linalg.norm(centroid)
+        centroids[label] = centroid if c_norm == 0 else centroid / c_norm
+
+    if not centroids:
+        return {}
+
+    intra_cos = float(
+        np.mean([np.dot(Xn[i], centroids[y[i]]) for i in range(n_samples)])
+    )
+
+    inter_cos = None
+    centroid_margin = None
+    if len(unique_labels) >= 2:
+        centroid_matrix = np.vstack([centroids[label] for label in unique_labels])
+        sims = centroid_matrix @ centroid_matrix.T
+        inter_cos = float(
+            np.mean(sims[np.triu_indices(len(unique_labels), k=1)])
+        )
+
+        all_sims = Xn @ centroid_matrix.T
+        label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
+        own_idx = np.array([label_to_idx[label] for label in y])
+        own_sims = all_sims[np.arange(n_samples), own_idx]
+        all_sims[np.arange(n_samples), own_idx] = -np.inf
+        max_other = np.max(all_sims, axis=1)
+        centroid_margin = float(np.mean(own_sims - max_other))
+
+    knn_purities = {k: None for k in k_values}
+    if n_samples > 1:
+        query_count = min(n_samples, max_queries)
+        if n_samples > query_count:
+            query_indices = rng.sample(range(n_samples), query_count)
+        else:
+            query_indices = list(range(n_samples))
+        query_labels = y[query_indices]
+        sims = Xn[query_indices] @ Xn.T
+        for row_idx, idx in enumerate(query_indices):
+            sims[row_idx, idx] = -np.inf
+        for k in k_values:
+            k_eff = min(k, n_samples - 1)
+            topk = np.argpartition(-sims, kth=k_eff - 1, axis=1)[:, :k_eff]
+            neigh_labels = y[topk]
+            purity = np.mean((neigh_labels == query_labels[:, None]).mean(axis=1))
+            knn_purities[k] = float(purity)
+
+    return {
+        "intra_centroid_cos": intra_cos,
+        "inter_centroid_cos": inter_cos,
+        "centroid_margin": centroid_margin,
+        "knn_purity@5": knn_purities.get(5),
+        "knn_purity@10": knn_purities.get(10),
+    }
 
 
 def sample_training_data(features, targets, percentage, rng):
@@ -157,13 +234,76 @@ def main():
         accuracy = evaluate_classifier_random_forest(clf, X_test, y_test)
         pca_knn = train_pca_knn_classifier(X_sampled, y_sampled)
         pca_accuracy = evaluate_pca_knn_classifier(pca_knn, X_test, y_test)
+        rf_metrics = compute_class_geometry_metrics(
+            X_test, y_test, random.Random(42)
+        )
+        pca_test = pca_knn["pca"].transform(X_test)
+        pca_metrics = compute_class_geometry_metrics(
+            pca_test, y_test, random.Random(42)
+        )
         print(f"Training sample %: {percentage}")
         print(f"Train size (sampled): {len(X_sampled)}")
         print(f"RF test accuracy: {accuracy:.4f}")
         print(
+            "RF intra_centroid_cos (mean): "
+            f"{rf_metrics.get('intra_centroid_cos', float('nan')):.4f}"
+        )
+        if rf_metrics.get("inter_centroid_cos") is not None:
+            print(
+                "RF inter_centroid_cos (mean): "
+                f"{rf_metrics['inter_centroid_cos']:.4f}"
+            )
+            print(
+                "RF centroid_margin (mean): "
+                f"{rf_metrics['centroid_margin']:.4f}"
+            )
+        else:
+            print("RF inter_centroid_cos (mean): n/a")
+            print("RF centroid_margin (mean): n/a")
+        if rf_metrics.get("knn_purity@5") is not None:
+            print(
+                "RF knn_purity@5 (mean): "
+                f"{rf_metrics['knn_purity@5']:.4f}"
+            )
+            print(
+                "RF knn_purity@10 (mean): "
+                f"{rf_metrics['knn_purity@10']:.4f}"
+            )
+        else:
+            print("RF knn_purity@5 (mean): n/a")
+            print("RF knn_purity@10 (mean): n/a")
+        print(
             f"PCA+kNN (k=1) test accuracy: {pca_accuracy:.4f} "
             f"(components: {pca_knn['n_components']})"
         )
+        print(
+            "PCA intra_centroid_cos (mean): "
+            f"{pca_metrics.get('intra_centroid_cos', float('nan')):.4f}"
+        )
+        if pca_metrics.get("inter_centroid_cos") is not None:
+            print(
+                "PCA inter_centroid_cos (mean): "
+                f"{pca_metrics['inter_centroid_cos']:.4f}"
+            )
+            print(
+                "PCA centroid_margin (mean): "
+                f"{pca_metrics['centroid_margin']:.4f}"
+            )
+        else:
+            print("PCA inter_centroid_cos (mean): n/a")
+            print("PCA centroid_margin (mean): n/a")
+        if pca_metrics.get("knn_purity@5") is not None:
+            print(
+                "PCA knn_purity@5 (mean): "
+                f"{pca_metrics['knn_purity@5']:.4f}"
+            )
+            print(
+                "PCA knn_purity@10 (mean): "
+                f"{pca_metrics['knn_purity@10']:.4f}"
+            )
+        else:
+            print("PCA knn_purity@5 (mean): n/a")
+            print("PCA knn_purity@10 (mean): n/a")
 
     if args.show_sample:
         print("Sample features (first 5 rows):")
