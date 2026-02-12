@@ -2,6 +2,7 @@ colorama
 contourpy
 cycler
 fonttools
+func_timeout
 graphviz
 kiwisolver
 lxml

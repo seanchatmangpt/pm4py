@@ -1,6 +1,6 @@
 '''
-    PM4Py â€“ A Process Mining Library for Python
-Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschrÃ¤nkt)
+    PM4Py – A Process Mining Library for Python
+Copyright (C) 2026 Process Intelligence Solutions UG (haftungsbeschränkt)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -19,15 +19,10 @@ visit <https://www.gnu.org/licenses/>.
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
+
+# Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
+
 from pm4py.util import constants as pm4_constants
 
 if pm4_constants.ENABLE_INTERNAL_IMPORTS:
-    from pm4py.objects.conversion import (
-        bpmn,
-        heuristics_net,
-        genetic_matrix,
-        process_tree,
-        wf_net,
-        log,
-        dfg,
-    )
+    from pm4py.objects.conversion.genetic_matrix import converter, variants
