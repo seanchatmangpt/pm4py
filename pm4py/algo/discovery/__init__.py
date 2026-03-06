@@ -12,6 +12,7 @@ if pm4_constants.ENABLE_INTERNAL_IMPORTS:
         heuristics,
         ilp,
         inductive,
+        genetic,
         log_skeleton,
         minimum_self_distance,
         ocel,

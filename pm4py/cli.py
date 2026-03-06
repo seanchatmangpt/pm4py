@@ -1,3 +1,4 @@
+
 import pm4py
 import sys
 import os
@@ -87,6 +88,13 @@ methods = {
         "output_extension": ".pnml",
         "method": lambda x: pm4py.write_pnml(
             *pm4py.discover_petri_net_heuristics(__read_log(x[0])), x[1]
+        ),
+    },
+    "DiscoverPetriNetGenetic": {
+        "inputs": [".xes"],
+        "output_extension": ".pnml",
+        "method": lambda x: pm4py.write_pnml(
+            *pm4py.discover_petri_net_genetic(__read_log(x[0])), x[1]
         ),
     },
     "DiscoverBPMNInductive": {
