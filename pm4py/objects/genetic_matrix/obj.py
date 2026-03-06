@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 class GeneticMatrix:

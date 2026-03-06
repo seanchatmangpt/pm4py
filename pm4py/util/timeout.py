@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 from threading import Thread
 from typing import Any, Callable, Optional
 import ctypes

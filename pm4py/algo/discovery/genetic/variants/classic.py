@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 from collections import defaultdict
@@ -6,10 +8,15 @@ import copy
 import csv
 from datetime import datetime
 from pm4py.util.timeout import func_timeout, FunctionTimedOut
-from tqdm import tqdm
 import numpy
 import random
 import itertools
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable=None, *args, **kwargs):
+        return iterable if iterable is not None else []
 
 import pm4py
 from pm4py.util import exec_utils, constants
