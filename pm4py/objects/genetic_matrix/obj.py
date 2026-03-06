@@ -50,14 +50,10 @@ class GeneticMatrix:
 
     def __repr__(self):
         return str({
-            I: self.input_map,
-            O: self.output_map,
-            T: self.transitions
+            "I": self.input_map,
+            "O": self.output_map,
+            "T": self.transitions
         })
 
     def __str__(self):
-        return str({
-            I: self.input_map,
-            O: self.output_map,
-            T: self.transitions
-        })
+        return self.__repr__()

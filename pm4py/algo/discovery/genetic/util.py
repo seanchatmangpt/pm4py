@@ -37,7 +37,7 @@ class iset(frozenset):
         return "{" + repr(sorted(self))[1:-1] + "}"
 
     @staticmethod
-    def flat(item: Iterable) -> Self:
+    def flat(item: Iterable) -> "iset":
         return iset(itertools.chain(*item))
 
 def rand_partition(pool: Iterable) -> list[set]:

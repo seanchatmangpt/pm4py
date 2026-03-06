@@ -26,7 +26,7 @@ from collections import defaultdict
 import copy
 import csv
 from datetime import datetime
-from func_timeout import func_timeout, FunctionTimedOut
+from pm4py.util.timeout import func_timeout, FunctionTimedOut
 from tqdm import tqdm
 import numpy
 import random
@@ -36,21 +36,22 @@ import pm4py
 from pm4py.util import exec_utils, constants
 from pm4py.util import xes_constants as xes
 from pm4py.algo.discovery.genetic.algorithm import Parameters
+from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.objects.conversion.genetic_matrix.variants.to_petri_net import apply as matrix2petrinet
 from pm4py.algo.discovery.genetic.util import get_src_sink_sets_for_wfnet, iset, rand_partition
 from pm4py.objects.genetic_matrix.obj import GeneticMatrix
 
 # typing
-import typing
-from typing import Union, TextIO, Self
+from typing import Any, Dict, Optional, TextIO, Tuple, Union
 from pandas.core.frame import DataFrame
-from pm4py.objects.log.obj import EventLog
+from pm4py.objects.log.obj import EventLog, EventStream
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.algo.discovery.genetic.util import InputMap, OutputMap, Individual
+from pm4py.utils import is_polars_lazyframe
 
 
 def apply(
-    log: EventLog,
+    log: Union[EventLog, EventStream, DataFrame],
     parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
@@ -89,6 +90,14 @@ def apply(
     """
     if parameters is None:
         parameters = {}
+    if is_polars_lazyframe(log):
+        log = log.collect().to_pandas()
+    if not isinstance(log, DataFrame):
+        log = log_converter.apply(
+            log,
+            variant=log_converter.Variants.TO_DATA_FRAME,
+            parameters=parameters,
+        )
 
     activity_key = exec_utils.get_param_value(
         Parameters.ACTIVITY_KEY, parameters, xes.DEFAULT_NAME_KEY
@@ -128,7 +137,7 @@ def apply(
     # configure parameters
     if population_size < 2:
         raise ValueError("population_size < 2: You need at least two parents for each next generation, thus at least a population size of 2.")
-    if elitism_min_sample > population_size:
+    if elitism_min_sample >= population_size:
         elitism_min_sample = population_size - 1
     if elitism_min_sample < 1:
         raise ValueError("elitism_min_sample < 1: No empty samples allowed.")
@@ -143,11 +152,25 @@ def apply(
     if tournament_timeout < 1:
         tournament_timeout = 1
     history = []
+    best_individual = None
+    best_fitness = -1.0
     population = individuals(log, population_size, T, { # [(I,O), …]
         "activity_key":activity_key, "timestamp_key":timestamp_key, "case_id_key":case_id_key
     })
     for _ in tqdm(range(generations), "Genetic generations"):
-        population, fitness = tournament(tqdm(population, f"└─Tournament {len(history)}"), log, T, sort=True, timeout=tournament_timeout)
+        population, fitness = tournament(
+            tqdm(population, f"└─Tournament {len(history)}"),
+            log,
+            T,
+            sort=True,
+            timeout=tournament_timeout,
+            activity_key=activity_key,
+            timestamp_key=timestamp_key,
+            case_id_key=case_id_key,
+        )
+        if fitness[0] > best_fitness:
+            best_fitness = fitness[0]
+            best_individual = copy.deepcopy(population[0])
         if log_csv:
             log_csv.writerow([datetime.now(), len(history)] + fitness)
         if fitness[0] == 1 or (history and all(f == fitness[0] for f in history[-int(generations/2):])):
@@ -167,27 +190,43 @@ def apply(
                     offspring = mutate(offspring, mutation_rate)
                     next_population.append(offspring)
         population = next_population
-    return matrix2petrinet(GeneticMatrix(*population[0], T))
+    if best_individual is None:
+        population, fitness = tournament(
+            population,
+            log,
+            T,
+            sort=True,
+            timeout=tournament_timeout,
+            activity_key=activity_key,
+            timestamp_key=timestamp_key,
+            case_id_key=case_id_key,
+        )
+        best_individual = copy.deepcopy(population[0])
+    return matrix2petrinet(GeneticMatrix(*best_individual, T))
 
 def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: dict[str,str] = {"activity_key":xes.DEFAULT_NAME_KEY, "timestamp_key":xes.DEFAULT_TIMESTAMP_KEY, "case_id_key":constants.CASE_CONCEPT_NAME}) -> list[Individual]:
     if not T:
         T = tuple(log[keys['activity_key']].unique())
+    T_idx = {activity: idx for idx, activity in enumerate(T)}
     # @src 6.1. Initial Population; https://doi.org/10.1007/11494744_5
     # create matrix C
     C = numpy.zeros((len(T), len(T)))
     for _,group in tqdm(log.sort_values(keys['timestamp_key'], ascending=True).groupby(keys['case_id_key']), desc="Find consecutive activities"):
-        for row1,row2 in itertools.pairwise(map(lambda r: r[1], group.iterrows())):
-            i = T.index(row1[keys['activity_key']])
-            o = T.index(row2[keys['activity_key']])
-            C[i,o] += 1
-    Cn = C / C.sum(axis=1)[:,None]    # normalise row-wise
+        prev_activity = None
+        for _, row in group.iterrows():
+            activity = row[keys['activity_key']]
+            if prev_activity is not None:
+                C[T_idx[prev_activity], T_idx[activity]] += 1
+            prev_activity = activity
+    row_sums = C.sum(axis=1, keepdims=True)
+    Cn = numpy.divide(C, row_sums, out=numpy.zeros_like(C, dtype=float), where=row_sums != 0)
     samples = []
-    for sample in tqdm(range(sample_size), "Initial population"):
+    for _ in tqdm(range(sample_size), "Initial population"):
         I,O = defaultdict(list), defaultdict(list)
         for i,o in numpy.ndindex(C.shape):
             if random.random() < Cn[i,o]:    # [0,1[ < [0,1]; 0 < 0 = false
-                I[T[i]].append(T[o])
-                O[T[o]].append(T[i])
+                O[T[i]].append(T[o])
+                I[T[o]].append(T[i])
         I,O = repair(I, O, C, T)
         # partitioning already ensures no T in >1 partitions
         # s. 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -198,7 +237,17 @@ def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: di
         samples.append((I,O))
     return samples
 
-def tournament(population: list[Individual], log: Union[DataFrame, EventLog], T, sort=True, timeout=1) -> tuple[list[Individual],list[float]]:
+def tournament(
+    population: list[Individual],
+    log: Union[DataFrame, EventLog],
+    T,
+    sort=True,
+    timeout=1,
+    *,
+    activity_key: str = xes.DEFAULT_NAME_KEY,
+    timestamp_key: str = xes.DEFAULT_TIMESTAMP_KEY,
+    case_id_key: str = constants.CASE_CONCEPT_NAME,
+) -> tuple[list[Individual],list[float]]:
     """sort=True: sort descending by fitness (i.e. best first)"""
     # @src 6.2. Fitness Calculation; https://doi.org/10.1007/11494744_5
     fitness = []
@@ -208,7 +257,12 @@ def tournament(population: list[Individual], log: Union[DataFrame, EventLog], T,
             metrics = func_timeout(
                 timeout = timeout,
                 func = pm4py.fitness_token_based_replay,
-                args = (log, *model)
+                args = (log, *model),
+                kwargs = {
+                    "activity_key": activity_key,
+                    "timestamp_key": timestamp_key,
+                    "case_id_key": case_id_key,
+                },
             )
         except FunctionTimedOut:
             print("\tTimeout for individual", i)
@@ -262,62 +316,71 @@ def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[I
     I2,O2 = offspring2 = copy.deepcopy(parent2)
     # 3. swap and recombine
     if I1[t] and I2[t]:
+        old_I1 = iset.flat(I1[t])
+        old_I2 = iset.flat(I2[t])
         swap_point = random.randrange(min(len(I1[t]), len(I2[t])))
         toI1, toI2 = I2[t][swap_point:], I1[t][swap_point:]
         # no T can exist twice in I/O[t], s. Def. 4; https://doi.org/10.1007/11494744_5
         # COPY of I_i, else not properly removed in opposite I_j
-        I1_flat = iset.flat(I1[t][:swap_point-1])
-        toI1_dedup = [ iset(S-I1_flat) for S in toI1 ]
-        I2_flat = iset.flat(I2[t][:swap_point-1])
-        toI2_dedup = [ iset(S-I2_flat) for S in toI2 ]
+        I1_flat = iset.flat(I1[t][:swap_point])
+        toI1_dedup = [iset(S - I1_flat) for S in toI1 if S - I1_flat]
+        I2_flat = iset.flat(I2[t][:swap_point])
+        toI2_dedup = [iset(S - I2_flat) for S in toI2 if S - I2_flat]
         # merge
-        I1[t], I2[t] = I1[t][:swap_point-1] + toI1_dedup, I2[t][:swap_point-1] + toI2_dedup
-        # @src 6.3. Genetic Operations: Update Related Elements; https://doi.org/10.1007/11494744_5
-        for c in iset.flat(toI1) - iset.flat(toI2): # no reassign staying T
-            O1[c].append(iset({t}))
-            for i,p in enumerate(O2[c]): # p = only local var
-                if t in p:
-                    O2[c][i] = iset(p - {t})
-                    if not O2[c][i]:
-                        O2[c].remove(O2[c][i])
-                    break
-        for c in iset.flat(toI2) - iset.flat(toI1): # no reassign staying T
-            O2[c].append(iset({t}))
-            for i,p in enumerate(O1[c]): # p = only local var
-                if t in p:
-                    O1[c][i] = iset(p - {t})
-                    if not O1[c][i]:
-                        O1[c].remove(O1[c][i])
-                    break
+        I1[t], I2[t] = I1[t][:swap_point] + toI1_dedup, I2[t][:swap_point] + toI2_dedup
+        new_I1 = iset.flat(I1[t])
+        new_I2 = iset.flat(I2[t])
+        for c in new_I1 - old_I1:
+            _add_singleton_partition(O1, c, t)
+        for c in old_I1 - new_I1:
+            _remove_value_from_partitions(O1, c, t)
+        for c in new_I2 - old_I2:
+            _add_singleton_partition(O2, c, t)
+        for c in old_I2 - new_I2:
+            _remove_value_from_partitions(O2, c, t)
     if O1[t] and O2[t]:
+        old_O1 = iset.flat(O1[t])
+        old_O2 = iset.flat(O2[t])
         swap_point = random.randrange(min(len(O1[t]), len(O2[t])))
         toO1, toO2 = O2[t][swap_point:], O1[t][swap_point:]
         # no T can exist twice in I/O[t], s. Def. 4; https://doi.org/10.1007/11494744_5
         # COPY of I_i, else not properly removed in opposite I_j
-        O1_flat = iset.flat(O1[t][:swap_point-1])
-        toO1_dedup = [ iset(S-O1_flat) for S in toO1 ]
-        O2_flat = iset.flat(O2[t][:swap_point-1])
-        toO2_dedup = [ iset(S-O2_flat) for S in toO2 ]
+        O1_flat = iset.flat(O1[t][:swap_point])
+        toO1_dedup = [iset(S - O1_flat) for S in toO1 if S - O1_flat]
+        O2_flat = iset.flat(O2[t][:swap_point])
+        toO2_dedup = [iset(S - O2_flat) for S in toO2 if S - O2_flat]
         # merge
-        O1[t], O2[t] = O1[t][:swap_point-1] + toO1_dedup, O2[t][:swap_point-1] + toO2_dedup
-        # @src 6.3. Genetic Operations: Update Related Elements; https://doi.org/10.1007/11494744_5
-        for c in iset.flat(toO1) - iset.flat(toO2):
-            I1[c].append(iset({t}))
-            for i,p in enumerate(I2[c]): # p = only local var
-                if t in p:
-                    I2[c][i] = iset(p - {t})
-                    if not I2[c][i]:
-                        I2[c].remove(I2[c][i])
-                    break
-        for c in iset.flat(toO2) - iset.flat(toO1):
-            I2[c].append(iset({t}))
-            for i,p in enumerate(I1[c]): # p = only local var
-                if t in p:
-                    I1[c][i] = iset(p - {t})
-                    if not I1[c][i]:
-                        I1[c].remove(I1[c][i])
-                    break
+        O1[t], O2[t] = O1[t][:swap_point] + toO1_dedup, O2[t][:swap_point] + toO2_dedup
+        new_O1 = iset.flat(O1[t])
+        new_O2 = iset.flat(O2[t])
+        for c in new_O1 - old_O1:
+            _add_singleton_partition(I1, c, t)
+        for c in old_O1 - new_O1:
+            _remove_value_from_partitions(I1, c, t)
+        for c in new_O2 - old_O2:
+            _add_singleton_partition(I2, c, t)
+        for c in old_O2 - new_O2:
+            _remove_value_from_partitions(I2, c, t)
     return (offspring1, offspring2)
+
+
+def _add_singleton_partition(mapping: Dict[str, list[iset]], key: str, value: str) -> None:
+    partitions = mapping.setdefault(key, [])
+    if any(value in partition for partition in partitions):
+        return
+    partitions.append(iset({value}))
+
+
+def _remove_value_from_partitions(mapping: Dict[str, list[iset]], key: str, value: str) -> None:
+    partitions = mapping.setdefault(key, [])
+    for index, partition in enumerate(partitions):
+        if value in partition:
+            updated = iset(partition - {value})
+            if updated:
+                partitions[index] = updated
+            else:
+                del partitions[index]
+            return
 
 def mutate(individual: Individual, rate: float = 0.01) -> Individual:
     # @src 6.3. Genetic Operations: Mutation; https://doi.org/10.1007/11494744_5
@@ -348,18 +411,20 @@ def repair(I: list[str], O: list[str], C: numpy.ndarray, T: list[str]) -> tuple[
             partition.add(t)
             Tn |= (set(I[t]) | set(O[t])) & left
         partitions.append(partition)
+    T_idx = {activity: idx for idx, activity in enumerate(T)}
+
     def rand_connect_one(I: InputMap, O: OutputMap, Ti: list[set], To: list[set], C: numpy.ndarray) -> Individual:
         comb = tuple(itertools.product(Ti, To))
         try:
             ti,to = random.choices(
                 comb,
-                weights = [ C[T.index(ti),T.index(to)] for ti,to in comb ],
+                weights = [ C[T_idx[ti], T_idx[to]] for ti,to in comb ],
                 k=1
             )[0]
         except ValueError:
             ti,to = random.choice(comb)
-        I[ti].append(to)
-        O[to].append(ti)
+        O[ti].append(to)
+        I[to].append(ti)
         return I,O
     while len(partitions) > 1:
         random.shuffle(partitions)
