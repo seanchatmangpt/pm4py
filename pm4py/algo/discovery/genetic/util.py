@@ -20,6 +20,8 @@ Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
 
+from __future__ import annotations
+
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 import random
@@ -27,9 +29,10 @@ import itertools
 
 # typing
 from collections.abc import Iterable
-InputMap = dict[str,list[frozenset]]
-OutputMap = dict[str,list[frozenset]]
-Individual = tuple[InputMap,OutputMap]
+from typing import Dict, FrozenSet, List, Tuple
+InputMap = Dict[str, List[FrozenSet]]
+OutputMap = Dict[str, List[FrozenSet]]
+Individual = Tuple[InputMap, OutputMap]
 
 class iset(frozenset):
     "Indexable frozenset printing as set, i.e. without `frozenset(…)`"
