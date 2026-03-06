@@ -1,15 +1,16 @@
 # PM4Py Third Party Dependencies
     
-    PM4Py depends on third party libraries to implement some functionality. This document describes which libraries
-    PM4Py depends upon. This is a best effort attempt to describe the library's dependencies, it is subject to change as
-    libraries are added/removed.
-    
-    | Name | URL | License | Version |
-    | --------------------------- | ------------------------------------------------------------ | --------------------------- | ------------------- |
-    | colorama | https://pypi.org/pypi/colorama/json | BSD License | 0.4.6 |
+PM4Py depends on third party libraries to implement some functionality. This document describes which libraries
+PM4Py depends upon. This is a best effort attempt to describe the library's dependencies, it is subject to change as
+libraries are added/removed.
+
+| Name | URL | License | Version |
+| --------------------------- | ------------------------------------------------------------ | --------------------------- | ------------------- |
+| colorama | https://pypi.org/pypi/colorama/json | BSD License | 0.4.6 |
 | contourpy | https://pypi.org/pypi/contourpy/json | BSD License | 1.3.3 |
 | cycler | https://pypi.org/pypi/cycler/json | BSD License | 0.12.1 |
 | fonttools | https://pypi.org/pypi/fonttools/json | Unspecified | 4.61.1 |
+| func_timeout | https://pypi.org/pypi/func-timeout/json | LGPLv2 License | 4.5.3 |
 | graphviz | https://pypi.org/pypi/graphviz/json | Unspecified | 0.21 |
 | kiwisolver | https://pypi.org/pypi/kiwisolver/json | BSD License | 1.4.9 |
 | lxml | https://pypi.org/pypi/lxml/json | Unspecified | 6.0.2 |
