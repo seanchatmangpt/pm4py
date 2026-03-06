@@ -1,8 +1,5 @@
-
-from __future__ import annotations
-
 from threading import Thread
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional, Tuple
 import ctypes
 
 
@@ -11,8 +8,8 @@ class FunctionTimedOut(TimeoutError):
         self,
         timeout: float,
         func: Callable[..., Any],
-        args: Optional[tuple[Any, ...]] = None,
-        kwargs: Optional[dict[str, Any]] = None,
+        args: Optional[Tuple[Any, ...]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.timeout = timeout
         self.func = func
@@ -42,8 +39,8 @@ def _request_thread_stop(thread: Thread) -> None:
 def func_timeout(
     timeout: float,
     func: Callable[..., Any],
-    args: Optional[tuple[Any, ...]] = None,
-    kwargs: Optional[dict[str, Any]] = None,
+    args: Optional[Tuple[Any, ...]] = None,
+    kwargs: Optional[Dict[str, Any]] = None,
 ) -> Any:
     if timeout is None:
         return func(*(args or ()), **(kwargs or {}))
@@ -53,8 +50,8 @@ def func_timeout(
     args = args if args is not None else ()
     kwargs = kwargs if kwargs is not None else {}
 
-    result: dict[str, Any] = {}
-    error: dict[str, BaseException] = {}
+    result: Dict[str, Any] = {}
+    error: Dict[str, BaseException] = {}
 
     def _runner() -> None:
         try:

@@ -1,6 +1,3 @@
-
-from __future__ import annotations
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 import random
@@ -22,7 +19,7 @@ class iset(frozenset):
     def flat(item: Iterable) -> "iset":
         return iset(itertools.chain(*item))
 
-def rand_partition(pool: Iterable) -> list[set]:
+def rand_partition(pool: Iterable) -> List[iset]:
     pool = set(pool)
     #     also ensures no activity in two partitions
     #     s. 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -36,7 +33,7 @@ def rand_partition(pool: Iterable) -> list[set]:
         pool -= draw
     return partition
 
-def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tuple[list[str],list[str]]:
+def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: List[str]) -> Tuple[List[str], List[str]]:
     """Determines input set and output set, which need to be connected by a place to create a WF-net"""
     def add2graphs(graphs, t, nextT):
         # find graph

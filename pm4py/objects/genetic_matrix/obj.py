@@ -1,14 +1,13 @@
-
-from __future__ import annotations
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
+
+from typing import Dict, FrozenSet, List
 
 class GeneticMatrix:
     def __init__(
         self,
-        input_map: dict[str,list[frozenset]],
-        output_map: dict[str,list[frozenset]],
-        transitions: list[str],
+        input_map: Dict[str, List[FrozenSet]],
+        output_map: Dict[str, List[FrozenSet]],
+        transitions: List[str],
     ):
         """
         Initialize a Genetic matrix
