@@ -1,48 +1,3 @@
-'''
-    PM4Py â€“ A Process Mining Library for Python
-Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschrÃ¤nkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-'''
-    PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions UG (haftungsbeschränkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-
-from __future__ import annotations
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 import random
@@ -64,7 +19,7 @@ class iset(frozenset):
     def flat(item: Iterable) -> "iset":
         return iset(itertools.chain(*item))
 
-def rand_partition(pool: Iterable) -> list[set]:
+def rand_partition(pool: Iterable) -> List[iset]:
     pool = set(pool)
     #     also ensures no activity in two partitions
     #     s. 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -78,7 +33,7 @@ def rand_partition(pool: Iterable) -> list[set]:
         pool -= draw
     return partition
 
-def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tuple[list[str],list[str]]:
+def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: List[str]) -> Tuple[List[str], List[str]]:
     """Determines input set and output set, which need to be connected by a place to create a WF-net"""
     def add2graphs(graphs, t, nextT):
         # find graph

@@ -1,50 +1,5 @@
-'''
-    PM4Py â€“ A Process Mining Library for Python
-Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschrÃ¤nkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-'''
-    PM4Py - A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions UG (haftungsbeschrankt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-
-from __future__ import annotations
-
 from threading import Thread
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional, Tuple
 import ctypes
 
 
@@ -53,8 +8,8 @@ class FunctionTimedOut(TimeoutError):
         self,
         timeout: float,
         func: Callable[..., Any],
-        args: Optional[tuple[Any, ...]] = None,
-        kwargs: Optional[dict[str, Any]] = None,
+        args: Optional[Tuple[Any, ...]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.timeout = timeout
         self.func = func
@@ -84,8 +39,8 @@ def _request_thread_stop(thread: Thread) -> None:
 def func_timeout(
     timeout: float,
     func: Callable[..., Any],
-    args: Optional[tuple[Any, ...]] = None,
-    kwargs: Optional[dict[str, Any]] = None,
+    args: Optional[Tuple[Any, ...]] = None,
+    kwargs: Optional[Dict[str, Any]] = None,
 ) -> Any:
     if timeout is None:
         return func(*(args or ()), **(kwargs or {}))
@@ -95,8 +50,8 @@ def func_timeout(
     args = args if args is not None else ()
     kwargs = kwargs if kwargs is not None else {}
 
-    result: dict[str, Any] = {}
-    error: dict[str, BaseException] = {}
+    result: Dict[str, Any] = {}
+    error: Dict[str, BaseException] = {}
 
     def _runner() -> None:
         try:

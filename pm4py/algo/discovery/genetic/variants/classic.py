@@ -1,48 +1,3 @@
-'''
-    PM4Py â€“ A Process Mining Library for Python
-Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschrÃ¤nkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-'''
-    PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions UG (haftungsbeschränkt)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
-
-Website: https://processintelligence.solutions
-Contact: info@processintelligence.solutions
-'''
-
-from __future__ import annotations
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 from collections import defaultdict
@@ -70,7 +25,7 @@ from pm4py.algo.discovery.genetic.util import get_src_sink_sets_for_wfnet, iset,
 from pm4py.objects.genetic_matrix.obj import GeneticMatrix
 
 # typing
-from typing import Any, Dict, Optional, TextIO, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, TextIO, Tuple, Union
 from pandas.core.frame import DataFrame
 from pm4py.objects.log.obj import EventLog, EventStream
 from pm4py.objects.petri_net.obj import PetriNet, Marking
@@ -232,7 +187,7 @@ def apply(
         best_individual = copy.deepcopy(population[0])
     return matrix2petrinet(GeneticMatrix(*best_individual, T))
 
-def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: dict[str,str] = {"activity_key":xes.DEFAULT_NAME_KEY, "timestamp_key":xes.DEFAULT_TIMESTAMP_KEY, "case_id_key":constants.CASE_CONCEPT_NAME}) -> list[Individual]:
+def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: Dict[str, str] = {"activity_key":xes.DEFAULT_NAME_KEY, "timestamp_key":xes.DEFAULT_TIMESTAMP_KEY, "case_id_key":constants.CASE_CONCEPT_NAME}) -> List[Individual]:
     if not T:
         T = tuple(log[keys['activity_key']].unique())
     T_idx = {activity: idx for idx, activity in enumerate(T)}
@@ -266,7 +221,7 @@ def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: di
     return samples
 
 def tournament(
-    population: list[Individual],
+    population: List[Individual],
     log: Union[DataFrame, EventLog],
     T,
     sort=True,
@@ -275,7 +230,7 @@ def tournament(
     activity_key: str = xes.DEFAULT_NAME_KEY,
     timestamp_key: str = xes.DEFAULT_TIMESTAMP_KEY,
     case_id_key: str = constants.CASE_CONCEPT_NAME,
-) -> tuple[list[Individual],list[float]]:
+) -> Tuple[List[Individual], List[float]]:
     """sort=True: sort descending by fitness (i.e. best first)"""
     # @src 6.2. Fitness Calculation; https://doi.org/10.1007/11494744_5
     fitness = []
@@ -318,7 +273,7 @@ def tournament(
         population, fitness = list(population), list(fitness)
     return (population, fitness)
 
-def sample_parents(population: list[Individual], fitness: list[float], elitism_min_sample: int):
+def sample_parents(population: List[Individual], fitness: List[float], elitism_min_sample: int):
     population_fitness = tuple(zip(population, fitness))
     parent1 = sorted(
         random.sample(population_fitness, k=elitism_min_sample),
@@ -335,7 +290,7 @@ def sample_parents(population: list[Individual], fitness: list[float], elitism_m
     )[0][0]
     return (parent1, parent2)
 
-def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[Individual,Individual]:
+def crossover(parent1: Individual, parent2: Individual, T: List[str]) -> Tuple[Individual, Individual]:
     # @src 6.3. Genetic Operations: Crossover; https://doi.org/10.1007/11494744_5
     # 1. cross-over point
     t = random.choice(T)
@@ -392,14 +347,14 @@ def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[I
     return (offspring1, offspring2)
 
 
-def _add_singleton_partition(mapping: Dict[str, list[iset]], key: str, value: str) -> None:
+def _add_singleton_partition(mapping: Dict[str, List[iset]], key: str, value: str) -> None:
     partitions = mapping.setdefault(key, [])
     if any(value in partition for partition in partitions):
         return
     partitions.append(iset({value}))
 
 
-def _remove_value_from_partitions(mapping: Dict[str, list[iset]], key: str, value: str) -> None:
+def _remove_value_from_partitions(mapping: Dict[str, List[iset]], key: str, value: str) -> None:
     partitions = mapping.setdefault(key, [])
     for index, partition in enumerate(partitions):
         if value in partition:
@@ -421,7 +376,7 @@ def mutate(individual: Individual, rate: float = 0.01) -> Individual:
             O[t] = rand_partition(itertools.chain(*O[t]))
     return (I,O)
 
-def repair(I: list[str], O: list[str], C: numpy.ndarray, T: list[str]) -> tuple[list[str]]:
+def repair(I: InputMap, O: OutputMap, C: numpy.ndarray, T: List[str]) -> Individual:
     """
     Merging partitions until petri-net is (coherent) workflow net
     s. last requirement in 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -441,7 +396,7 @@ def repair(I: list[str], O: list[str], C: numpy.ndarray, T: list[str]) -> tuple[
         partitions.append(partition)
     T_idx = {activity: idx for idx, activity in enumerate(T)}
 
-    def rand_connect_one(I: InputMap, O: OutputMap, Ti: list[set], To: list[set], C: numpy.ndarray) -> Individual:
+    def rand_connect_one(I: InputMap, O: OutputMap, Ti: Iterable[str], To: Iterable[str], C: numpy.ndarray) -> Individual:
         comb = tuple(itertools.product(Ti, To))
         try:
             ti,to = random.choices(
