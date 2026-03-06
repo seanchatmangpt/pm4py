@@ -21,7 +21,6 @@ Contact: info@processintelligence.solutions
 """
 
 from collections import defaultdict
-import copy
 from itertools import chain, combinations
 from typing import Counter, Generic, TypeVar, Dict, Set, FrozenSet, Tuple, Iterator
 from pm4py.objects.ocpn.obj import OCPetriNet, OCMarking
@@ -171,7 +170,8 @@ class OCPetriNetSemantics(Generic[N]):
         OCMarking
             newly reached marking
         """
-        m_out = copy.copy(marking)
+        # Copy counters place-wise so firing does not mutate the input marking.
+        m_out = OCMarking({place: counter.copy() for place, counter in marking.items()})
         for a in transition.in_arcs:
             obj_set = objects.get(a.object_type, set())
             m_out[a.source] -= Counter(obj_set)

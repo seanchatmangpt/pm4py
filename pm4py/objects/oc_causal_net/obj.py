@@ -300,9 +300,22 @@ class OCCausalNet(object):
 
     def __eq__(self, other):
         if isinstance(other, OCCausalNet):
+            def normalize_edges(edges):
+                normalized = Counter()
+                for source, target_dict in edges.items():
+                    for target, key_dict in target_dict.items():
+                        for edge_key, attributes in key_dict.items():
+                            object_type = (
+                                attributes.get("object_type")
+                                if isinstance(attributes, dict)
+                                else None
+                            )
+                            normalized[(source, target, edge_key, object_type)] += 1
+                return normalized
+
             return (
                 set(self.activities) == set(other.activities)
-                and set(self.edges) == set(other.edges)
+                and normalize_edges(self.edges) == normalize_edges(other.edges)
                 and all(
                     Counter(self.input_marker_groups.get(a, []))
                     == Counter(other.input_marker_groups.get(a, []))

@@ -19,7 +19,7 @@ visit <https://www.gnu.org/licenses/>.
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
-from pm4py.algo.simulation.playout.ocpn.variants import extensive
+from pm4py.algo.simulation.playout.oc_causal_net.variants import extensive
 from pm4py.util import exec_utils
 from enum import Enum
 from pm4py.objects.oc_causal_net.obj import OCCausalNet

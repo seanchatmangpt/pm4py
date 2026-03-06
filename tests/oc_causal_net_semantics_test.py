@@ -250,6 +250,31 @@ class OCCausalNetSemanticsTest(unittest.TestCase):
             }
             self.assertIsNotNone(OCCausalNetSemantics.is_binding_enabled(occn, "START_order", None, prod_dict, OCCausalNetState()))
 
+    def test_state_repr_non_empty(self):
+        state = OCCausalNetState({"a": Counter([("START_order", "o1", "order")])})
+        rep = repr(state)
+        self.assertIn("START_order", rep)
+        self.assertIn("o1[order]", rep)
+        self.assertIn("a", rep)
+
+    def test_enabled_bindings_respects_key_constraints(self):
+        occn = occn_key_constraint_no_overlap()
+
+        # Same object for both predecessor activities violates key constraints.
+        violating_state = OCCausalNetState(
+            {"a": Counter([("x", "o1", "order"), ("y", "o1", "order")])}
+        )
+        self.assertEqual(
+            OCCausalNetSemantics.enabled_bindings(occn, "a", violating_state), ()
+        )
+
+        valid_state = OCCausalNetState(
+            {"a": Counter([("x", "o1", "order"), ("y", "o2", "order")])}
+        )
+        self.assertEqual(
+            len(OCCausalNetSemantics.enabled_bindings(occn, "a", valid_state)), 1
+        )
+
 
 def occn_multi_ot_multi_arc():
     marker_groups = {
@@ -305,6 +330,19 @@ def occn_multi_ot_multi_arc():
 
     occn = create_oc_causal_net(marker_groups)
     return occn
+
+
+def occn_key_constraint_no_overlap():
+    marker_groups = {
+        "x": {"omg": [[("a", "order", (1, 1), 1)]]},
+        "y": {"omg": [[("a", "order", (1, 1), 2)]]},
+        "a": {
+            "img": [[("x", "order", (1, 1), 7), ("y", "order", (1, 1), 7)]],
+            "omg": [[("END_order", "order", (2, 2), 0)]],
+        },
+        "END_order": {"img": [[("a", "order", (1, 1), 0)]]},
+    }
+    return create_oc_causal_net(marker_groups)
 
 
 def occn_multi_ot_multi_min_0():

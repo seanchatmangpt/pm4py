@@ -279,7 +279,6 @@ class OCPetriNet(PetriNet):
                 new_source,
                 new_target,
                 self.object_type,
-                weight=self.weight,
                 is_variable=self.is_variable,
                 properties=self.properties,
             )
@@ -364,6 +363,24 @@ class OCPetriNet(PetriNet):
             tgt.in_arcs.add(a_copy)
             new_net.arcs.add(a_copy)
             memodict[id(a)] = a_copy
+
+        def copy_marking(marking):
+            if marking is None:
+                return None
+            copied_marking = OCMarking()
+            for place, objects in marking.items():
+                place_copy = memodict.get(id(place))
+                if place_copy is None:
+                    place_copy = OCPetriNet.Place(
+                        place.name, place.object_type, properties=place.properties
+                    )
+                    memodict[id(place)] = place_copy
+                    new_net.places.add(place_copy)
+                copied_marking[place_copy] = objects.copy()
+            return copied_marking
+
+        new_net._OCPetriNet__initial_marking = copy_marking(self.initial_marking)
+        new_net._OCPetriNet__final_marking = copy_marking(self.final_marking)
         return new_net
 
     def __repr__(self):

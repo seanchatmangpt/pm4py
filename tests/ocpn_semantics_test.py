@@ -1,4 +1,5 @@
 from collections import Counter
+import copy
 import unittest
 from pm4py.objects.ocpn.obj import OCPetriNet, OCMarking
 from pm4py.objects.ocpn.semantics import OCPetriNetSemantics
@@ -148,6 +149,43 @@ class OCPN_Semantics_Test(unittest.TestCase):
         self.assertEqual(new_marking[places["p2"]], Counter(["order1", "order2"]))
         self.assertEqual(new_marking[places["p5"]], Counter(["box1", "box2"]))
         self.assertEqual(new_marking[places["p6"]], Counter(["box1", "box2"]))
+
+    def test_fire_does_not_mutate_input_marking(self):
+        ocpn = ocpn_big()
+        places = {p.name: p for p in ocpn.places}
+        transitions = {t.name: t for t in ocpn.transitions}
+        marking = OCMarking(
+            {places["o1"]: Counter(["order1"]), places["i1"]: Counter(["item1"])}
+        )
+        marking_before = OCMarking(
+            {place: counter.copy() for place, counter in marking.items()}
+        )
+
+        OCPetriNetSemantics.fire(
+            ocpn, transitions["po"], marking, {"order": {"order1"}, "item": {"item1"}}
+        )
+
+        self.assertEqual(marking, marking_before)
+
+    def test_deepcopy_preserves_markings(self):
+        ocpn = ocpn_big()
+        copied = copy.deepcopy(ocpn)
+
+        def to_name_counter(marking):
+            return {place.name: counter for place, counter in marking.items()}
+
+        self.assertIsNotNone(copied.initial_marking)
+        self.assertIsNotNone(copied.final_marking)
+        self.assertEqual(
+            to_name_counter(copied.initial_marking),
+            to_name_counter(ocpn.initial_marking),
+        )
+        self.assertEqual(
+            to_name_counter(copied.final_marking),
+            to_name_counter(ocpn.final_marking),
+        )
+        self.assertTrue(all(p in copied.places for p in copied.initial_marking.keys()))
+        self.assertTrue(all(p in copied.places for p in copied.final_marking.keys()))
         
     def assert_bindings_equal(self, possible_bindings_iter, expected_bindings):
             # Check that all iterator elements are in the expected bindings

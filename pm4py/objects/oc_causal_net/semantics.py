@@ -98,9 +98,9 @@ class OCCausalNetState(Generic[N], defaultdict):
         # e.g.  [(a, o1[order], a'), ...]
         sorted_entries = sorted(self.items(), key=lambda item: item[0])
         obligations = [
-            f"({a}, {obj_id}[{ot}], {ot}):{count}"
-            for (a, obl) in sorted_entries
-            for ((a_prime, obj_id, ot), count) in obl
+            f"({pred}, {obj_id}[{ot}], {act}):{count}"
+            for (act, obl) in sorted_entries
+            for ((pred, obj_id, ot), count) in obl.items()
         ]
         return f'[{", ".join(obligations) if obligations else ""}]'
 
@@ -824,9 +824,9 @@ class OCCausalNetSemantics(Generic[N]):
             # Check key constraints
             constraint_violated = False
             for rel_act_1_id, ot_id, rel_act_2_id in key_constraints_by_id:
-                objects1 = grouped_by_pred[rel_act_1_id].get(ot_id)
-                objects2 = grouped_by_pred[rel_act_2_id].get(ot_id)
-                if objects1 and objects2 and not objects1.isdisjoint(objects2):
+                objects1 = grouped_by_pred.get(rel_act_1_id, {}).get(ot_id)
+                objects2 = grouped_by_pred.get(rel_act_2_id, {}).get(ot_id)
+                if objects1 and objects2 and set(objects1).intersection(objects2):
                     # key constraint violated, move on to next binding
                     constraint_violated = True
                     break
