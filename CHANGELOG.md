@@ -1,9 +1,12 @@
 # Changelog of pm4py
 
 
-# pm4py 2.7.20 (2025.08.XX)
+# pm4py 2.7.20 (2026.03.11)
 
 ### Added
+* 0fd2714a6ca38189aabee43bb5b84d63eaba5492
+  * added object-centric causal nets and object-centric Petri nets as objects
+  * added genetic miner
 * de34c822fbca2a1a0b86515fb7c69d068a0706c6
   * New timeframe filters
 * 3e5fb309c2af7d696ff8d6e1e3752f2116eb5c02
@@ -13,9 +16,12 @@
 * d50fb4a492127193c7d8b18f8fccc94e1013b104
   * Approaches for object-centric conformance checking
 * b6190a7b4424f8820a38697f73e2937214ec1b92
+  20a5cf543b86cbc1b4d5a218d7244bd087fc93e0
   * Variant of Align-ETConformance faithful to the original paper's conclusions
 
 ### Changed
+* 5057455f90b3c68e348c662b205842611fb6b205
+  * flanking 'rustxes' with 'r4pm'
 
 ### Deprecated
 
