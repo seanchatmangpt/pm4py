@@ -81,7 +81,7 @@ def apply(genetic_matrix, parameters=None):
     Xs = [ Tio for Tio in Xs if not any(
         Tio[0] <= Ti and Tio[1] <= To for Ti,To in X
     )]
-    # remove Xs (silent transitions from non-simple matrix) from X (s. later)
+    # remove Xs (silent transitions from non-simple matrix) from X (see later)
     def is_transitively_not_sophisticated(Tio, places):
         """If place `Tio` is not in sophisticated mapping (i.e. place in `Xs`), all adjacent places (i.e. with same input/output transition) are replaced by non-sophisticated places and their silent transitions."""
         return any(
@@ -101,7 +101,7 @@ def apply(genetic_matrix, parameters=None):
     io = [PetriNet.Place('i'), PetriNet.Place('o')]
     net = PetriNet(
         places = [PetriNet.Place(p) for p in map(str, X)] + io,
-        transitions = [PetriNet.Transition(t) for t in T]
+        transitions = [PetriNet.Transition(t,label=t) for t in T]
     )
     # original: F = {(i,t) | t∈T ∧ •t=∅} ∪ {(t,o) | t∈T ∧ t•=∅} ∪ …
     T_noI, T_noO = get_src_sink_sets_for_wfnet(I, O, T)
@@ -131,7 +131,7 @@ def apply(genetic_matrix, parameters=None):
         for name in [ (t,s) for t in To for s in I[t] ]
     }
     net.places.extend(itertools.chain(Ps_o.values(), Ps_i.values()))
-    Ts = defaultdict(lambda: PetriNet.Transition(name="")) # name="" → silent
+    Ts = defaultdict(lambda: PetriNet.Transition(name="", label=None)) # name="",label=None → silent
     # add arcs
     for (t1,So),p in Ps_o.items():
         petri_utils.add_arc_from_to(getTransition(t1), p, net)

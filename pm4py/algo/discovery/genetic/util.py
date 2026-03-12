@@ -26,6 +26,7 @@ import random
 import itertools
 
 # typing
+from typing import Self
 from collections.abc import Iterable
 InputMap = dict[str,list[frozenset]]
 OutputMap = dict[str,list[frozenset]]

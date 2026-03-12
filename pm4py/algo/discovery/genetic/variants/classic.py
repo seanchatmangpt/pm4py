@@ -35,22 +35,23 @@ import itertools
 import pm4py
 from pm4py.util import exec_utils, constants
 from pm4py.util import xes_constants as xes
+from pm4py.utils import is_polars_lazyframe
+from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.algo.discovery.genetic.algorithm import Parameters
 from pm4py.objects.conversion.genetic_matrix.variants.to_petri_net import apply as matrix2petrinet
 from pm4py.algo.discovery.genetic.util import get_src_sink_sets_for_wfnet, iset, rand_partition
 from pm4py.objects.genetic_matrix.obj import GeneticMatrix
 
 # typing
-import typing
-from typing import Union, TextIO, Self
+from typing import Any, Dict, Optional, TextIO, Tuple, Union
 from pandas.core.frame import DataFrame
-from pm4py.objects.log.obj import EventLog
+from pm4py.objects.log.obj import EventLog, EventStream
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.algo.discovery.genetic.util import InputMap, OutputMap, Individual
 
 
 def apply(
-    log: EventLog,
+    log: Union[EventLog, EventStream, DataFrame],
     parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
@@ -89,6 +90,14 @@ def apply(
     """
     if parameters is None:
         parameters = {}
+    if not isinstance(log, DataFrame):
+        log = log_converter.apply(
+            log,
+            variant=log_converter.Variants.TO_DATA_FRAME,
+            parameters=parameters,
+        )
+    if is_polars_lazyframe(log):
+        log = log.collect().to_pandas()
 
     activity_key = exec_utils.get_param_value(
         Parameters.ACTIVITY_KEY, parameters, xes.DEFAULT_NAME_KEY
@@ -266,12 +275,12 @@ def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[I
         toI1, toI2 = I2[t][swap_point:], I1[t][swap_point:]
         # no T can exist twice in I/O[t], s. Def. 4; https://doi.org/10.1007/11494744_5
         # COPY of I_i, else not properly removed in opposite I_j
-        I1_flat = iset.flat(I1[t][:swap_point-1])
+        I1_flat = iset.flat(I1[t][:swap_point])
         toI1_dedup = [ iset(S-I1_flat) for S in toI1 ]
-        I2_flat = iset.flat(I2[t][:swap_point-1])
+        I2_flat = iset.flat(I2[t][:swap_point])
         toI2_dedup = [ iset(S-I2_flat) for S in toI2 ]
         # merge
-        I1[t], I2[t] = I1[t][:swap_point-1] + toI1_dedup, I2[t][:swap_point-1] + toI2_dedup
+        I1[t], I2[t] = I1[t][:swap_point] + toI1_dedup, I2[t][:swap_point] + toI2_dedup
         # @src 6.3. Genetic Operations: Update Related Elements; https://doi.org/10.1007/11494744_5
         for c in iset.flat(toI1) - iset.flat(toI2): # no reassign staying T
             O1[c].append(iset({t}))
@@ -294,12 +303,12 @@ def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[I
         toO1, toO2 = O2[t][swap_point:], O1[t][swap_point:]
         # no T can exist twice in I/O[t], s. Def. 4; https://doi.org/10.1007/11494744_5
         # COPY of I_i, else not properly removed in opposite I_j
-        O1_flat = iset.flat(O1[t][:swap_point-1])
+        O1_flat = iset.flat(O1[t][:swap_point])
         toO1_dedup = [ iset(S-O1_flat) for S in toO1 ]
-        O2_flat = iset.flat(O2[t][:swap_point-1])
+        O2_flat = iset.flat(O2[t][:swap_point])
         toO2_dedup = [ iset(S-O2_flat) for S in toO2 ]
         # merge
-        O1[t], O2[t] = O1[t][:swap_point-1] + toO1_dedup, O2[t][:swap_point-1] + toO2_dedup
+        O1[t], O2[t] = O1[t][:swap_point] + toO1_dedup, O2[t][:swap_point] + toO2_dedup
         # @src 6.3. Genetic Operations: Update Related Elements; https://doi.org/10.1007/11494744_5
         for c in iset.flat(toO1) - iset.flat(toO2):
             I1[c].append(iset({t}))
