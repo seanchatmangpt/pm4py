@@ -25,7 +25,6 @@ from collections import defaultdict
 import copy
 import csv
 from datetime import datetime
-from pm4py.util.timeout import func_timeout, FunctionTimedOut
 import numpy
 import random
 import itertools
@@ -81,7 +80,6 @@ def apply(
             - Parameters.MUTATION_RATE
             - Parameters.GENERATIONS
             - Parameters.ELITISM_MIN_SAMPLE
-            - Parameters.TOURNAMENT_TIMEOUT
             - Parameters.LOG_CSV
 
     Returns
@@ -132,9 +130,6 @@ def apply(
     elitism_min_sample = exec_utils.get_param_value(
         Parameters.ELITISM_MIN_SAMPLE, parameters, 5
     )
-    tournament_timeout = exec_utils.get_param_value(
-        Parameters.TOURNAMENT_TIMEOUT, parameters, None
-    )
     log_csv = exec_utils.get_param_value(
         Parameters.LOG_CSV, parameters, None
     )
@@ -151,17 +146,12 @@ def apply(
         log_csv.writerow(['timestamp', 'generation'] + [f'fitness{i}' for i in range(population_size)])
     # @src 6.3. Genetic Operations; https://doi.org/10.1007/11494744_5
     T = tuple(log[activity_key].unique())
-    if tournament_timeout is None or tournament_timeout < 1:
-        tournament_timeout = 3 * len(T) * log.shape[0] * (46 / 1202267 / 26)
-        # based on previous runs: 46s for 1202267 traces with 26 activities
-    if tournament_timeout < 1:
-        tournament_timeout = 1
     history = []
     # initial population
     population = individuals(log, population_size, T, { # [(I,O), …]
         "activity_key":activity_key, "timestamp_key":timestamp_key, "case_id_key":case_id_key
     })
-    population, fitness = tournament(tqdm(population, f"└─Tournament {len(history)}"), log, T, sort=True, timeout=tournament_timeout)
+    population, fitness = tournament(tqdm(population, f"└─Tournament {len(history)}"), log, T, sort=True)
     if log_csv:
         log_csv.writerow([datetime.now(), len(history)] + fitness)
     # generations
@@ -183,7 +173,7 @@ def apply(
                     offspring = mutate(offspring, mutation_rate)
                     next_population.append(offspring)
         # sorts population by fitness
-        population, fitness = tournament(tqdm(next_population, f"└─Tournament {len(history)}"), log, T, sort=True, timeout=tournament_timeout)
+        population, fitness = tournament(tqdm(next_population, f"└─Tournament {len(history)}"), log, T, sort=True)
         if log_csv:
             log_csv.writerow([datetime.now(), len(history)] + fitness)
     return matrix2petrinet(GeneticMatrix(*population[0], T))
@@ -231,7 +221,6 @@ def tournament(
     log: Union[DataFrame, EventLog],
     T,
     sort=True,
-    timeout=1,
     activity_key: str = xes.DEFAULT_NAME_KEY,
     timestamp_key: str = xes.DEFAULT_TIMESTAMP_KEY,
     case_id_key: str = constants.CASE_CONCEPT_NAME,
@@ -241,20 +230,13 @@ def tournament(
     fitness = []
     for i,(I,O) in enumerate(population):
         model = matrix2petrinet(GeneticMatrix(I,O,T))
-        try:
-            metrics = func_timeout(
-                timeout = timeout,
-                func = pm4py.fitness_token_based_replay,
-                args = (log, *model),
-                kwargs = {
-                    "activity_key": activity_key,
-                    "timestamp_key": timestamp_key,
-                    "case_id_key": case_id_key,
-                },
-            )
-        except FunctionTimedOut:
-            print("\tTimeout for individual", i)
-            metrics = defaultdict(lambda: 0)
+        metrics = pm4py.fitness_token_based_replay(
+            log,
+            *model,
+            activity_key=activity_key,
+            timestamp_key=timestamp_key,
+            case_id_key=case_id_key,
+        )
         fitness.append(
             0.4 * metrics['average_trace_fitness']
             # @see https://pm4py-source.readthedocs.io/en/stable/_modules/pm4py/algo/evaluation/replay_fitness/variants/token_replay.html#evaluate

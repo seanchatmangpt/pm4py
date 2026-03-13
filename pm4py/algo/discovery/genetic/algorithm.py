@@ -39,7 +39,6 @@ class Parameters(Enum):
     MUTATION_RATE = "mutation_rate"
     GENERATIONS = "generations"
     ELITISM_MIN_SAMPLE = "elitism_min_sample"
-    TOURNAMENT_TIMEOUT = "tournament_timeout"
     LOG_CSV = "log_csv"
 
 class Variants(Enum):
