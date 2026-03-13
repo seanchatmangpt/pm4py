@@ -9,5 +9,4 @@ pytz
 tqdm
 wheel
 setuptools
-func_timeout
 cvxopt;python_version<'3.14'

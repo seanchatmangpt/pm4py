@@ -19,17 +19,16 @@ visit <https://www.gnu.org/licenses/>.
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 import random
 import itertools
 
 # typing
-from typing import Self
+from typing import Self, Union
 from collections.abc import Iterable
-InputMap = dict[str,list[frozenset]]
-OutputMap = dict[str,list[frozenset]]
+TransitionMap = dict[str,list[frozenset]]
+InputMap = OutputMap = TransitionMap
 Individual = tuple[InputMap,OutputMap]
 
 class iset(frozenset):
@@ -41,7 +40,7 @@ class iset(frozenset):
     def flat(item: Iterable) -> Self:
         return iset(itertools.chain(*item))
 
-def rand_partition(pool: Iterable) -> list[set]:
+def rand_partition(pool: Iterable) -> list[Union[set,frozenset]]:
     pool = set(pool)
     #     also ensures no activity in two partitions
     #     s. 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -54,6 +53,22 @@ def rand_partition(pool: Iterable) -> list[set]:
         partition.append(draw)
         pool -= draw
     return partition
+
+def add_singleton_partition(tmap: TransitionMap, key: str, t: str):
+    partitions = tmap.setdefault(key, []) # tmap[key] or []
+    if not any(t in partition for partition in partitions):
+        partitions.append(iset({t}))
+
+def remove_transition_from_partitions(tmap: TransitionMap, key: str, t: str):
+    partitions = tmap.setdefault(key, []) # tmap[key] or []
+    for i,partition in enumerate(partitions):
+        if t in partition:
+            updated = iset(partition - {t})
+            if updated:
+                partitions[i] = updated
+            else:
+                del partitions[i]
+            return
 
 def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tuple[list[str],list[str]]:
     """Determines input set and output set, which need to be connected by a place to create a WF-net"""
@@ -71,8 +86,8 @@ def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tupl
             else:
                 successors.extend(S)
         graph += successors
-        # merge if end = start
-        for tn in successors:
+        # merge if path end = start
+        for tn in successors: # tn = end
             for g2 in graphs[:]: # [:] = copy
                 if g2[0] == tn and g2 != graph:
                     graph += g2
@@ -83,6 +98,6 @@ def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tupl
     for t in T:
         graphsI = add2graphs(graphsI, t, I)
         graphsO = add2graphs(graphsO, t, O)
-    first = [g[0] for g in graphsO] # ⋃first = reachable via O[∀t]
-    last = [g[0] for g in graphsI] # ⋃first = reachable via I[∀t]
-    return first, last
+    sources = [g[0] for g in graphsO] # ⋃sources = ∀t reachable from O[∀sources]
+    sinks = [g[0] for g in graphsI] # ⋃sinks = ∀t reachable from I[∀sinks]
+    return sources, sinks

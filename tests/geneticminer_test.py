@@ -3,7 +3,6 @@
 
 import unittest
 from pm4py import save_vis_petri_net
-from pm4py.algo.discovery.genetic import algorithm as geneticminer
 from pm4py.algo.discovery.genetic.util import iset
 from pm4py.objects.conversion.genetic_matrix.variants.to_petri_net import apply as matrix2petrinet
 from pm4py.objects.genetic_matrix.obj import GeneticMatrix

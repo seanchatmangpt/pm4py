@@ -22,11 +22,11 @@ Contact: info@processintelligence.solutions
 from enum import Enum
 from pm4py.util import exec_utils
 from pm4py.algo.discovery.genetic.variants import classic
-from typing import Union, Optional, Dict, Any, Tuple
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.log.obj import EventLog, EventStream
 import pandas as pd
 from pm4py.util import constants
+from typing import Union, Optional, Dict, Any, Tuple
 
 
 class Parameters(Enum):
@@ -41,7 +41,6 @@ class Parameters(Enum):
     ELITISM_MIN_SAMPLE = "elitism_min_sample"
     TOURNAMENT_TIMEOUT = "tournament_timeout"
     LOG_CSV = "log_csv"
-
 
 class Variants(Enum):
     CLASSIC = classic

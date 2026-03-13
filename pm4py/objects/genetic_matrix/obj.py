@@ -19,8 +19,9 @@ visit <https://www.gnu.org/licenses/>.
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
+
+from typing import Dict, FrozenSet, List
 
 class GeneticMatrix:
     def __init__(
