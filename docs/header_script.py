@@ -8,6 +8,25 @@ COPYRIGHT_LINE_PATTERN = re.compile(
     r"Copyright \(C\) \d{4} Process Intelligence Solutions UG \(haftungsbeschränkt\)"
 )
 COPYRIGHT_LINE_CANONICAL = "Copyright (C) <YEAR> Process Intelligence Solutions UG (haftungsbeschränkt)"
+HEADER_MARKERS = (
+    "PM4Py - A Process Mining Library for Python",
+    COPYRIGHT_LINE_CANONICAL,
+    "GNU Affero General Public License",
+    "Website: https://processintelligence.solutions",
+    "Contact: info@processintelligence.solutions",
+)
+MOJIBAKE_REPLACEMENTS = {
+    "â€“": "-",
+    "â€”": "-",
+}
+DASH_TRANSLATION = str.maketrans({
+    "\u2010": "-",
+    "\u2011": "-",
+    "\u2012": "-",
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2015": "-",
+})
 
 
 def _consume_prefix(data: str) -> int:
@@ -67,7 +86,20 @@ def _strip_wrapping_triple_quotes(data: str) -> str:
 
 def _normalize_header(data: str) -> str:
     normalized = _strip_wrapping_triple_quotes(data).strip()
-    return COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
+    normalized = COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
+    for source, target in MOJIBAKE_REPLACEMENTS.items():
+        normalized = normalized.replace(source, target)
+    normalized = normalized.translate(DASH_TRANSLATION)
+    return "\n".join(
+        re.sub(r"\s+", " ", line).strip()
+        for line in normalized.splitlines()
+        if line.strip()
+    )
+
+
+def _matches_license_header(data: str) -> bool:
+    normalized = _normalize_header(data)
+    return all(marker in normalized for marker in HEADER_MARKERS)
 
 
 if __name__ == '__main__':
@@ -75,14 +107,13 @@ if __name__ == '__main__':
     license_header_raw = _strip_wrapping_triple_quotes(
         (script_dir / 'LICENSE_HEADER_GITHUB.txt').read_text(encoding='utf-8')
     ).strip()
-    license_header_normalized = _normalize_header(license_header_raw)
 
     for filename in glob.iglob(str(script_dir.parent / 'pm4py' / '**' / '*.py'), recursive=True):
         with open(filename, 'r', encoding='utf-8') as original:
             data = original.read()
 
         current_header = _extract_leading_docstring(data)
-        if current_header is not None and _normalize_header(current_header) == license_header_normalized:
+        if current_header is not None and _matches_license_header(current_header):
             print('skipping: ' + filename)
             continue
 
