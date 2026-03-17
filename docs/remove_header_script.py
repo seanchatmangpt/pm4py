@@ -3,9 +3,12 @@ from pathlib import Path
 from typing import Optional
 
 
-COPYRIGHT_MARKER = "Copyright (C)"
 SKIP_DIRS = {".git", "__pycache__", ".mypy_cache", ".pytest_cache"}
 ENCODING_PATTERN = re.compile(r"#.*coding[:=]\s*[-\w.]+")
+COPYRIGHT_LINE_PATTERN = re.compile(
+    r"Copyright \(C\) \d{4} Process Intelligence Solutions UG \(haftungsbeschränkt\)"
+)
+COPYRIGHT_LINE_CANONICAL = "Copyright (C) <YEAR> Process Intelligence Solutions UG (haftungsbeschränkt)"
 
 
 def _consume_prefix(data: str) -> int:
@@ -37,7 +40,22 @@ def _consume_prefix(data: str) -> int:
     return index
 
 
-def remove_header(data: str) -> Optional[str]:
+def _strip_wrapping_triple_quotes(data: str) -> str:
+    stripped = data.strip()
+    if len(stripped) >= 6 and (
+        (stripped.startswith('"""') and stripped.endswith('"""'))
+        or (stripped.startswith("'''") and stripped.endswith("'''"))
+    ):
+        return stripped[3:-3]
+    return stripped
+
+
+def _normalize_header(data: str) -> str:
+    normalized = _strip_wrapping_triple_quotes(data).strip()
+    return COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
+
+
+def remove_header(data: str, expected_header: str) -> Optional[str]:
     header_start = _consume_prefix(data)
     while header_start < len(data) and data[header_start] in {" ", "\t", "\r", "\n"}:
         header_start += 1
@@ -51,7 +69,7 @@ def remove_header(data: str) -> Optional[str]:
         return None
 
     header_content = data[header_start + 3:header_end]
-    if COPYRIGHT_MARKER not in header_content:
+    if _normalize_header(header_content) != expected_header:
         return None
 
     cut_end = header_end + 3
@@ -64,7 +82,9 @@ def remove_header(data: str) -> Optional[str]:
 
 
 if __name__ == "__main__":
-    repository_root = Path(__file__).resolve().parent.parent
+    script_dir = Path(__file__).resolve().parent
+    repository_root = script_dir.parent
+    license_header = _normalize_header((script_dir / "LICENSE_HEADER_GITHUB.txt").read_text(encoding="utf-8"))
     python_files = sorted(repository_root.rglob("*.py"))
 
     for filename in python_files:
@@ -77,7 +97,7 @@ if __name__ == "__main__":
             print("skipping non utf-8 file: " + str(filename.relative_to(repository_root)))
             continue
 
-        updated_data = remove_header(data)
+        updated_data = remove_header(data, license_header)
         if updated_data is None:
             print("skipping: " + str(filename.relative_to(repository_root)))
             continue
