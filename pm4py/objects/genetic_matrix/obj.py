@@ -5,9 +5,9 @@ from typing import Dict, FrozenSet, List
 class GeneticMatrix:
     def __init__(
         self,
-        input_map: Dict[str, List[FrozenSet]],
-        output_map: Dict[str, List[FrozenSet]],
-        transitions: List[str],
+        input_map: dict[str,list[frozenset]],
+        output_map: dict[str,list[frozenset]],
+        transitions: list[str],
     ):
         """
         Initialize a Genetic matrix

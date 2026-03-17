@@ -1,4 +1,3 @@
-
 # Author: Maximilian Josef Frank (https://orcid.org/0000-0002-0714-7748)
 
 from collections import defaultdict
@@ -60,7 +59,7 @@ def apply(genetic_matrix, parameters=None):
     Xs = [ Tio for Tio in Xs if not any(
         Tio[0] <= Ti and Tio[1] <= To for Ti,To in X
     )]
-    # remove Xs (silent transitions from non-simple matrix) from X (s. later)
+    # remove Xs (silent transitions from non-simple matrix) from X (see later)
     def is_transitively_not_sophisticated(Tio, places):
         """If place `Tio` is not in sophisticated mapping (i.e. place in `Xs`), all adjacent places (i.e. with same input/output transition) are replaced by non-sophisticated places and their silent transitions."""
         return any(
@@ -78,11 +77,10 @@ def apply(genetic_matrix, parameters=None):
                     check.append(Tio2)
     # build PetriNet
     io = [PetriNet.Place('i'), PetriNet.Place('o')]
-    net = PetriNet()
-    net.places.update(PetriNet.Place(p) for p in map(str, X))
-    net.places.update(io)
-    # Non-silent transitions must have a label; label=None is rendered as invisible.
-    net.transitions.update(PetriNet.Transition(t, t) for t in T)
+    net = PetriNet(
+        places = [PetriNet.Place(p) for p in map(str, X)] + io,
+        transitions = [PetriNet.Transition(t,label=t) for t in T]
+    )
     # original: F = {(i,t) | t∈T ∧ •t=∅} ∪ {(t,o) | t∈T ∧ t•=∅} ∪ …
     T_noI, T_noO = get_src_sink_sets_for_wfnet(I, O, T)
     arcs_pt = [ ('i', t) for t in T_noI ] + [
@@ -110,8 +108,8 @@ def apply(genetic_matrix, parameters=None):
     Ps_i = { name : PetriNet.Place("i"+str(name))    # input of next non-silent T
         for name in [ (t,s) for t in To for s in I[t] ]
     }
-    net.places.update(itertools.chain(Ps_o.values(), Ps_i.values()))
-    Ts = defaultdict(lambda: PetriNet.Transition(name="")) # name="" → silent
+    net.places.extend(itertools.chain(Ps_o.values(), Ps_i.values()))
+    Ts = defaultdict(lambda: PetriNet.Transition(name="", label=None)) # name="",label=None → silent
     # add arcs
     for (t1,So),p in Ps_o.items():
         petri_utils.add_arc_from_to(getTransition(t1), p, net)
@@ -121,7 +119,7 @@ def apply(genetic_matrix, parameters=None):
         petri_utils.add_arc_from_to(p, getTransition(t2), net)
         for t1 in Si: # connect silent T
             petri_utils.add_arc_from_to(Ts[t1,t2], p, net)
-    net.transitions.update(Ts.values())
+    net.transitions.extend(Ts.values())
     # add markings
     markings = [Marking() for _ in io]
     for m,p in zip(markings, io):
