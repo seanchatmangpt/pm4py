@@ -5,29 +5,6 @@ from typing import Optional
 
 SKIP_DIRS = {".git", "__pycache__", ".mypy_cache", ".pytest_cache"}
 ENCODING_PATTERN = re.compile(r"#.*coding[:=]\s*[-\w.]+")
-COPYRIGHT_LINE_PATTERN = re.compile(
-    r"Copyright \(C\) \d{4} Process Intelligence Solutions UG \(haftungsbeschränkt\)"
-)
-COPYRIGHT_LINE_CANONICAL = "Copyright (C) <YEAR> Process Intelligence Solutions UG (haftungsbeschränkt)"
-HEADER_MARKERS = (
-    "PM4Py - A Process Mining Library for Python",
-    COPYRIGHT_LINE_CANONICAL,
-    "GNU Affero General Public License",
-    "Website: https://processintelligence.solutions",
-    "Contact: info@processintelligence.solutions",
-)
-MOJIBAKE_REPLACEMENTS = {
-    "â€“": "-",
-    "â€”": "-",
-}
-DASH_TRANSLATION = str.maketrans({
-    "\u2010": "-",
-    "\u2011": "-",
-    "\u2012": "-",
-    "\u2013": "-",
-    "\u2014": "-",
-    "\u2015": "-",
-})
 
 
 def _consume_prefix(data: str) -> int:
@@ -57,36 +34,6 @@ def _consume_prefix(data: str) -> int:
         break
 
     return index
-
-
-def _strip_wrapping_triple_quotes(data: str) -> str:
-    stripped = data.strip()
-    if len(stripped) >= 6 and (
-        (stripped.startswith('"""') and stripped.endswith('"""'))
-        or (stripped.startswith("'''") and stripped.endswith("'''"))
-    ):
-        return stripped[3:-3]
-    return stripped
-
-
-def _normalize_header(data: str) -> str:
-    normalized = _strip_wrapping_triple_quotes(data).strip()
-    normalized = COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
-    for source, target in MOJIBAKE_REPLACEMENTS.items():
-        normalized = normalized.replace(source, target)
-    normalized = normalized.translate(DASH_TRANSLATION)
-    return "\n".join(
-        re.sub(r"\s+", " ", line).strip()
-        for line in normalized.splitlines()
-        if line.strip()
-    )
-
-
-def _matches_license_header(data: str) -> bool:
-    normalized = _normalize_header(data)
-    return all(marker in normalized for marker in HEADER_MARKERS)
-
-
 def remove_header(data: str) -> Optional[str]:
     header_start = _consume_prefix(data)
     while header_start < len(data) and data[header_start] in {" ", "\t", "\r", "\n"}:
@@ -98,10 +45,6 @@ def remove_header(data: str) -> Optional[str]:
     quote = data[header_start:header_start + 3]
     header_end = data.find(quote, header_start + 3)
     if header_end == -1:
-        return None
-
-    header_content = data[header_start + 3:header_end]
-    if not _matches_license_header(header_content):
         return None
 
     cut_end = header_end + 3
