@@ -9,6 +9,25 @@ COPYRIGHT_LINE_PATTERN = re.compile(
     r"Copyright \(C\) \d{4} Process Intelligence Solutions UG \(haftungsbeschränkt\)"
 )
 COPYRIGHT_LINE_CANONICAL = "Copyright (C) <YEAR> Process Intelligence Solutions UG (haftungsbeschränkt)"
+HEADER_MARKERS = (
+    "PM4Py - A Process Mining Library for Python",
+    COPYRIGHT_LINE_CANONICAL,
+    "GNU Affero General Public License",
+    "Website: https://processintelligence.solutions",
+    "Contact: info@processintelligence.solutions",
+)
+MOJIBAKE_REPLACEMENTS = {
+    "â€“": "-",
+    "â€”": "-",
+}
+DASH_TRANSLATION = str.maketrans({
+    "\u2010": "-",
+    "\u2011": "-",
+    "\u2012": "-",
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2015": "-",
+})
 
 
 def _consume_prefix(data: str) -> int:
@@ -52,10 +71,23 @@ def _strip_wrapping_triple_quotes(data: str) -> str:
 
 def _normalize_header(data: str) -> str:
     normalized = _strip_wrapping_triple_quotes(data).strip()
-    return COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
+    normalized = COPYRIGHT_LINE_PATTERN.sub(COPYRIGHT_LINE_CANONICAL, normalized)
+    for source, target in MOJIBAKE_REPLACEMENTS.items():
+        normalized = normalized.replace(source, target)
+    normalized = normalized.translate(DASH_TRANSLATION)
+    return "\n".join(
+        re.sub(r"\s+", " ", line).strip()
+        for line in normalized.splitlines()
+        if line.strip()
+    )
 
 
-def remove_header(data: str, expected_header: str) -> Optional[str]:
+def _matches_license_header(data: str) -> bool:
+    normalized = _normalize_header(data)
+    return all(marker in normalized for marker in HEADER_MARKERS)
+
+
+def remove_header(data: str) -> Optional[str]:
     header_start = _consume_prefix(data)
     while header_start < len(data) and data[header_start] in {" ", "\t", "\r", "\n"}:
         header_start += 1
@@ -69,7 +101,7 @@ def remove_header(data: str, expected_header: str) -> Optional[str]:
         return None
 
     header_content = data[header_start + 3:header_end]
-    if _normalize_header(header_content) != expected_header:
+    if not _matches_license_header(header_content):
         return None
 
     cut_end = header_end + 3
@@ -82,9 +114,7 @@ def remove_header(data: str, expected_header: str) -> Optional[str]:
 
 
 if __name__ == "__main__":
-    script_dir = Path(__file__).resolve().parent
-    repository_root = script_dir.parent
-    license_header = _normalize_header((script_dir / "LICENSE_HEADER_GITHUB.txt").read_text(encoding="utf-8"))
+    repository_root = Path(__file__).resolve().parent.parent
     python_files = sorted(repository_root.rglob("*.py"))
 
     for filename in python_files:
@@ -97,7 +127,7 @@ if __name__ == "__main__":
             print("skipping non utf-8 file: " + str(filename.relative_to(repository_root)))
             continue
 
-        updated_data = remove_header(data, license_header)
+        updated_data = remove_header(data)
         if updated_data is None:
             print("skipping: " + str(filename.relative_to(repository_root)))
             continue
