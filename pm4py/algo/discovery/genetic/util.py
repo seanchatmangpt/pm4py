@@ -4,11 +4,10 @@ import random
 import itertools
 
 # typing
-from typing import Self, Union
-from collections.abc import Iterable
-TransitionMap = dict[str,list[frozenset]]
+from typing import Dict, FrozenSet, Iterable, List, Set, Tuple, Union
+TransitionMap = Dict[str, List[FrozenSet[str]]]
 InputMap = OutputMap = TransitionMap
-Individual = tuple[InputMap,OutputMap]
+Individual = Tuple[InputMap, OutputMap]
 
 class iset(frozenset):
     "Indexable frozenset printing as set, i.e. without `frozenset(…)`"
@@ -16,10 +15,10 @@ class iset(frozenset):
         return "{" + repr(sorted(self))[1:-1] + "}"
 
     @staticmethod
-    def flat(item: Iterable) -> Self:
+    def flat(item: Iterable) -> "iset":
         return iset(itertools.chain(*item))
 
-def rand_partition(pool: Iterable) -> list[Union[set,frozenset]]:
+def rand_partition(pool: Iterable) -> List[Union[Set[str], FrozenSet[str]]]:
     pool = set(pool)
     #     also ensures no activity in two partitions
     #     s. 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
@@ -49,7 +48,7 @@ def remove_transition_from_partitions(tmap: TransitionMap, key: str, t: str):
                 del partitions[i]
             return
 
-def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: list[str]) -> tuple[list[str],list[str]]:
+def get_src_sink_sets_for_wfnet(I: InputMap, O: OutputMap, T: List[str]) -> Tuple[List[str], List[str]]:
     """Determines input set and output set, which need to be connected by a place to create a WF-net"""
     def add2graphs(graphs, t, nextT):
         # find graph

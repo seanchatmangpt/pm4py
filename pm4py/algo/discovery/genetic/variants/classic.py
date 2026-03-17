@@ -26,7 +26,7 @@ from pm4py.algo.discovery.genetic.util import add_singleton_partition, get_src_s
 from pm4py.objects.genetic_matrix.obj import GeneticMatrix
 
 # typing
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 from pandas.core.frame import DataFrame
 from pm4py.objects.log.obj import EventLog, EventStream
 from pm4py.objects.petri_net.obj import PetriNet, Marking
@@ -35,8 +35,8 @@ from pm4py.algo.discovery.genetic.util import TransitionMap, InputMap, OutputMap
 
 def apply(
     log: Union[EventLog, EventStream, DataFrame],
-    parameters: Optional[dict[Union[str, Parameters], Any]] = None,
-) -> tuple[PetriNet, Marking, Marking]:
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> Tuple[PetriNet, Marking, Marking]:
     """
     Discovers a Petri net using Genetic Miner
 
@@ -157,7 +157,7 @@ def apply(
             log_csv.writerow([datetime.now(), len(history)] + fitness)
     return matrix2petrinet(GeneticMatrix(*population[0], T))
 
-def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: dict[str,str] = {"activity_key":xes.DEFAULT_NAME_KEY, "timestamp_key":xes.DEFAULT_TIMESTAMP_KEY, "case_id_key":constants.CASE_CONCEPT_NAME}) -> list[Individual]:
+def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: Dict[str, str] = {"activity_key":xes.DEFAULT_NAME_KEY, "timestamp_key":xes.DEFAULT_TIMESTAMP_KEY, "case_id_key":constants.CASE_CONCEPT_NAME}) -> List[Individual]:
     if not T:
         T = tuple(log[keys['activity_key']].unique())
     # polyfill for itertools.pairwise (requires Python 3.10+)
@@ -196,14 +196,14 @@ def individuals(log: Union[DataFrame, EventLog], sample_size=1, T=None, keys: di
     return samples
 
 def tournament(
-    population: list[Individual],
+    population: List[Individual],
     log: Union[DataFrame, EventLog],
     T,
     sort=True,
     activity_key: str = xes.DEFAULT_NAME_KEY,
     timestamp_key: str = xes.DEFAULT_TIMESTAMP_KEY,
     case_id_key: str = constants.CASE_CONCEPT_NAME,
-) -> tuple[list[Individual], list[float]]:
+) -> Tuple[List[Individual], List[float]]:
     """sort=True: sort descending by fitness (i.e. best first)"""
     # @src 6.2. Fitness Calculation; https://doi.org/10.1007/11494744_5
     fitness = []
@@ -239,7 +239,7 @@ def tournament(
         population, fitness = list(population), list(fitness)
     return (population, fitness)
 
-def sample_parents(population: list[Individual], fitness: list[float], elitism_min_sample: int):
+def sample_parents(population: List[Individual], fitness: List[float], elitism_min_sample: int):
     population_fitness = tuple(zip(population, fitness))
     parent1 = sorted(
         random.sample(population_fitness, k=elitism_min_sample),
@@ -256,7 +256,7 @@ def sample_parents(population: list[Individual], fitness: list[float], elitism_m
     )[0][0]
     return (parent1, parent2)
 
-def crossover(parent1: Individual, parent2: Individual, T: list[str]) -> tuple[Individual,Individual]:
+def crossover(parent1: Individual, parent2: Individual, T: List[str]) -> Tuple[Individual, Individual]:
     # @src 6.3. Genetic Operations: Crossover; https://doi.org/10.1007/11494744_5
     # 1. cross-over point
     t = random.choice(T)
@@ -323,7 +323,7 @@ def mutate(individual: Individual, rate: float = 0.01) -> Individual:
             O[t] = rand_partition(itertools.chain(*O[t]))
     return (I,O)
 
-def repair(I: InputMap, O: OutputMap, C: numpy.ndarray, T: list[str]) -> Individual:
+def repair(I: InputMap, O: OutputMap, C: numpy.ndarray, T: List[str]) -> Individual:
     """
     Merging partitions until petri-net is (coherent) workflow net
     see last requirement in 4. Causal Matrix, Def. 4; https://doi.org/10.1007/11494744_5
