@@ -34,8 +34,8 @@ Otherwise, the output not be correctly rendered, see here:
 ## Footer and Header for the P.I.S. Website
 
 In order to improve the embedding of the documentation into the P.I.S. website, the 
-footer and header can be added statically to the documentation by adapting 
-the `include_header_and_footer` flag `html_context`. Per default it is not included.
+footer and header is added statically to the documentation. 
+Per default, this is enabled. You can change it by changing the `include_header_and_footer` flag `html_context`. 
 
 If the header and footer changes, the please adapt `source/_templates/layout.html` accordingly.
 Initially, the code and css from the website was copied over, for small changes it might be more
