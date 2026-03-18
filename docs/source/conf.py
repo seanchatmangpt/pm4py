@@ -111,18 +111,26 @@ html_logo = 'pm4py-logo.png'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
+generate_for_website = True
 html_theme_options = {
-   "logo": {
-      "image_light": "pm4py-logo.png",
-      "image_dark": "pm4py-logo.png",
-   },
-    "navbar_persistent": []
+    "logo": {
+        "image_light": "pm4py-logo.png",
+        "image_dark": "pm4py-logo.png",
+    },
+    "navbar_persistent": [],
 }
+
+if generate_for_website:
+    html_theme_options.update({
+        "switcher": {
+            "json_url": "/static/api/versions.json",
+            "version_match": release,
+        },
+    })
 
 html_context = {
     "default_mode": "light",
-    # True when generating the documentation for the P.I.S. website
-    "include_header_and_footer": True
+    "include_header_and_footer": generate_for_website
 }
 
 html_baseurl = "https://processintelligence.solutions/pm4py/api"

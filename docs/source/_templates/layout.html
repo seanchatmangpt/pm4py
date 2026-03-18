@@ -147,6 +147,10 @@
       display: block !important;
       height: auto !important;
     }
+
+    html {
+      scrollbar-gutter: stable;
+    }
 </style>
 {% endif %}
 {% endblock %}
@@ -161,6 +165,7 @@
                      alt="">
             </a>
             <form role="search" class="d-flex align-items-center">
+                {% include "version-switcher.html" %}
                 <a href="mailto:info@processintelligence.solutions"
                    class="btn btn-outline-gray">
                     <i class="bi bi-envelope"></i>
