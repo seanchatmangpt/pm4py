@@ -90,6 +90,7 @@ Among *procedural process models*, ``pm4py`` currently supports:
   * :meth:`pm4py.discovery.discover_petri_net_inductive`; discovers a *Petri net* using the Inductive Miner algorithm.
   * :meth:`pm4py.discovery.discover_petri_net_heuristics`; discovers a *Petri net* using the Heuristics Miner algorithm.
   * :meth:`pm4py.discovery.discover_petri_net_ilp`; discovers a *Petri net* using the ILP Miner algorithm.
+  * :meth:`pm4py.discovery.discover_petri_net_genetic`; discovers a *Petri net* using the Genetic Miner algorithm.
   * :meth:`pm4py.discovery.discover_process_tree_inductive`; discovers a *process tree* using the Inductive Miner algorithm.
   * :meth:`pm4py.discovery.discover_bpmn_inductive`; discovers a *BPMN model* using the Inductive Miner algorithm.
   * :meth:`pm4py.discovery.discover_heuristics_net`; discovers a *heuristics net* using the Heuristics Miner algorithm.
@@ -370,6 +371,13 @@ We offer different algorithms for the analysis of the organizational networks st
   * :meth:`pm4py.org.discover_network_analysis`; discovers the network analysis from the event log.
 
 
+Privacy (:mod:`pm4py.privacy`)
+------------------------------------------
+We offer the following algorithms for the anonymization of event logs:
+
+  * :meth:`pm4py.privacy.anonymize_differential_privacy`; PRIPEL (Privacy-preserving event log publishing with contextual information) is a framework to publish event logs that fulfill differential privacy.
+
+
 Utilities (:mod:`pm4py.utils`)
 -------------------------------
 Other algorithms, which do not belong to the aforementioned categories, are collected in this section:
@@ -458,6 +466,7 @@ List of Methods
    pm4py.discovery.discover_petri_net_inductive
    pm4py.discovery.discover_petri_net_heuristics
    pm4py.discovery.discover_petri_net_ilp
+   pm4py.discovery.discover_petri_net_genetic
    pm4py.discovery.discover_process_tree_inductive
    pm4py.discovery.discover_heuristics_net
    pm4py.discovery.derive_minimum_self_distance
