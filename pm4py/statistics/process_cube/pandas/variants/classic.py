@@ -21,8 +21,8 @@ def apply(
         parameters: Optional[Dict[Any, Any]] = None
 ):
     """
-    Constructs a process cube by slicing data along two dimensions
-    (x_col, y_col) and aggregating a third (agg_col). Additionally:
+    Constructs a process cube by slicing data along two dimensions (x_col,
+    y_col) and aggregating a third (agg_col). Additionally:
 
     1) If x_col (or y_col) is an actual column in df, we do numeric binning.
        You can manually specify bin edges via parameters[Parameters.X_BINS]
@@ -45,14 +45,12 @@ def apply(
         The column to aggregate (mean, sum, etc.).
     parameters: Dict[Any, Any]
         Optional parameters of the method, including:
+
         * Parameters.X_BINS: List of numeric bin edges for x_col.
         * Parameters.Y_BINS: List of numeric bin edges for y_col.
-        * Parameters.MAX_DIVISIONS_X: If x_col is numeric and X_BINS not provided,
-          how many bins to divide it into.
-        * Parameters.MAX_DIVISIONS_Y: If y_col is numeric and Y_BINS not provided,
-          how many bins to divide it into.
-        * Parameters.AGGREGATION_FUNCTION: The aggregation function,
-          e.g., 'mean', 'sum', 'min', 'max'.
+        * Parameters.MAX_DIVISIONS_X: If x_col is numeric and X_BINS not provided, how many bins to divide it into.
+        * Parameters.MAX_DIVISIONS_Y: If y_col is numeric and Y_BINS not provided, how many bins to divide it into.
+        * Parameters.AGGREGATION_FUNCTION: The aggregation function, e.g., 'mean', 'sum', 'min', 'max'.
 
     Returns
     -------
@@ -61,6 +59,7 @@ def apply(
         and y bins as columns, containing aggregated values of agg_col.
     cell_case_dict : dict
         A dictionary mapping (x_bin, y_bin) -> set of case IDs that fall in that cell.
+
     """
     if parameters is None:
         parameters = {}

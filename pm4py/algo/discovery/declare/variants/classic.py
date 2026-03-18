@@ -907,44 +907,46 @@ def apply(
     parameters: Optional[Dict[Any, Any]] = None,
 ) -> Dict[str, Dict[Any, Dict[str, int]]]:
     """
-    Discovers a DECLARE model from the provided event log
+    Discovers a DECLARE model from the provided event log.
 
     Paper:
     F. M. Maggi, A. J. Mooij and W. M. P. van der Aalst, "User-guided discovery of declarative process models," 2011 IEEE Symposium on Computational Intelligence and Data Mining (CIDM), Paris, France, 2011, pp. 192-199, doi: 10.1109/CIDM.2011.5949297.
 
     Parameters
-    ---------------
+    ----------
     log
         Log object (EventLog, Pandas table)
     parameters
         Possible parameters of the algorithm, including:
+
         - Parameters.ACTIVITY_KEY
         - Parameters.CONSIDERED_ACTIVITIES
         - Parameters.MIN_SUPPORT_RATIO
         - Parameters.MIN_CONFIDENCE_RATIO
         - Parameters.AUTO_SELECTION_MULTIPLIER
         - Parameters.ALLOWED_TEMPLATES: collection of templates to consider, including:
-            * existence
-            * exactly_one
-            * init
-            * responded_existence
-            * response
-            * precedence
-            * succession
-            * altresponse
-            * altprecedence
-            * altsuccession
-            * chainresponse
-            * chainprecedence
-            * chainsuccession
-            * absence
-            * coexistence
-            * noncoexistence
-            * nonsuccession
-            * nonchainsuccession
+
+          * existence
+          * exactly_one
+          * init
+          * responded_existence
+          * response
+          * precedence
+          * succession
+          * altresponse
+          * altprecedence
+          * altsuccession
+          * chainresponse
+          * chainprecedence
+          * chainsuccession
+          * absence
+          * coexistence
+          * noncoexistence
+          * nonsuccession
+          * nonchainsuccession
 
     Returns
-    -------------
+    -------
     declare_model
         DECLARE model (as Python dictionary), where each template is associated with its own rules
     """

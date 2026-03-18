@@ -27,15 +27,16 @@ def apply(
     variant=CLASSIC,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
-    Discovers a Petri net using Heuristics Miner
+    Discovers a Petri net using Heuristics Miner.
 
     Parameters
-    ------------
+    ----------
     log
         Event log
     parameters
         Possible parameters of the algorithm,
         including:
+
             - Parameters.ACTIVITY_KEY
             - Parameters.TIMESTAMP_KEY
             - Parameters.CASE_ID_KEY
@@ -44,20 +45,19 @@ def apply(
             - Parameters.MIN_ACT_COUNT
             - Parameters.MIN_DFG_OCCURRENCES
             - Parameters.DFG_PRE_CLEANING_NOISE_THRESH
-            - Parameters.LOOP_LENGTH_TWO_THRESH
-    variant
-        Variant of the algorithm:
+            - Parameters.LOOP_LENGTH_TWO_THRESH variant Variant of the algorithm:
             - Variants.CLASSIC
             - Variants.PLUSPLUS
 
     Returns
-    ------------
+    -------
     net
         Petri net
     im
         Initial marking
     fm
         Final marking
+
     """
     if pandas_utils.check_is_pandas_dataframe(log):
         return exec_utils.get_variant(variant).apply_pandas(
@@ -84,10 +84,10 @@ def apply_dfg(
     variant=CLASSIC,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
-    Discovers a Petri net using Heuristics Miner
+    Discovers a Petri net using Heuristics Miner.
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-Follows Graph
     activities
@@ -101,6 +101,7 @@ def apply_dfg(
     parameters
         Possible parameters of the algorithm,
         including:
+
             - Parameters.ACTIVITY_KEY
             - Parameters.TIMESTAMP_KEY
             - Parameters.CASE_ID_KEY
@@ -109,19 +110,18 @@ def apply_dfg(
             - Parameters.MIN_ACT_COUNT
             - Parameters.MIN_DFG_OCCURRENCES
             - Parameters.DFG_PRE_CLEANING_NOISE_THRESH
-            - Parameters.LOOP_LENGTH_TWO_THRESH
-    variant
-        Variant of the algorithm:
+            - Parameters.LOOP_LENGTH_TWO_THRESH variant Variant of the algorithm:
             - Variants.CLASSIC
 
     Returns
-    ------------
+    -----------------
     net
         Petri net
     im
         Initial marking
     fm
         Final marking
+
     """
     return exec_utils.get_variant(variant).apply_dfg(
         dfg,
@@ -139,15 +139,16 @@ def apply_heu(
     variant=CLASSIC,
 ) -> HeuristicsNet:
     """
-    Discovers an Heuristics Net using Heuristics Miner
+    Discovers an Heuristics Net using Heuristics Miner.
 
     Parameters
-    ------------
+    ----------
     log
         Event log
     parameters
         Possible parameters of the algorithm,
         including:
+
             - Parameters.ACTIVITY_KEY
             - Parameters.TIMESTAMP_KEY
             - Parameters.CASE_ID_KEY
@@ -157,8 +158,10 @@ def apply_heu(
             - Parameters.MIN_DFG_OCCURRENCES
             - Parameters.DFG_PRE_CLEANING_NOISE_THRESH
             - Parameters.LOOP_LENGTH_TWO_THRESH
+
     variant
         Variant of the algorithm:
+
             - Variants.CLASSIC
 
     Returns
@@ -169,6 +172,7 @@ def apply_heu(
         Initial marking
     fm
         Final marking
+
     """
     return exec_utils.get_variant(variant).apply_heu(
         log_conversion.apply(
@@ -190,10 +194,10 @@ def apply_heu_dfg(
     variant=CLASSIC,
 ) -> HeuristicsNet:
     """
-    Discovers an Heuristics Net using Heuristics Miner
+    Discovers an Heuristics Net using Heuristics Miner.
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-Follows Graph
     activities
@@ -207,6 +211,7 @@ def apply_heu_dfg(
     parameters
         Possible parameters of the algorithm,
         including:
+
             - Parameters.ACTIVITY_KEY
             - Parameters.TIMESTAMP_KEY
             - Parameters.CASE_ID_KEY
@@ -216,8 +221,10 @@ def apply_heu_dfg(
             - Parameters.MIN_DFG_OCCURRENCES
             - Parameters.DFG_PRE_CLEANING_NOISE_THRESH
             - Parameters.LOOP_LENGTH_TWO_THRESH
+
     variant
         Variant of the algorithm:
+
             - Variants.CLASSIC
 
     Returns
@@ -228,6 +235,7 @@ def apply_heu_dfg(
         Initial marking
     fm
         Final marking
+
     """
     return exec_utils.get_variant(variant).apply_heu_dfg(
         dfg,

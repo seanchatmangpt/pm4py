@@ -30,31 +30,33 @@ def performance_calculation_ocel_aggregation(
     - aggregate_total_objects
 
     Parameters
-    ----------------
+    ----------
     ocel
         Object-centric event log
     aggregation
         Aggregation calculated using one of the aforementioned methods
     parameters
         Parameters of the algorithm, including:
+
         - Parameters.EVENT_ID => the event identifier
         - Parameters.EVENT_TIMESTAMP => the timestamp
         - Parameters.BUSINESS_HOURS => enables/disables the business hours
-        - Parameters.BUSINESS_HOURS_SLOTS =>
-        work schedule of the company, provided as a list of tuples where each tuple represents one time slot of business
-        hours. One slot i.e. one tuple consists of one start and one end time given in seconds since week start, e.g.
-        [
-            (7 * 60 * 60, 17 * 60 * 60),
-            ((24 + 7) * 60 * 60, (24 + 12) * 60 * 60),
-            ((24 + 13) * 60 * 60, (24 + 17) * 60 * 60),
-        ]
-        meaning that business hours are Mondays 07:00 - 17:00 and Tuesdays 07:00 - 12:00 and 13:00 - 17:00
+        - Parameters.BUSINESS_HOURS_SLOTS => work schedule of the company.
+          The following list defines that business hours are Mondays 07:00 - 17:00
+          and Tuesdays 07:00 - 12:00 and 13:00 - 17:00::
+
+            [
+                (7 * 60 * 60, 17 * 60 * 60),
+                ((24 + 7) * 60 * 60, (24 + 12) * 60 * 60),
+                ((24 + 13) * 60 * 60, (24 + 17) * 60 * 60),
+            ]
 
     Returns
     ----------------
     edges_performance
         For each object type, associate a dictionary where to each activity couple
         all the times between the activities are recorded.
+
     """
     if parameters is None:
         parameters = {}
