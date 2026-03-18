@@ -76,7 +76,7 @@ def _project_ocpn_on_object_type(
 
     Returns
     ----------
-    tuple[PetriNet, Marking, Marking]
+    tuple[PetriNet, ~pm4py.objects.petri_net.obj.Marking, ~pm4py.objects.petri_net.obj.Marking]
         A tuple containing the Petri net projection, initial marking, and final marking projection for the object type.
     """
     # extract places by ot
@@ -137,7 +137,7 @@ def oc_marking_to_petri(
 
     Returns
     ----------
-    Marking
+    Marking : ~pm4py.objects.petri_net.obj.Marking
         A classic Petri net marking (place -> token count)
     """
     petri_marking = Marking()

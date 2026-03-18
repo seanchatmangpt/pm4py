@@ -735,7 +735,7 @@ def get_activity_labels(*args) -> List[str]:
 
     Returns
     ---------------
-    activities
+    activities : list
         Activity labels
 
     """

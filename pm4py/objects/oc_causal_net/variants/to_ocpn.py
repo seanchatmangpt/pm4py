@@ -10,22 +10,23 @@ SILENT_TRANSITION_PREFIX = "_silent"
 
 
 def apply(occn: OCCausalNet, parameters=None) -> OCPetriNet:
-    """
+    r"""
     Converts an Object-centric Causal Net (OCCN) to an Object-centric Petri Net (OCPN) with empty markings.
-    All cardinalities c!=(1,1) are treated as c=(0, *). Keys for input marker groups are ignored.
+    All cardinalities c!=(1,1) are treated as c=(0, \*). Keys for input marker groups are ignored.
 
     Parameters
     ----------
-    occn: OCCausalNet
+    occn : OCCausalNet
         The Object-centric Causal Net to convert. Start and end activities must be labeled "START_{object_type}" and "END_{object_type}" respectively.
-    parameters: dict, optional
+
+    parameters : dict, optional
         Additional parameters for the conversion (not used in this implementation).
 
     Returns
     -------
     OCPetriNet
         The converted Object-centric Petri Net with empty markings.
-    """
+"""
     activities = occn.activities
     object_types = occn.object_types
     img = occn.input_marker_groups

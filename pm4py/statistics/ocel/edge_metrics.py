@@ -123,7 +123,7 @@ def aggregate_ev_couples(
 
     Parameters
     -------------------
-    edges
+    edges : dict
         Edges calculated using the find_associations_per_edge function
 
     Returns
@@ -148,7 +148,7 @@ def aggregate_unique_objects(
 
     Parameters
     -------------------
-    edges
+    edges : dict
         Edges calculated using the find_associations_per_edge function
 
     Returns
@@ -173,7 +173,7 @@ def aggregate_total_objects(
 
     Parameters
     -------------------
-    edges
+    edges : dict
         Edges calculated using the find_associations_per_edge function
 
     Returns
@@ -209,7 +209,7 @@ def find_associations_per_edge(
 
     Returns
     ------------------
-    edges
+    edges : dict
         A dictionary associating to each object type a dictionary where to each edge (activity couple) the list of triples (source event, target event, object ID)
         is associated.
     """
