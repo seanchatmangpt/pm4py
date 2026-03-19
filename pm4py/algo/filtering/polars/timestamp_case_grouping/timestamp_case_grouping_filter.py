@@ -68,15 +68,15 @@ def apply(
         # Get all columns except activity for the first event, then concatenate activities
         # First, get the grouped dataframe
         grouped = df.group_by([case_id_key, timestamp_key], maintain_order=True)
-        
+
         # Get all columns from first event
         first_df = grouped.first()
-        
+
         # Get concatenated activities
         concat_activities = grouped.agg(
             pl.col(activity_key).sort().str.concat(" & ").alias(activity_key)
         )
-        
+
         # Update the activity column in first_df with concatenated values
         df = first_df.drop(activity_key).join(
             concat_activities,

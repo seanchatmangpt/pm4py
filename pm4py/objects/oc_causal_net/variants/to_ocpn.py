@@ -39,11 +39,11 @@ def apply(occn: OCCausalNet, parameters=None) -> OCPetriNet:
     assert not (
         any(activity.startswith(SILENT_TRANSITION_PREFIX) for activity in activities)
     ), f"The OCCN must not contain any activities with prefix {SILENT_TRANSITION_PREFIX}."
-    
+
     assert (
         all(f"START_{object_type}" in activities for object_type in object_types)
     ), "All object types must have a corresponding start activity labeled 'START_{object_type}'."
-    
+
     assert (
         all(f"END_{object_type}" in activities for object_type in object_types)
     ), "All object types must have a corresponding end activity labeled 'END_{object_type}'."
@@ -55,13 +55,13 @@ def apply(occn: OCCausalNet, parameters=None) -> OCPetriNet:
     place_names = set()
     transitions = set()
     arcs = set()
-    
+
     # create global input binding place
     p_input_binding = OCPetriNet.Place(
         name=f"p{BINDING_OBJECT_TYPE}_global_input",
         object_type=BINDING_OBJECT_TYPE,
     )
-    
+
     places.add(p_input_binding)
 
     # recursively create OCPN for every activity
@@ -77,16 +77,16 @@ def apply(occn: OCCausalNet, parameters=None) -> OCPetriNet:
             object_types=object_types,
             p_input_binding=p_input_binding,
         )
-        
+
     # create OCPN
     ocpn = OCPetriNet(
         places=places,
         transitions=transitions,
         arcs=arcs,
     )
-    
+
     return ocpn
-        
+
 
 
 def build_ordered_key_groups(activities, marker_groups):
@@ -131,7 +131,7 @@ def build_ordered_key_groups(activities, marker_groups):
                 marker_group_dict[object_type][marker_key].append(marker)
             if marker_group_dict:
                 key_groups[a].append(marker_group_dict)
-            
+
 
     # sort the key groups
     for a in activities:
@@ -209,16 +209,16 @@ def transform_activity(
     t = OCPetriNet.Transition(name=activity, label=activity)
     transitions.add(t)
 
-    
+
     # input and output places
     non_variable_object_types, variable_object_types = get_activity_object_types(
         object_types, input_marker_groups, output_marker_groups
     )
-    
-        
+
+
     for object_type in non_variable_object_types | variable_object_types:
         is_variable = object_type in variable_object_types
-        
+
         p_i = add_place(
             OCPetriNet.Place(
                 name=label_activity_place(activity, True, object_type),
@@ -235,7 +235,7 @@ def transform_activity(
             places, 
             places_names
         )
-        
+
         # arcs for input and output places
         add_arc(
             OCPetriNet.Arc(
@@ -255,7 +255,7 @@ def transform_activity(
                 ),
             arcs
         )
-        
+
     # binding places
     if not is_start:
         p_i_t = add_place(
@@ -275,7 +275,7 @@ def transform_activity(
             places,
             places_names,
         )
-    
+
     # arcs for binding places
     if is_start:
         add_arc(
@@ -313,7 +313,7 @@ def transform_activity(
             ),
             arcs
         )
-    
+
     # add marker groups
     for marker_group in input_marker_groups:
         transform_marker_group(
@@ -339,8 +339,8 @@ def transform_activity(
             p_output_binding=p_input_binding,
             is_output_marker_group=True,  
         )
-    
-    
+
+
 
 
 def get_activity_object_types(object_types, input_marker_groups, output_marker_groups):
@@ -376,7 +376,7 @@ def get_activity_object_types(object_types, input_marker_groups, output_marker_g
             if len(matches) > 1:
                 raise ValueError(f"More than one object type group found for object type {object_type} in marker_group.")
             object_type_group = matches[0] if matches else (object_type, [])
-            
+
             object_type = object_type_group[0]
             if matches:
                 found_object_types.add(object_type)

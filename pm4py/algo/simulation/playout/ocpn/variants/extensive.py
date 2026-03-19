@@ -133,11 +133,11 @@ def apply(
         is_final,
         memo,
     )
-    
+
     # If we are only interested in whether a trace exists, return immediately
     if exists_trace:
         return trace_exists
-    
+
 
     # == Phase 2: Reconstruct traces from memo ==
     feasible_traces_iter = _reconstruct_traces(
@@ -153,7 +153,7 @@ def apply(
         ot = p.object_type
         for obj_id in obj_ids:
             id_to_obj_type[obj_id] = ot
-    
+
     if return_traces:
         # Inverse the transition_to_idx mapping to get transition labels
         idx_to_transition = {v: k for k, v in transition_to_idx.items()}

@@ -206,10 +206,10 @@ def _get_start_end_activities(
     """
     # activities are those occuring in the given marking
     activities = {ot: {} for ot in ocpn.object_types}
-    
+
     if marking is None:
         return activities
-    
+
     for p in marking.places:
         ot = p.object_type
         if p not in activities[ot]:
@@ -218,5 +218,5 @@ def _get_start_end_activities(
                 "unique_objects": set(),
                 "total_objects": set(),
             }
-            
+
     return activities

@@ -94,11 +94,11 @@ def apply(
         else:
             df_collected = lf.collect()
             diff_values = []
-            
+
             for row in df_collected.iter_rows():
                 start_idx = df_collected.columns.index(start_timestamp_key)
                 end_idx = df_collected.columns.index(timestamp_key)
-                
+
                 diff = soj_time_business_hours_diff(
                     row[start_idx],
                     row[end_idx],
@@ -106,7 +106,7 @@ def apply(
                     workcalendar,
                 )
                 diff_values.append(diff)
-        
+
         df_with_diff = df_collected.with_columns(
             pl.Series("__diff", diff_values)
         ).lazy()
@@ -135,7 +135,7 @@ def apply(
         result = df_with_diff.group_by(activity_key).agg(pl.col("__diff").mean())
 
     result_df = result.collect()
-    
+
     # Convert to dictionary
     ret_dict = {}
     for row in result_df.iter_rows():

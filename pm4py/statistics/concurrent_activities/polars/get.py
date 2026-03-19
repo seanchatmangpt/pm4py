@@ -50,13 +50,13 @@ def get_concurrent_events_dataframe(
 
     # Sort by case ID and timestamps
     lf = lf.sort([case_id_glue, start_timestamp_key, timestamp_key])
-    
+
     # Reduce to needed columns for efficiency
     lf = lf.select([case_id_glue, activity_key, start_timestamp_key, timestamp_key])
-    
+
     # Add index for ordering within cases
     lf = lf.with_row_count("__index__")
-    
+
     # Self-join to get all pairs within same cases
     lf_self = lf.select([
         pl.col(case_id_glue).alias(case_id_glue + "_2"),
@@ -65,7 +65,7 @@ def get_concurrent_events_dataframe(
         pl.col(timestamp_key).alias(timestamp_key + "_2"),
         pl.col("__index__").alias("__index___2")
     ])
-    
+
     # Join on case ID
     concurrent_df = lf.join(
         lf_self, 
@@ -73,33 +73,33 @@ def get_concurrent_events_dataframe(
         right_on=case_id_glue + "_2",
         how="inner"
     )
-    
+
     # Filter to avoid duplicates - only keep pairs where first index < second index
     concurrent_df = concurrent_df.filter(
         pl.col("__index__") < pl.col("__index___2")
     )
-    
+
     # Calculate overlap of time intervals
     max_start_col = "__max_start_column"
     min_complete_col = "__min_complete_column"
     diff_col = "__diff_maxs_minc"
-    
+
     concurrent_df = concurrent_df.with_columns([
         pl.max_horizontal([pl.col(start_timestamp_key), pl.col(start_timestamp_key + "_2")]).alias(max_start_col),
         pl.min_horizontal([pl.col(timestamp_key), pl.col(timestamp_key + "_2")]).alias(min_complete_col)
     ])
-    
+
     # Calculate time difference (in seconds)
     concurrent_df = concurrent_df.with_columns(
         (pl.col(min_complete_col) - pl.col(max_start_col)).dt.total_seconds().alias(diff_col)
     )
-    
+
     # Filter based on strict parameter
     if strict:
         concurrent_df = concurrent_df.filter(pl.col(diff_col) > 0)
     else:
         concurrent_df = concurrent_df.filter(pl.col(diff_col) >= 0)
-    
+
     return concurrent_df
 
 
@@ -161,7 +161,7 @@ def apply(
 
     # Group by activity pairs and count
     ret_dict0_df = concurrent_dataframe.group_by([activity_key, activity_key + "_2"]).count().collect()
-    
+
     ret_dict0 = {}
     for row in ret_dict0_df.iter_rows():
         key = (row[0], row[1])
