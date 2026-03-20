@@ -1,3 +1,24 @@
+'''
+    PM4Py – A Process Mining Library for Python
+Copyright (C) 2024 Process Intelligence Solutions UG (haftungsbeschränkt)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see this software project's root or
+visit <https://www.gnu.org/licenses/>.
+
+Website: https://processintelligence.solutions
+Contact: info@processintelligence.solutions
+'''
 __doc__ = """
 The ``pm4py.discovery`` module contains the process discovery algorithms implemented in ``pm4py``.
 """
@@ -424,7 +445,6 @@ def discover_petri_net_genetic(
     mutation_rate: float = 0.01,
     generations: int = 100,
     elitism_min_sample: int = 5,
-    tournament_timeout: int = None,
     log_csv: TextIO = None,
     activity_key: str = "concept:name",
     timestamp_key: str = "time:timestamp",
@@ -443,7 +463,6 @@ def discover_petri_net_genetic(
     :param mutation_rate: Random model mutation rate (default: 0.01).
     :param generations: Iterations of model improvement (default: 100).
     :param elitism_min_sample: Minimum sample size for selecting best models (default: 5).
-    :param tournament_timeout: Timeout in seconds for assessing individuals. If the timeout is reached, the individual will not appear in the next generation (default: factor dependent on number of activities and log size)
     :param log_csv: Output stream for CSV log (default: None).
     :param activity_key: Attribute to be used for the activity (default: "concept:name").
     :param timestamp_key: Attribute to be used for the timestamp (default: "time:timestamp").
@@ -479,7 +498,6 @@ def discover_petri_net_genetic(
     parameters[genetic_parameters.MUTATION_RATE] = mutation_rate
     parameters[genetic_parameters.GENERATIONS] = generations
     parameters[genetic_parameters.ELITISM_MIN_SAMPLE] = elitism_min_sample
-    parameters[genetic_parameters.TOURNAMENT_TIMEOUT] = tournament_timeout
     parameters[genetic_parameters.LOG_CSV] = log_csv
 
     if check_is_pandas_dataframe(log):
