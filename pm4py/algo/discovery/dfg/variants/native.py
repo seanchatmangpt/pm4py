@@ -37,7 +37,7 @@ def native(
 
     Returns
     -------
-    dfg
+    dfg: dict
         DFG graph
     """
     if parameters is None:

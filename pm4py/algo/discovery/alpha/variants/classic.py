@@ -1,16 +1,12 @@
 """
-This module implements the \"classic\" alpha miner [1]_.
-It converts the input event log, which should be a log, to the (well-known) directly follows abstraction.
-For example, when we have a trace of the form (control-flow perspective) <...a,b,...>, we observe the relation a>b, i.e.
-activity a precedes activity b.
-From the directly follows relations, the alpha relations parallelism (||), conflict (x) and causality (->) are deduced.
-These relations form the basics for finding the places in the net.
-Finally, a start and end place is added.
-
-References
-    ----------
-    .. [1] Wil M. P. van der Aalst et al., "Workflow Mining: Discovering Process Models from Event Logs",
-      IEEE Trans. Knowl. Data Eng., 16, 1128-1142, 2004. `DOI <https://doi.org/10.1109/TKDE.2004.47>`_.
+This module implements the "classic" alpha miner [1]_. It converts the
+input event log, which should be a log, to the (well-known) directly follows
+abstraction. For example, when we have a trace of the form (control-flow
+perspective) <...a,b,...>, we observe the relation a>b, i.e. activity a
+precedes activity b. From the directly follows relations, the alpha relations
+parallelism (||), conflict (x) and causality (->) are deduced. These relations
+form the basics for finding the places in the net. Finally, a start and end
+place is added.
 """
 
 import time
@@ -100,11 +96,12 @@ def apply_dfg(
     parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
-    Applying Alpha Miner starting from the knowledge of the Directly Follows graph,
-    and of the start activities and end activities in the log inferred from the DFG
+    Applying Alpha Miner starting from the knowledge of the Directly Follows
+    graph, and of the start activities and end activities in the log inferred
+    from the DFG.
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-Follows graph
     parameters
@@ -119,8 +116,8 @@ def apply_dfg(
         marking object representing the initial marking
     final marking : :class:`pm4py.models.net.Marking`
         marking object representing the final marking, not guaranteed that it is actually reachable!
-    """
 
+    """
     return apply_dfg_sa_ea(dfg, None, None, parameters=parameters)
 
 
@@ -131,11 +128,12 @@ def apply_dfg_sa_ea(
     parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
 ) -> Tuple[PetriNet, Marking, Marking]:
     """
-    Applying Alpha Miner starting from the knowledge of the Directly Follows graph,
-    and of the start activities and end activities in the log (possibly inferred from the DFG)
+    Applying Alpha Miner starting from the knowledge of the Directly Follows
+    graph, and of the start activities and end activities in the log (possibly
+    inferred from the DFG)
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-Follows graph
     start_activities
@@ -154,6 +152,7 @@ def apply_dfg_sa_ea(
         marking object representing the initial marking
     final marking : :class:`pm4py.models.net.Marking`
         marking object representing the final marking, not guaranteed that it is actually reachable!
+
     """
     if parameters is None:
         parameters = {}

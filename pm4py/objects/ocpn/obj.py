@@ -8,7 +8,7 @@ from pm4py.objects.petri_net.obj import PetriNet
 class OCMarking(defaultdict):
     """
     An object-centric marking represented as a mapping from places to multisets of object IDs.
-    
+
     ```
     marking = OCMarking({p: Counter(["object1", "object2"])})
     ```
@@ -209,7 +209,7 @@ class OCPetriNet(PetriNet):
             """
             self.__out_arcs.add(arc)
             assert arc.source == self
-            
+
 
     class Arc(PetriNet.Arc):
         def __init__(

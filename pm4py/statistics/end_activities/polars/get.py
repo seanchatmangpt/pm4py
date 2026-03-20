@@ -58,7 +58,7 @@ def get_end_activities(
         .count()
         .collect()
     )
-    
+
     # Convert to dictionary
     endact_dict = dict(
         zip(
@@ -66,5 +66,5 @@ def get_end_activities(
             end_activities_df["count"].to_list()
         )
     )
-    
+
     return endact_dict

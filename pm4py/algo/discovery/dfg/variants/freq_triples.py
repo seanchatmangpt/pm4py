@@ -35,7 +35,7 @@ def freq_triples(
 
     Returns
     -------
-    dfg
+    dfg: dict
         DFG graph
     """
     if parameters is None:

@@ -146,7 +146,7 @@ def get_all_trace_attributes_from_log(log: EventLog) -> Set[str]:
 
     Returns
     ------------
-    all_attributes
+    all_attributes : set
         All trace attributes from the log
     """
     log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG)
@@ -170,7 +170,7 @@ def get_all_event_attributes_from_log(log: EventLog) -> Set[str]:
 
     Returns
     -------------
-    all_attributes
+    all_attributes : set
         All trace attributes from the log
     """
     log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG)
@@ -203,7 +203,7 @@ def get_attribute_values(
 
     Returns
     ----------
-    attributes
+    attributes : dict
         Dictionary of attributes associated with their count
     """
     log = log_converter.apply(
@@ -251,7 +251,7 @@ def get_trace_attribute_values(
 
     Returns
     ------------
-    attributes
+    attributes : dict
         Dictionary of attributes associated with their count
     """
     if parameters is None:

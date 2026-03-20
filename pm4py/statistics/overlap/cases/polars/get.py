@@ -52,7 +52,7 @@ def apply(
     )
 
     columns = list({timestamp_key, start_timestamp_key, case_id_key})
-    
+
     # Get min and max timestamps per case
     case_ranges = (
         lf.select(columns)
@@ -63,7 +63,7 @@ def apply(
         ])
         .collect()
     )
-    
+
     # Convert to list of tuples for the compute function
     points = []
     for row in case_ranges.iter_rows():
