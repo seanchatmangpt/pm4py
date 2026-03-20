@@ -59,22 +59,23 @@ def read_xes(
     encoding: str = constants.DEFAULT_ENCODING,
     **kwargs
 ) -> Union[DataFrame, EventLog]:
-    """
-    Reads an event log stored in XES format (see `xes-standard <https://xes-standard.org/>`_).
+    r"""Reads an event log stored in XES format (see `xes-standard <https://xes-standard.org/>`_).
     Returns a table (`pandas.DataFrame`) view of the event log or an `EventLog` object.
 
     :param file_path: Path/URI to the event log (`.xes` file).
     :param variant: Variant of the importer to use. Options include:
+
         - "iterparse" – traditional XML parser,
         - "line_by_line" – text-based line-by-line importer,
         - "chunk_regex" – chunk-of-bytes importer (default),
         - "iterparse20" – XES 2.0 importer,
         - "r4pm" – Rust-based importer via `r4pm.df`,
         - "rustxes" – compatibility alias for the Rust-based importer.
+
     :param return_legacy_log_object: Boolean indicating whether to return a legacy `EventLog` object (default: `False`).
-    :param return_pl_lazyframe: Returns a Polars LazyFrame (defaul
+    :param return_pl_lazyframe: Returns a Polars LazyFrame (default: `False`).
     :param encoding: Encoding to be used (default: `utf-8`).
-    :param **kwargs: Additional parameters to pass to the importer.
+    :param \**kwargs: Additional parameters to pass to the importer.
     :rtype: `pandas.DataFrame` or `pm4py.objects.log.obj.EventLog`
 
     .. code-block:: python3

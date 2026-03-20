@@ -71,12 +71,12 @@ def get_attribute_values(
             .count()
             .collect()
         )
-    
+
     # Convert to dictionary
     attributes_values_dict = {}
     for row in result.iter_rows():
         attributes_values_dict[row[0]] = row[1]
-    
+
     return attributes_values_dict
 
 
@@ -189,7 +189,7 @@ def apply_numeric(
     filtered_df_by_ev = df.filter(
         (pl.col(attribute_key) >= int1) & (pl.col(attribute_key) <= int2)
     )
-    
+
     if stream_filter_key1 is not None:
         filtered_df_by_ev = filtered_df_by_ev.filter(
             pl.col(stream_filter_key1) == stream_filter_value1
@@ -201,7 +201,7 @@ def apply_numeric(
 
     # Get case IDs that match the criteria
     matching_cases = filtered_df_by_ev.select(case_id_glue).unique()
-    
+
     if positive:
         # Keep cases that match
         ret = df.join(matching_cases, on=case_id_glue, how="inner")
@@ -332,13 +332,13 @@ def filter_df_on_attribute_values(
     """
     if values is None:
         values = []
-    
+
     # Get events matching the attribute values
     filtered_df_by_ev = df.filter(pl.col(attribute_key).is_in(values))
-    
+
     # Get unique case IDs from filtered events
     matching_cases = filtered_df_by_ev.select(case_id_glue).unique()
-    
+
     if positive:
         # Keep cases that have matching events
         ret = df.join(matching_cases, on=case_id_glue, how="inner")
@@ -382,13 +382,13 @@ def filter_df_keeping_activ_exc_thresh(
 
     if act_count0 is None:
         act_count0 = get_attribute_values(df, activity_key)
-    
+
     act_count = [
         k
         for k, v in act_count0.items()
         if v >= thresh or k in most_common_variant
     ]
-    
+
     if len(act_count) < len(act_count0):
         ret = df.filter(pl.col(activity_key).is_in(act_count))
     else:
@@ -427,13 +427,13 @@ def filter_df_keeping_spno_activities(
         .limit(max_no_activities)
         .collect()
     )
-    
+
     # Extract activity names to keep
     activity_to_keep = activity_counts[activity_key].to_list()
-    
+
     # Get total unique activities in original dataframe
     total_activities = df.select(pl.col(activity_key).n_unique()).collect()[0, 0]
-    
+
     if len(activity_to_keep) < total_activities:
         ret = df.filter(pl.col(activity_key).is_in(activity_to_keep))
     else:

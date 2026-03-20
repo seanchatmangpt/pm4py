@@ -4,7 +4,7 @@ from enum import Enum
 
 class Variants(Enum):
     TO_OCPN = to_ocpn
-    
+
 def apply(oc_causal_net, parameters=None, variant=Variants.TO_OCPN):
     """
     Method for converting from Object-centric Causal Net Object-centric Petri Net

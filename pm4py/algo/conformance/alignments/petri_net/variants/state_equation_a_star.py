@@ -1,15 +1,15 @@
-"""
-This module contains code that allows us to compute alignments on the basis of a regular A* search on the state-space
-of the synchronous product net of a trace and a Petri net.
-The main algorithm follows [1]_.
-When running the log-based variant, the code is running in parallel on a trace based level.
-Furthermore, by default, the code applies heuristic estimation, and prefers those states that have the smallest h-value
-in case the f-value of two states is equal.
+"""This module contains code that allows us to compute alignments on the basis
+of a regular A* search on the state-space of the synchronous product net of a
+trace and a Petri net. The main algorithm follows [1]_. When running the log-
+based variant, the code is running in parallel on a trace based level.
+Furthermore, by default, the code applies heuristic estimation, and prefers
+those states that have the smallest h-value in case the f-value of two states
+is equal.
 
 References
 ----------
 .. [1] Sebastiaan J. van Zelst et al., "Tuning Alignment Computation: An Experimental Evaluation",
-      ATAED@Petri Nets/ACSD 2017: 6-20. `http://ceur-ws.org/Vol-1847/paper01.pdf`_.
+      ATAED@Petri Nets/ACSD 2017: 6-20. http://ceur-ws.org/Vol-1847/paper01.pdf
 
 """
 
@@ -72,11 +72,10 @@ PARAM_SYNC_COST_FUNCTION = Parameters.PARAM_SYNC_COST_FUNCTION.value
 def get_best_worst_cost(
     petri_net, initial_marking, final_marking, parameters=None
 ):
-    """
-    Gets the best worst cost of an alignment
+    """Gets the best worst cost of an alignment.
 
     Parameters
-    -----------
+    ----------
     petri_net
         Petri net
     initial_marking
@@ -85,9 +84,10 @@ def get_best_worst_cost(
         Final marking
 
     Returns
-    -----------
+    -----------------
     best_worst_cost
         Best worst cost of alignment
+
     """
     if parameters is None:
         parameters = {}
@@ -208,7 +208,7 @@ def apply_from_variant(
     Apply the alignments from the specification of a single variant
 
     Parameters
-    -------------
+    ----------
     variant
         Variant (as string delimited by the "variant_delimiter" parameter)
     petri_net
@@ -223,6 +223,7 @@ def apply_from_variant(
     Returns
     ------------
     dictionary: `dict` with keys **alignment**, **cost**, **visited_states**, **queued_states** and **traversed_arcs**
+
     """
     if parameters is None:
         parameters = {}
@@ -240,7 +241,7 @@ def apply_from_variants_dictionary(
     Apply the alignments from the specification of a variants dictionary
 
     Parameters
-    -------------
+    ----------
     var_dictio
         Dictionary of variants (along possibly with their count, or the list of indexes, or the list of involved cases)
     petri_net
@@ -256,6 +257,7 @@ def apply_from_variants_dictionary(
     --------------
     dictio_alignments
         Dictionary that assigns to each variant its alignment
+
     """
     if parameters is None:
         parameters = {}
@@ -278,7 +280,7 @@ def apply_from_variants_list(
     Apply the alignments from the specification of a list of variants in the log
 
     Parameters
-    -------------
+    ----------
     var_list
         List of variants (for each item, the first entry is the variant itself, the second entry may be the number of cases)
     petri_net
@@ -294,6 +296,7 @@ def apply_from_variants_list(
     --------------
     dictio_alignments
         Dictionary that assigns to each variant its alignment
+
     """
     if parameters is None:
         parameters = {}
@@ -329,7 +332,7 @@ def apply_from_variants_list_petri_string(
     Apply the alignments from the specification of a list of variants in the log
 
     Parameters
-    -------------
+    ----------
     var_list
         List of variants (for each item, the first entry is the variant itself, the second entry may be the number of cases)
     petri_net_string
@@ -339,6 +342,7 @@ def apply_from_variants_list_petri_string(
     --------------
     dictio_alignments
         Dictionary that assigns to each variant its alignment
+
     """
     if parameters is None:
         parameters = {}
@@ -368,7 +372,7 @@ def apply_from_variants_list_petri_string_mprocessing(
     Apply the alignments from the specification of a list of variants in the log
 
     Parameters
-    -------------
+    ----------
     mp_output
         Multiprocessing output
     var_list
@@ -380,6 +384,7 @@ def apply_from_variants_list_petri_string_mprocessing(
     --------------
     dictio_alignments
         Dictionary that assigns to each variant its alignment
+
     """
     if parameters is None:
         parameters = {}
@@ -421,6 +426,7 @@ def apply_trace_net(
     Returns
     -------
     dictionary: `dict` with keys **alignment**, **cost**, **visited_states**, **queued_states** and **traversed_arcs**
+
     """
     if parameters is None:
         parameters = {}
@@ -532,6 +538,7 @@ def apply_sync_prod(
     -------
     dictionary : :class:`dict` with keys **alignment**, **cost**, **visited_states**, **queued_states**
     and **traversed_arcs**
+
     """
     return __search(
         sync_prod,

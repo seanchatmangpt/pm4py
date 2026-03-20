@@ -12,7 +12,7 @@ class BasicStructureRandomVariable(object):
 
         Returns
         ----------
-        weight
+        weight : float
             Weight of the transition
         """
         return self.weight
@@ -23,7 +23,7 @@ class BasicStructureRandomVariable(object):
 
         Parameters
         -----------
-        weight
+        weight : float
             Weight of the transition
         """
         self.weight = weight

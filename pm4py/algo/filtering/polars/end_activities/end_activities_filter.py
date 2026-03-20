@@ -49,7 +49,7 @@ def get_end_activities(
     """
     if parameters is None:
         parameters = {}
-    
+
     # Get last activity for each case
     end_activities = (
         df.group_by(case_id_key)
@@ -58,12 +58,12 @@ def get_end_activities(
         .count()
         .collect()
     )
-    
+
     # Convert to dictionary
     result = {}
     for row in end_activities.iter_rows():
         result[row[0]] = row[1]
-    
+
     return result
 
 
@@ -151,7 +151,7 @@ def filter_df_on_end_activities(
         .filter(pl.col("end_activity").is_in(values))
         .select(case_id_glue)
     )
-    
+
     if positive:
         # Keep cases with matching end activities
         ret = df.join(matching_cases, on=case_id_glue, how="inner")
@@ -196,7 +196,7 @@ def filter_df_on_end_activities_nocc(
 
     if ea_count0 is None:
         ea_count0 = get_end_activities(df, case_id_glue, activity_key)
-    
+
     ea_count = [
         k
         for k, v in ea_count0.items()
@@ -209,7 +209,7 @@ def filter_df_on_end_activities_nocc(
         if v >= nocc
         or (len(most_common_variant) > 0 and k == most_common_variant[-1])
     }
-    
+
     if len(ea_count) < len(ea_count0):
         ret = filter_df_on_end_activities(
             df, ea_count, case_id_glue=case_id_glue, activity_key=activity_key
@@ -217,7 +217,7 @@ def filter_df_on_end_activities_nocc(
         if return_dict:
             return ret, ea_count_dict
         return ret
-    
+
     if return_dict:
         return df, ea_count_dict
     return df

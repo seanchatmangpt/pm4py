@@ -218,7 +218,7 @@ class RandomVariable(object):
 
         Returns
         ----------
-        weight
+        weight : float
             Weight of the transition
         """
         if self.random_variable is not None:
@@ -230,7 +230,7 @@ class RandomVariable(object):
 
         Parameters
         -----------
-        weight
+        weight : float
             Weight of the transition
         """
         if self.random_variable is not None:

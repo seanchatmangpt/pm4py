@@ -34,7 +34,7 @@ def get_start_activities(
 
     Returns
     ----------
-    start_activities
+    start_activities : dict
         Dictionary of start attributes associated with their count
     """
     if parameters is None:

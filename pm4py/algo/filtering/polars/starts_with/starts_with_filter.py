@@ -57,7 +57,7 @@ def apply(
 
     # Convert prefixes to strings
     prefix_strings = [constants.DEFAULT_VARIANT_SEP.join(p) for p in prefixes]
-    
+
     # Check if variant starts with any prefix
     prefix_expr = None
     for prefix in prefix_strings:
@@ -65,7 +65,7 @@ def apply(
             prefix_expr = pl.col("variant").str.starts_with(prefix)
         else:
             prefix_expr = prefix_expr | pl.col("variant").str.starts_with(prefix)
-    
+
     matching_cases = variants_df.filter(prefix_expr).select(case_id_glue)
 
     if positive:

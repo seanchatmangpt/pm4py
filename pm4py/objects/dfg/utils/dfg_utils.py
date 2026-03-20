@@ -51,8 +51,9 @@ def infer_start_activities(dfg):
 
     Returns
     ----------
-    start_activities
+    start_activities : list
         Start activities in the log
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -77,8 +78,9 @@ def infer_end_activities(dfg):
 
     Returns
     ----------
-    end_activities
+    end_activities : list
         End activities in the log
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -99,13 +101,14 @@ def infer_start_activities_from_prev_connections_and_current_dfg(
     Infer the start activities from the previous connections
 
     Parameters
-    -----------
+    ----------
     initial_dfg
         Initial DFG
     dfg
         Directly-follows graph
     activities
         List of the activities contained in DFG
+
     """
     start_activities = set()
     for el in initial_dfg:
@@ -125,13 +128,14 @@ def infer_end_activities_from_succ_connections_and_current_dfg(
     Infer the end activities from the previous connections
 
     Parameters
-    -----------
+    ----------
     initial_dfg
         Initial DFG
     dfg
         Directly-follows graph
     activities
         List of the activities contained in DFG
+
     """
     end_activities = set()
     for el in initial_dfg:
@@ -156,6 +160,7 @@ def get_outputs_of_outside_activities_going_to_start_activities(
         Directly-follows graph
     activities
         Activities contained in the DFG
+
     """
     outputs = set()
     start_activities = (
@@ -184,13 +189,14 @@ def get_inputs_of_outside_activities_reached_by_end_activities(
     Get inputs of outside activities going to start activities
 
     Parameters
-    ------------
+    ----------
     initial_dfg
         Initial DFG
     dfg
         Directly-follows graph
     activities
         Activities contained in the DFG
+
     """
     inputs = set()
     end_activities = (
@@ -218,7 +224,7 @@ def get_activities_from_dfg(dfg):
     Get the list of attributes directly from DFG graph
 
     Parameters
-    -----------
+    ----------
     dfg
         Directly-Follows graph
 
@@ -226,6 +232,7 @@ def get_activities_from_dfg(dfg):
     -----------
     list_activities
         List of activities that are present in the DFG graph
+
     """
     set_activities = set()
     for el in dfg:
@@ -245,7 +252,7 @@ def get_max_activity_count(dfg, act):
     Get maximum count of an ingoing/outgoing edge related to an activity
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-Follows graph
     act
@@ -255,6 +262,7 @@ def get_max_activity_count(dfg, act):
     ------------
     max_value
         Maximum count of ingoing/outgoing edges to attributes
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -275,7 +283,7 @@ def sum_ingoutg_val_activ(dictio, activity):
     Gets the sum of ingoing/outgoing values of an activity
 
     Parameters
-    -----------
+    ----------
     dictio
         Dictionary
     activity
@@ -284,6 +292,7 @@ def sum_ingoutg_val_activ(dictio, activity):
     Returns
     -----------
     summ
+
     """
     summ = 0
     for act2 in dictio[activity]:
@@ -339,13 +348,14 @@ def sum_start_activities_count(dfg):
     Gets the sum of start attributes count inside a DFG
 
     Parameters
-    -------------
+    ----------
     dfg
         Directly-Follows graph
 
     Returns
     -------------
         Sum of start attributes count
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -365,13 +375,14 @@ def sum_end_activities_count(dfg):
     Gets the sum of end attributes count inside a DFG
 
     Parameters
-    -------------
+    ----------
     dfg
         Directly-Follows graph
 
     Returns
     -------------
         Sum of start attributes count
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -391,7 +402,7 @@ def sum_activities_count(dfg, activities, enable_halving=True):
     Gets the sum of specified attributes count inside a DFG
 
     Parameters
-    -------------
+    ----------
     dfg
         Directly-Follows graph
     activities
@@ -402,6 +413,7 @@ def sum_activities_count(dfg, activities, enable_halving=True):
     Returns
     -------------
         Sum of start attributes count
+
     """
     ingoing = get_ingoing_edges(dfg)
     outgoing = get_outgoing_edges(dfg)
@@ -428,11 +440,12 @@ def filter_dfg_on_act(dfg, listact):
     (to produce a projected DFG graph)
 
     Parameters
-    -----------
+    ----------
     dfg
         Current DFG graph
     listact
         List of attributes to filter on
+
     """
     new_dfg = []
     for el in dfg:
@@ -454,6 +467,7 @@ def negate(dfg):
     ----------
     negated_dfg
         Negated Directly-Follows graph (for parallel cut detection)
+
     """
     negated_dfg = []
 
@@ -471,7 +485,7 @@ def get_activities_direction(dfg, activities):
     Calculate activities direction (in a similar way to Heuristics Miner)
 
     Parameters
-    -----------
+    ----------
     dfg
         Directly-follows graph
     activities
@@ -482,6 +496,7 @@ def get_activities_direction(dfg, activities):
     direction
         Dictionary that contains for each direction a number that goes from -1 (all ingoing edges)
         to 1 (all outgoing edges)
+
     """
 
     if activities is None:
@@ -509,7 +524,7 @@ def get_activities_dirlist(activities_direction):
     the direction (going from -1 if all ingoing edges, to 1 if all outgoing edges)
 
     Parameters
-    -----------
+    ----------
     activities_direction
         Dictionary that contains for each direction a number that goes from -1 (all ingoing edges)
         to 1 (all outgoing edges)
@@ -518,6 +533,7 @@ def get_activities_dirlist(activities_direction):
     ----------
     dirlist
         Sorted list of couples of activity plus the direction
+
     """
     dirlist = []
     for act in activities_direction:
@@ -539,6 +555,7 @@ def get_activities_self_loop(dfg):
     ----------
     self_loop_act
         Activities of the graph that are in subloop
+
     """
     self_loop_act = []
 
@@ -557,7 +574,7 @@ def get_connected_components(
     Get connected components in the DFG graph
 
     Parameters
-    -----------
+    ----------
     ingoing
         Ingoing attributes
     outgoing
@@ -566,6 +583,7 @@ def get_connected_components(
         Activities to consider
     force_insert_missing_acti
         Force the insertion of a missing activity
+
     """
     activities_considered = set()
 
@@ -641,7 +659,7 @@ def add_to_most_probable_component(comps, act2, ingoing, outgoing):
     Adds a lost component in parallel cut detection to the most probable component
 
     Parameters
-    -------------
+    ----------
     comps
         Connected components
     act2
@@ -655,6 +673,7 @@ def add_to_most_probable_component(comps, act2, ingoing, outgoing):
     -------------
     comps
         Fixed connected components
+
     """
     sums = []
     idx_max_sum = 0
@@ -680,7 +699,7 @@ def get_all_activities_connected_as_output_to_activity(dfg, activity):
     Gets all the activities that are connected as output to a given activity
 
     Parameters
-    -------------
+    ----------
     dfg
         Directly-follows graph
     activity
@@ -690,6 +709,7 @@ def get_all_activities_connected_as_output_to_activity(dfg, activity):
     -------------
     all_activities
         All activities connected as output to a given activity
+
     """
     all_activities = set()
 
@@ -705,7 +725,7 @@ def get_all_activities_connected_as_input_to_activity(dfg, activity):
     Gets all the activities that are connected as input to a given activity
 
     Parameters
-    ------------
+    ----------
     dfg
         Directly-follows graph
     activity
@@ -715,6 +735,7 @@ def get_all_activities_connected_as_input_to_activity(dfg, activity):
     ------------
     all_activities
         All activities connected as input to a given activities
+
     """
     all_activities = set()
     for el in dfg:
@@ -729,7 +750,7 @@ def get_dfg_np_matrix(dfg):
     making correspondence between indexes and activities names
 
     Parameters
-    -------------
+    ----------
     dfg
         Directly-Follows graph
 
@@ -739,6 +760,7 @@ def get_dfg_np_matrix(dfg):
         Matrix describing the DFG
     index_corresp
         Dictionary making correspondence between indexes and activities names
+
     """
     activities_in_dfg = get_activities_from_dfg(dfg)
     matrix = np.zeros((len(activities_in_dfg), len(activities_in_dfg)))
@@ -771,11 +793,12 @@ def get_dfg_sa_ea_act_from_variants(variants, parameters=None):
     from the dictionary/set/list of variants in the log
 
     Parameters
-    ---------------
+    ----------
     variants
         Dictionary/set/list of variants
     parameters
         Parameters of the algorithm, including:
+
         - variants_sep: the delimiter splitting activities in a variant
 
     Returns
@@ -784,10 +807,11 @@ def get_dfg_sa_ea_act_from_variants(variants, parameters=None):
         DFG
     list_act
         List of different activities
-    start_activities
+    start_activities : dict
         Start activities
-    end_activities
+    end_activities : dict
         End activities
+
     """
     if parameters is None:
         parameters = {}
@@ -815,6 +839,7 @@ def transform_dfg_to_directed_nx_graph(dfg, activities=None):
         NetworkX digraph
     nodes_map
         Correspondence between digraph nodes and activities
+
     """
     if activities is None:
         activities = get_activities_from_dfg(dfg)
@@ -834,7 +859,7 @@ def get_successors(dfg, activities_model=None):
     Gets the successors of any node of the DFG graph
 
     Parameters
-    ----------------
+    ----------
     dfg
         DFG
     activities_model
@@ -844,6 +869,7 @@ def get_successors(dfg, activities_model=None):
     -----------------
     successors
         Dictionary associating to each node all the descendants
+
     """
     if activities_model is None:
         activities_model = set(x[0] for x in dfg).union(set(x[1] for x in dfg))
@@ -877,7 +903,7 @@ def get_predecessors(dfg, activities_model=None):
     Gets the predecessors of any node of the DFG graph
 
     Parameters
-    ----------------
+    ----------
     dfg
         DFG
     activities_model
@@ -887,6 +913,7 @@ def get_predecessors(dfg, activities_model=None):
     -----------------
     predecessors
         Dictionary associating to each node all the ascendants
+
     """
     if activities_model is None:
         activities_model = set(x[0] for x in dfg).union(set(x[1] for x in dfg))
