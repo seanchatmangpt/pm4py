@@ -1,3 +1,4 @@
+
 from pm4py.statistics.attributes.log import get as attr_get
 from pm4py.objects.dfg.utils import dfg_utils
 from pm4py.util import xes_constants as xes
@@ -5,6 +6,8 @@ from pm4py.util import exec_utils
 from pm4py.statistics.service_time.log import get as serv_time_get
 from enum import Enum
 from pm4py.util import constants
+from enum import Enum
+from collections import Counter
 
 from typing import Optional, Dict, Any, Tuple
 import graphviz

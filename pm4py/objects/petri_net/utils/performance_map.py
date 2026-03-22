@@ -496,7 +496,9 @@ def aggregate_statistics(
         Desidered view on data (frequency or performance)
     aggregation_measure
         Aggregation measure (e.g. mean, min) to use
-
+    stat_locale
+        Dict to locale the stat strings
+    
     Returns
     ----------
     aggregated_statistics

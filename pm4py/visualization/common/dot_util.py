@@ -1,3 +1,4 @@
+
 def check_dot_installed():
     """
     Check if Graphviz's dot is installed correctly in the system

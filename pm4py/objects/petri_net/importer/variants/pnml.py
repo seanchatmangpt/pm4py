@@ -89,7 +89,7 @@ def import_net_from_string(petri_string, parameters=None):
     )
 
     if type(petri_string) is str:
-        petri_string = petri_string.encode(encoding)
+        petri_string = petri_string.encode(constants.DEFAULT_ENCODING)
 
     parser = etree.XMLParser(remove_comments=True)
     root = objectify.fromstring(petri_string, parser=parser)
