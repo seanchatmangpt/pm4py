@@ -46,7 +46,10 @@ def no_synchronous_discounted_alignment():
     print("Time:",(time.time()-start))
 
 
-if __name__ == '__main__':
-    # example on the first trace
+def execute_script():
     synchronous_discounted_alignment()
     no_synchronous_discounted_alignment()
+
+
+if __name__ == '__main__':
+    execute_script()
