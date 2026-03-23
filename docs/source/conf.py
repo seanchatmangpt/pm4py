@@ -121,6 +121,7 @@ html_theme_options = {
 }
 
 if generate_for_website:
+    html_favicon = '_static/favicon.ico'
     html_theme_options.update({
         "switcher": {
             "json_url": "/static/api/versions.json",
