@@ -14,6 +14,38 @@ This is a foundation. The following describes where it can go.
 
 ---
 
+## 2025.5 — NL-to-POWL-to-BPMN (COMPLETE)
+
+### AI-Assisted Process Discovery from Natural Language
+
+The central paradigm shift: process models generated from natural language descriptions, verified for structural soundness, and exported to BPMN 2.0.
+
+```python
+from pm4py.algo.dspy.powl.natural_language import generate_powl_from_text
+from pm4py.objects.powl.parser import parse_powl_model_string
+
+result = generate_powl_from_text(
+    "A customer submits an order. The order is validated. "
+    "If valid, it is picked, packed, and billed in parallel. "
+    "If invalid, it is cancelled and refunded."
+)
+# Returns: {powl: str, verdict: bool, reasoning: str, refinements: int}
+```
+
+**Key components:**
+- **NaturalLanguageToPOWL** — DSPy ReAct agent that generates POWL from NL
+- **POWLJudge** — "Dr. van der Aalst" evaluates structural soundness (no ground truth)
+- **Judge-refinement loop** — rejected models get feedback and re-generate
+- **Few-shot demos** — 4 domain examples teaching correct XOR vs PO operator selection
+- **BPMN round-trip** — verified POWL → BPMN 2.0 XML (Camunda/Signavio compatible)
+
+**CLI:**
+```bash
+python -m pm4py.cli DiscoverPOWLToBPMN "process description..." output.bpmn
+```
+
+---
+
 ## 2025 — Completeness
 
 ### Event Log Processing in WASM
