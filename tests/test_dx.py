@@ -39,6 +39,8 @@ from pm4py.dx import (
     conformance_batched,
     explain_conformance_violations,
     suggest_model_improvements,
+    simplify_model,
+    compare_model_complexity,
     LogStats,
     VariantInfo,
     FitnessBucket,
@@ -610,6 +612,120 @@ class TestConformanceDiagnostics(unittest.TestCase):
         explanation = explain_conformance_violations(self.log, model, result)
 
         self.assertIn("No trace fitness data available", explanation)
+
+
+class TestModelSimplification(unittest.TestCase):
+    """Test suite for model simplification utilities."""
+
+    def test_simplify_model_conservative(self):
+        """Test conservative simplification strategy."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, X(B, C))")
+        simplified, report = simplify_model(model, strategy="conservative")
+
+        self.assertIsNotNone(simplified)
+        self.assertEqual(report["strategy"], "conservative")
+        self.assertIn("Flattened nested operators", report["operators_simplified"])
+        self.assertLess(
+            report["simplified_complexity"].node_count,
+            report["original_complexity"].node_count
+        )
+
+    def test_simplify_model_moderate(self):
+        """Test moderate simplification strategy."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, X(B, C), X(D, E))")
+        simplified, report = simplify_model(model, strategy="moderate")
+
+        self.assertIsNotNone(simplified)
+        self.assertEqual(report["strategy"], "moderate")
+        self.assertIn("Flattened nested operators", report["operators_simplified"])
+
+    def test_simplify_model_aggressive(self):
+        """Test aggressive simplification strategy."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, X(B, X(C, D)))")
+        simplified, report = simplify_model(model, strategy="aggressive")
+
+        self.assertIsNotNone(simplified)
+        self.assertEqual(report["strategy"], "aggressive")
+        self.assertIn("Flattened nested operators", report["operators_simplified"])
+
+    def test_simplify_model_preserve_activities(self):
+        """Test that preserve_activities flag works."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, B, C)")
+
+        # With preserve_activities=True
+        simplified1, report1 = simplify_model(model, strategy="moderate", preserve_activities=True)
+
+        # With preserve_activities=False
+        simplified2, report2 = simplify_model(model, strategy="moderate", preserve_activities=False)
+
+        # Both should return a model
+        self.assertIsNotNone(simplified1)
+        self.assertIsNotNone(simplified2)
+
+    def test_simplify_model_invalid_strategy(self):
+        """Test that invalid strategy raises error."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, B)")
+
+        with self.assertRaises(ValueError):
+            simplify_model(model, strategy="invalid_strategy")
+
+    def test_compare_model_complexity(self):
+        """Test comparing complexity of two models."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model1 = parse_powl_model_string("X(A, X(B, C))")
+        model2 = parse_powl_model_string("X(A, B, C)")
+
+        comparison = compare_model_complexity(model1, model2)
+
+        self.assertIn("model1_metrics", comparison)
+        self.assertIn("model2_metrics", comparison)
+        self.assertIn("complexity_reduction", comparison)
+        self.assertIn("simpler_model", comparison)
+
+        # model2 should be simpler (fewer nodes due to flattening)
+        self.assertEqual(comparison["simpler_model"], "model2")
+
+    def test_compare_model_complexity_equal(self):
+        """Test comparing identical models."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, B)")
+
+        comparison = compare_model_complexity(model, model)
+
+        self.assertEqual(comparison["simpler_model"], "equal")
+        self.assertEqual(comparison["node_count_difference"], 0)
+
+    def test_simplify_model_report_structure(self):
+        """Test that simplification report has correct structure."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("X(A, X(B, C))")
+        simplified, report = simplify_model(model, strategy="conservative")
+
+        # Check report structure
+        self.assertIn("original_complexity", report)
+        self.assertIn("simplified_complexity", report)
+        self.assertIn("activities_removed", report)
+        self.assertIn("operators_simplified", report)
+        self.assertIn("strategy", report)
+        self.assertIn("complexity_reduction", report)
+
+        # Check that complexity_reduction is a float between 0 and 1
+        self.assertIsInstance(report["complexity_reduction"], float)
+        self.assertGreaterEqual(report["complexity_reduction"], 0.0)
+        self.assertLessEqual(report["complexity_reduction"], 1.0)
 
 
 if __name__ == '__main__':
