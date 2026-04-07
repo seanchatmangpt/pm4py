@@ -45,6 +45,10 @@ mod binary_relation;
 mod powl;
 mod parser;
 pub mod algorithms;
+pub mod petri_net;
+pub mod process_tree;
+pub mod footprints;
+pub mod conversion;
 
 use binary_relation::BinaryRelation;
 use powl::{PowlArena, PowlNode};
