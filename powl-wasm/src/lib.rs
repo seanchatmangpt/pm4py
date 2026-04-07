@@ -49,12 +49,16 @@ pub mod petri_net;
 pub mod process_tree;
 pub mod footprints;
 pub mod conversion;
+pub mod event_log;
+pub mod conformance;
 
 use binary_relation::BinaryRelation;
 use powl::{PowlArena, PowlNode};
 use parser::parse_powl_model_string;
 use algorithms::simplify as simplify_algo;
 use algorithms::transitive as transitive_algo;
+use event_log::EventLog;
+use petri_net::PetriNetResult;
 
 // ─── JS-visible wrapper types ────────────────────────────────────────────────
 
@@ -327,6 +331,86 @@ pub fn node_info_json(model: &PowlModel, arena_idx: u32) -> String {
             )
         }
     }
+}
+
+// ─── Event log API ───────────────────────────────────────────────────────────
+
+/// Parse a XES-formatted XML string and return the event log as a JSON string.
+///
+/// # Errors
+/// Throws a JavaScript `Error` on parse failure.
+#[wasm_bindgen]
+pub fn parse_xes_log(xml: &str) -> Result<String, JsValue> {
+    let log = event_log::parse_xes(xml)
+        .map_err(|e| JsValue::from_str(&format!("XES parse error: {}", e)))?;
+    serde_json::to_string(&log)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Parse a CSV string (with headers) and return the event log as a JSON string.
+///
+/// Required columns: `case_id` / `case:concept:name`, `concept:name` / `activity`.
+/// Optional: `time:timestamp` / `timestamp`.
+///
+/// # Errors
+/// Throws a JavaScript `Error` on parse failure.
+#[wasm_bindgen]
+pub fn parse_csv_log(csv: &str) -> Result<String, JsValue> {
+    let log = event_log::parse_csv(csv)
+        .map_err(|e| JsValue::from_str(&format!("CSV parse error: {}", e)))?;
+    serde_json::to_string(&log)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+// ─── Conformance API ──────────────────────────────────────────────────────────
+
+/// Compute token-replay fitness of `log_json` (output of [`parse_xes_log`] /
+/// [`parse_csv_log`]) against `petri_net_json` (output of [`powl_to_petri_net`]).
+///
+/// Returns a JSON string with shape:
+/// ```json
+/// {
+///   "percentage": 0.97,
+///   "avg_trace_fitness": 0.96,
+///   "perfectly_fitting_traces": 42,
+///   "total_traces": 44,
+///   "trace_results": [...]
+/// }
+/// ```
+///
+/// # Errors
+/// Throws if either JSON input cannot be deserialised.
+#[wasm_bindgen]
+pub fn token_replay_fitness(petri_net_json: &str, log_json: &str) -> Result<String, JsValue> {
+    let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = conformance::token_replay::compute_fitness(
+        &pn_result.net,
+        &pn_result.initial_marking,
+        &pn_result.final_marking,
+        &log,
+    );
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Convert a POWL model to Petri net and return the result as a JSON string.
+///
+/// Convenience wrapper combining `parse_powl` + conversion in one call.
+///
+/// # Errors
+/// Throws on parse or conversion failure.
+#[wasm_bindgen]
+pub fn powl_to_petri_net(s: &str) -> Result<String, JsValue> {
+    let mut arena = PowlArena::new();
+    let root = parse_powl_model_string(s, &mut arena)
+        .map_err(|e| JsValue::from_str(&format!("POWL parse error: {}", e)))?;
+    let model = PowlModel { arena, root };
+    let result = conversion::to_petri_net::apply(&model.arena, model.root);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
