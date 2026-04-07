@@ -1,223 +1,162 @@
 # Summary
 
+- [Title Page](./title.md)
 - [Introduction](./README.md)
-  - [About This Pattern Language](./about.md)
-  - [How to Use These Patterns](./usage.md)
-  - [Pattern Language Philosophy](./philosophy.md)
+  - [Multi-Perspective POWL](./multi-perspective-powl.md)
 
 ---
 
 # Control Flow Patterns (Basic)
 
-## Sequence
-- [Sequence](./patterns/control-flow/sequence.md)
+## 1. Sequence
+- [Sequence](./patterns/sequence.md)
 
-## Parallel Split
-- [Parallel Split](./patterns/control-flow/parallel-split.md)
+## 2. Parallel Split  
+- [Parallel Split](./patterns/parallel-split.md)
 
-## Synchronization
-- [Synchronization](./patterns/control-flow/synchronization.md)
+## 3. Synchronization
+- [Synchronization](./patterns/synchronization.md)
 
-## Exclusive Choice
-- [Exclusive Choice](./patterns/control-flow/exclusive-choice.md)
+## 4. Exclusive Choice
+- [Exclusive Choice](./patterns/exclusive-choice.md)
 
-## Simple Merge
-- [Simple Merge](./patterns/control-flow/simple-merge.md)
+## 5. Simple Merge
+- [Simple Merge](./patterns/simple-merge.md)
 
 ---
 
 # Control Flow Patterns (Advanced Branching)
 
-## Multi-Choice
-- [Multi-Choice](./patterns/advanced-branching/multi-choice.md)
+## 6. Multi-Choice
+- [Multi-Choice](./patterns/multi-choice.md)
 
-## Synchronizing Merge
-- [Synchronizing Merge](./patterns/advanced-branching/synchronizing-merge.md)
+## 7. Synchronizing Merge
+- [Synchronizing Merge](./patterns/synchronizing-merge.md)
 
-## Multi-Merge
-- [Multi-Merge](./patterns/advanced-branching/multi-merge.md)
+## 8. Multi-Merge
+- [Multi-Merge](./patterns/multi-merge.md)
 
-## Discriminator
-- [Discriminator](./patterns/advanced-branching/discriminator.md)
+## 9. Discriminator
+- [Discriminator](./patterns/discriminator.md)
 
-## Arbitrary Cycles
-- [Arbitrary Cycles](./patterns/advanced-branching/arbitrary-cycles.md)
+## 10. Arbitrary Cycles
+- [Arbitrary Cycles](./patterns/arbitrary-cycles.md)
 
-## Implicit Termination
-- [Implicit Termination](./patterns/advanced-branching/implicit-termination.md)
+## 11. Implicit Termination
+- [Implicit Termination](./patterns/implicit-termination.md)
 
-## Deferred Choice
-- [Deferred Choice](./patterns/advanced-branching/deferred-choice.md)
+## 12. Deferred Choice
+- [Deferred Choice](./patterns/deferred-choice.md)
 
-## Interleaved Parallel Routing
-- [Interleaved Parallel Routing](./patterns/advanced-branching/interleaved-parallel-routing.md)
+## 13. Interleaved Parallel Routing
+- [Interleaved Parallel Routing](./patterns/interleaved-parallel-routing.md)
 
-## Milestone
-- [Milestone](./patterns/advanced-branching/milestone.md)
+## 14. Milestone
+- [Milestone](./patterns/milestone.md)
 
----
-
-# Control Flow Patterns (Structural)
-
-## Arbitrary Interleaving
-- [Arbitrary Interleaving](./patterns/structural/arbitrary-interleaving.md)
-
-## Partial Join
-- [Partial Join](./patterns/structural/partial-join.md)
-
-## Cancel Activity
-- [Cancel Activity](./patterns/structural/cancel-activity.md)
-
-## Cancel Case
-- [Cancel Case](./patterns/structural/cancel-case.md)
-
-## Complete
-- [Complete](./patterns/structural/complete.md)
-
-## Parent Join
-- [Parent Join](./patterns/structural/parent-join.md)
-
-## Interleaved Routing
-- [Interleaved Routing](./patterns/structural/interleaved-routing.md)
-
-## Interleaved Looping
-- [Interleaved Looping](./patterns/structural/interleaved-looping.md)
-
-## History
-- [History](./patterns/structural/history.md)
-
-## Recovery
-- [Recovery](./patterns/structural/recovery.md)
+## 15. Structured Loop
+- [Structured Loop](./patterns/structured-loop.md)
 
 ---
 
-# Control Flow Patterns (State-Based)
+# Structural Patterns
 
-## Thread Split
-- [Thread Split](./patterns/state-based/thread-split.md)
+## 16. Arbitrary Interleaving
+- [Arbitrary Interleaving](./patterns/arbitrary-interleaving.md)
 
-## Thread Merge
-- [Thread Merge](./patterns/state-based/thread-merge.md)
+## 17. Partial Join
+- [Partial Join](./patterns/partial-join.md)
 
-## Thread Partial Merge
-- [Thread Partial Merge](./patterns/state-based/thread-partial-merge.md)
+## 18. Cancel Activity
+- [Cancel Activity](./patterns/cancel-activity.md)
 
-## Thread Join
-- [Thread Join](./patterns/state-based/thread-join.md)
+## 19. Cancel Case
+- [Cancel Case](./patterns/cancel-case.md)
 
-## Interleaved Routing
-- [Interleaved Routing](./patterns/state-based/interleaved-routing-state.md)
+## 20. Complete
+- [Complete](./patterns/complete.md)
 
-## Milestone
-- [Milestone State](./patterns/state-based/milestone-state.md)
+## 21. Parent Join
+- [Parent Join](./patterns/parent-join.md)
 
-## Cancellation Region
-- [Cancellation Region](./patterns/state-based/cancellation-region.md)
+## 22. Interleaved Routing
+- [Interleaved Routing](./patterns/interleaved-routing.md)
 
-## Cancellation Area
-- [Cancellation Area](./patterns/state-based/cancellation-area.md)
+## 23. Interleaved Looping
+- [Interleaved Looping](./patterns/interleaved-looping.md)
 
-## Complete
-- [Complete State](./patterns/state-based/complete-state.md)
+## 24. History
+- [History](./patterns/history.md)
 
-## Terminate
-- [Terminate](./patterns/state-based/terminate.md)
+## 25. Recovery
+- [Recovery](./patterns/recovery.md)
+
+---
+
+# State-Based Patterns
+
+## 26. Thread Split
+- [Thread Split](./patterns/thread-split.md)
+
+## 27. Thread Merge
+- [Thread Merge](./patterns/thread-merge.md)
+
+## 28. Thread Partial Merge
+- [Thread Partial Merge](./patterns/thread-partial-merge.md)
+
+## 29. Thread Join
+- [Thread Join](./patterns/thread-join.md)
+
+## 30. Interleaved Routing State
+- [Interleaved Routing State](./patterns/interleaved-routing-state.md)
+
+## 31. Milestone State
+- [Milestone State](./patterns/milestone-state.md)
+
+## 32. Cancellation Region
+- [Cancellation Region](./patterns/cancellation-region.md)
+
+## 33. Cancellation Area
+- [Cancellation Area](./patterns/cancellation-area.md)
+
+## 34. Complete State
+- [Complete State](./patterns/complete-state.md)
+
+## 35. Terminate
+- [Terminate](./patterns/terminate.md)
 
 ---
 
 # Multiple Instance Patterns
 
-## Multiple Instance Without Synchronization
-- [Multiple Instance Without Synchronization](./patterns/multiple-instance/without-synchronization.md)
+## 36. Multiple Instance Without Synchronization
+- [Without Synchronization](./patterns/without-synchronization.md)
 
-## Multiple Instance With A Priori Design Time Knowledge
-- [Multiple Instance With A Priori Design Time Knowledge](./patterns/multiple-instance/a-priori-design-time.md)
+## 37. Multiple Instance With A Priori Design Time Knowledge
+- [A-Priori Design Time](./patterns/a-priori-design-time.md)
 
-## Multiple Instance With A Priori Runtime Knowledge
-- [Multiple Instance With A Priori Runtime Knowledge](./patterns/multiple-instance/a-priori-runtime.md)
+## 38. Multiple Instance With A Priori Runtime Knowledge
+- [A-Priori Runtime](./patterns/a-priori-runtime.md)
 
-## Multiple Instance Without A Priori Runtime Knowledge
-- [Multiple Instance Without A Priori Runtime Knowledge](./patterns/multiple-instance/without-a-priori-runtime.md)
+## 39. Multiple Instance Without A Priori Runtime Knowledge
+- [Without A-Priori Runtime](./patterns/without-a-priori-runtime.md)
 
-## Critical Section
-- [Critical Section](./patterns/multiple-instance/critical-section.md)
+## 40. Critical Section
+- [Critical Section](./patterns/critical-section.md)
 
-## Interleaved Parallel Routing
-- [Interleaved Parallel Routing MI](./patterns/multiple-instance/interleaved-parallel-routing.md)
+## 41. Interleaved Parallel Routing MI
+- [Interleaved Parallel Routing MI](./patterns/interleaved-parallel-routing-mi.md)
 
-## Design Time + Runtime Knowledge
-- [Design Time + Runtime Knowledge](./patterns/multiple-instance/design-time-plus-runtime.md)
+## 42. Design Time + Runtime Knowledge
+- [Design Time + Runtime](./patterns/design-time-plus-runtime.md)
 
-## Static Partial Join
-- [Static Partial Join](./patterns/multiple-instance/static-partial-join.md)
-
-## Dynamic Partial Join
-- [Dynamic Partial Join](./patterns/multiple-instance/dynamic-partial-join.md)
-
-## Cancellation Region
-- [Cancellation Region MI](./patterns/multiple-instance/cancellation-region.md)
-
-## Dynamic Partial Join For Multiple Instances
-- [Dynamic Partial Join For Multiple Instances](./patterns/multiple-instance/dynamic-partial-join-mi.md)
+## 43. Static Partial Join
+- [Static Partial Join](./patterns/static-partial-join.md)
 
 ---
 
-# Data Patterns
+# Appendix
 
-## Transient Data
-- [Transient Data](./patterns/data/transient-data.md)
-
-## Data Visibility
-- [Data Visibility](./patterns/data/data-visibility.md)
-
-## Data Interaction
-- [Data Interaction](./patterns/data/data-interaction.md)
-
-## Data Output
-- [Data Output](./patterns/data/data-output.md)
-
-## Data Determination
-- [Data Determination](./patterns/data/data-determination.md)
-
----
-
-# Resource Patterns
-
-## Role-Based Distribution
-- [Role-Based Distribution](./patterns/resource/role-based-distribution.md)
-
-## Distribution Based on Capacity
-- [Distribution Based on Capacity](./patterns/resource/distribution-based-on-capacity.md)
-
-## Distribution Based on Organizational Rules
-- [Distribution Based on Organizational Rules](./patterns/resource/distribution-based-on-org-rules.md)
-
-## Late Binding
-- [Late Binding](./patterns/resource/late-binding.md)
-
-## Retain Familiar
-- [Retain Familiar](./patterns/resource/retain-familiar.md)
-
-## Router
-- [Router](./patterns/resource/router.md)
-
-## Auto Start
-- [Auto Start](./patterns/resource/auto-start.md)
-
-## Visible Authorization
-- [Visible Authorization](./patterns/resource/visible-authorization.md)
-
-## Creation
-- [Creation](./patterns/resource/creation.md)
-
-## Role Sequence
-- [Role Sequence](./patterns/resource/role-sequence.md)
-
----
-
-# Pattern Index
-
-- [Alphabetical Index](./index/alphabetical.md)
-- [By Category](./index/by-category.md)
-- [By POWL Operator](./index/by-powl-operator.md)
-- [Cross-Reference Matrix](./index/cross-reference.md)
+- [Pattern Index](./index/alphabetical.md)
+- [Build Instructions](../BUILD.md)
+- [Code Examples](https://github.com/seanchatmangpt/pm4py)
