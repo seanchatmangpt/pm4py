@@ -176,49 +176,52 @@ fn recursively_add_tree(
             let order = spo.order.get_transitive_reduction();
             let n = children.len();
 
+            // tau_split: initial_place → tau_split → per-child init places
             let tau_split = new_hidden_trans(net, counts, "tauSplit");
             net.add_arc(initial_place, &tau_split);
 
+            // tau_join: per-child final places → tau_join → final_place
             let tau_join = new_hidden_trans(net, counts, "tauJoin");
             net.add_arc(&tau_join, &final_place_name);
 
-            let start_locals = order.get_start_nodes(); // local indices
+            let start_locals = order.get_start_nodes();
             let end_locals = order.get_end_nodes();
 
-            let mut init_trans: Vec<String> = Vec::new();
-            let mut final_trans: Vec<String> = Vec::new();
+            // Each child gets an init PLACE and a final PLACE (proper PN structure).
+            let mut init_places: Vec<String> = Vec::new();
+            let mut final_places: Vec<String> = Vec::new();
 
             for (local, &child_idx) in children.iter().enumerate() {
-                let i_trans = new_hidden_trans(net, counts, "init_par");
-                let f_trans = new_hidden_trans(net, counts, "final_par");
+                let i_place = new_place(net, counts); // init place for this child
+                let f_place = new_place(net, counts); // final place for this child
 
+                // Start nodes receive a token from tau_split
                 if start_locals.contains(&local) {
-                    let i_place = new_place(net, counts);
                     net.add_arc(&tau_split, &i_place);
-                    net.add_arc(&i_place, &i_trans);
                 }
 
+                // End nodes feed tau_join
                 if end_locals.contains(&local) {
-                    let f_place = new_place(net, counts);
-                    net.add_arc(&f_trans, &f_place);
                     net.add_arc(&f_place, &tau_join);
                 }
 
+                // Child subtree: i_place → [child subtree] → f_place
                 recursively_add_tree(
-                    arena, child_idx, net, &i_trans, Some(&f_trans), counts, false,
+                    arena, child_idx, net, &i_place, Some(&f_place), counts, false,
                 );
 
-                init_trans.push(i_trans);
-                final_trans.push(f_trans);
+                init_places.push(i_place);
+                final_places.push(f_place);
             }
 
-            // Ordering arcs between children
+            // Ordering arcs: for edge i→j, route tokens through a sync transition
+            // to enforce the ordering constraint.
             for i in 0..n {
                 for j in 0..n {
                     if order.is_edge(i, j) {
-                        let connector = new_place(net, counts);
-                        net.add_arc(&final_trans[i], &connector);
-                        net.add_arc(&connector, &init_trans[j]);
+                        let sync = new_hidden_trans(net, counts, "sync");
+                        net.add_arc(&final_places[i], &sync);
+                        net.add_arc(&sync, &init_places[j]);
                     }
                 }
             }

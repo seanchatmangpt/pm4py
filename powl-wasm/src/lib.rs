@@ -51,6 +51,9 @@ pub mod footprints;
 pub mod conversion;
 pub mod event_log;
 pub mod conformance;
+pub mod complexity;
+pub mod diff;
+pub mod streaming;
 
 use binary_relation::BinaryRelation;
 use powl::{PowlArena, PowlNode};
@@ -394,6 +397,55 @@ pub fn token_replay_fitness(petri_net_json: &str, log_json: &str) -> Result<Stri
     );
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute complexity metrics for a POWL model and return JSON.
+///
+/// Returns a JSON object with `cyclomatic`, `cfc`, `cognitive`, `nesting_depth`,
+/// `branching_factor`, `activity_count`, `node_count`, and `halstead` fields.
+///
+/// # Errors
+/// Throws if `model` is empty.
+#[wasm_bindgen]
+pub fn measure_complexity(model: &PowlModel) -> Result<String, JsValue> {
+    let report = complexity::measure(&model.arena, model.root);
+    serde_json::to_string(&report)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Compute the structural and behavioural diff between two POWL model strings.
+///
+/// Returns a JSON object describing added/removed activities, ordering changes,
+/// structural operator changes, and an overall severity level.
+///
+/// # Errors
+/// Throws if either string fails to parse.
+#[wasm_bindgen]
+pub fn diff_models(model_a: &str, model_b: &str) -> Result<String, JsValue> {
+    let mut arena_a = PowlArena::new();
+    let root_a = parse_powl_model_string(model_a, &mut arena_a)
+        .map_err(|e| JsValue::from_str(&format!("Model A parse error: {}", e)))?;
+    let mut arena_b = PowlArena::new();
+    let root_b = parse_powl_model_string(model_b, &mut arena_b)
+        .map_err(|e| JsValue::from_str(&format!("Model B parse error: {}", e)))?;
+    let d = diff::diff(&arena_a, root_a, &arena_b, root_b);
+    serde_json::to_string(&d)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Convert a POWL model string to BPMN 2.0 XML.
+///
+/// Returns a complete `<definitions>` XML document importable by Camunda,
+/// bpmn.io, Signavio, and other BPMN-compliant tools.
+///
+/// # Errors
+/// Throws on parse failure.
+#[wasm_bindgen]
+pub fn powl_to_bpmn(s: &str) -> Result<String, JsValue> {
+    let mut arena = PowlArena::new();
+    let root = parse_powl_model_string(s, &mut arena)
+        .map_err(|e| JsValue::from_str(&format!("POWL parse error: {}", e)))?;
+    Ok(conversion::to_bpmn::to_bpmn_xml(&arena, root))
 }
 
 /// Convert a POWL model to Petri net and return the result as a JSON string.

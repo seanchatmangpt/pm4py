@@ -91,6 +91,42 @@ fn fire(marking: &mut Marking, pre: &[String], post: &[String]) -> (u32, u32) {
     (pre.len() as u32, post.len() as u32)
 }
 
+// ─── Silent transition firing ─────────────────────────────────────────────────
+
+/// Fire all currently-enabled silent (tau) transitions in a fixed-point loop.
+///
+/// POWL-generated Petri nets use silent transitions as synchronization barriers
+/// (tau-split, tau-join, sync). These must fire before visible transitions can
+/// become enabled. We continue until no more silent transitions are enabled.
+///
+/// A budget cap prevents infinite loops in cyclic nets (e.g. LOOP body).
+///
+/// Returns (extra_consumed, extra_produced) from the silent firings.
+fn fire_silent_enabled(net: &PetriNet, marking: &mut Marking) -> (u32, u32) {
+    let mut total_c = 0u32;
+    let mut total_p = 0u32;
+    let mut budget = net.transitions.len() * 4 + 16; // generous but bounded
+    loop {
+        if budget == 0 { break; }
+        let mut fired = false;
+        for trans in &net.transitions {
+            if trans.label.is_some() { continue; } // skip visible
+            let pre = preset(net, &trans.name);
+            if !pre.is_empty() && is_enabled(marking, &pre) {
+                let post = postset(net, &trans.name);
+                let (c, p) = fire(marking, &pre, &post);
+                total_c += c;
+                total_p += p;
+                budget -= 1;
+                fired = true;
+                break; // restart to respect new marking
+            }
+        }
+        if !fired { break; }
+    }
+    (total_c, total_p)
+}
+
 // ─── Core replay ─────────────────────────────────────────────────────────────
 
 /// Replay one trace against the Petri net.
@@ -105,6 +141,11 @@ pub fn replay_trace(
     let mut produced: u32 = initial_marking.values().sum();
     let mut consumed: u32 = 0;
     let mut missing: u32 = 0;
+
+    // Fire any initially-enabled silent transitions (e.g. tau-splits at the start)
+    let (sc, sp) = fire_silent_enabled(net, &mut marking);
+    consumed += sc;
+    produced += sp;
 
     for event in &trace.events {
         let activity = &event.name;
@@ -151,6 +192,11 @@ pub fn replay_trace(
         let (c, p) = fire(&mut marking, &pre, &post);
         consumed += c;
         produced += p;
+
+        // Fire any newly-enabled silent transitions after visible transition
+        let (sc, sp) = fire_silent_enabled(net, &mut marking);
+        consumed += sc;
+        produced += sp;
     }
 
     // After replay: tokens remaining in non-final places
