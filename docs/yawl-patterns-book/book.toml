@@ -1,0 +1,32 @@
+[book]
+title = "Workflow Pattern Language"
+authors = ["Wil van der Aalst", "Process Mining Community"]
+description = "A pattern language for workflow processes based on YAWL 43 patterns"
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[preprocessor.index]
+
+[preprocessor.links]
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/pm4py/pm4py"
+edit-url-template = "https://github.com/pm4py/pm4py/edit/main/docs/yawl-patterns-book/{path}"
+
+[output.html.search]
+limit-results = 20
+
+[output.html.code]
+git-repository-url = "https://github.com/pm4py/pm4py"
+
+[output.html.playground]
+editable = true
+copyable = true
+line-numbers = true
