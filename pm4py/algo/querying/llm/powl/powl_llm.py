@@ -24,7 +24,7 @@ try:
     import dspy
 except ImportError:
     raise ImportError(
-        "DSPy is required for POWL v2 functionality. Install it with: pip install dspy-ai"
+        "DSPy is required for POWL v2 functionality. Install it with: pip install dspy"
     )
 
 from typing import Dict, Any, Optional
@@ -36,7 +36,7 @@ from pm4py.algo.querying.llm.powl.algorithm import (
 )
 
 
-def explain_powl(powl_model: POWL, lm: Optional[Any] = None) -> str:
+def explain_powl(powl_model: POWL, lm=None) -> str:
     """
     Explain a POWL model in plain language using DSPy.
 
@@ -44,8 +44,8 @@ def explain_powl(powl_model: POWL, lm: Optional[Any] = None) -> str:
     ----------
     powl_model : POWL
         The POWL model to explain
-    lm : Optional[dspy.LM]
-        DSPy language model to use. If None, uses dspy.settings.lm
+    lm : dspy.LM, optional
+        DSPy language model. If None, uses the globally configured LM.
 
     Returns
     -------
@@ -54,29 +54,24 @@ def explain_powl(powl_model: POWL, lm: Optional[Any] = None) -> str:
 
     Example
     -------
-    >>> import pm4py
-    >>> import dspy
-    >>> dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
+    >>> import pm4py, dspy
+    >>> dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
     >>> log = pm4py.read_xes("log.xes")
     >>> powl = pm4py.discover_powl(log)
-    >>> explanation = pm4py.llm.explain_powl(powl)
-    >>> print(explanation)
+    >>> print(pm4py.llm.explain_powl(powl))
     """
     from pm4py.llm import abstract_powl
 
-    if lm is None:
-        lm = dspy.settings.lm
+    if lm is not None:
+        with dspy.context(lm=lm):
+            result = POWLExplainer()(powl_description=abstract_powl(powl_model))
+    else:
+        result = POWLExplainer()(powl_description=abstract_powl(powl_model))
 
-    with dspy.context(lm=lm):
-        explainer = POWLExplainer()
-        powl_text = abstract_powl(powl_model)
-        result = explainer(powl_description=powl_text)
-        return result.explanation
+    return result.explanation
 
 
-def discover_powl_from_description(
-    process_description: str, lm: Optional[Any] = None
-) -> str:
+def discover_powl_from_description(process_description: str, lm=None) -> str:
     """
     Discover a POWL model string from a natural language process description using DSPy.
 
@@ -84,35 +79,31 @@ def discover_powl_from_description(
     ----------
     process_description : str
         Natural language description of the process
-    lm : Optional[dspy.LM]
-        DSPy language model to use. If None, uses dspy.settings.lm
+    lm : dspy.LM, optional
+        DSPy language model. If None, uses the globally configured LM.
 
     Returns
     -------
     str
-        POWL model string (can be parsed with pm4py.objects.powl.parser.parse_powl_model_string)
+        POWL model string (parse with pm4py.objects.powl.parser.parse_powl_model_string)
 
     Example
     -------
-    >>> import pm4py
-    >>> import dspy
-    >>> dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
-    >>> desc = "A process starts with activity A, then either B or C in parallel, then D at the end."
-    >>> powl_string = pm4py.llm.discover_powl_from_description(desc)
-    >>> powl_model = pm4py.objects.powl.parser.parse_powl_model_string(powl_string)
+    >>> import pm4py, dspy
+    >>> dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
+    >>> s = pm4py.llm.discover_powl_from_description("A loan process starting with application...")
+    >>> powl = pm4py.objects.powl.parser.parse_powl_model_string(s)
     """
-    if lm is None:
-        lm = dspy.settings.lm
+    if lm is not None:
+        with dspy.context(lm=lm):
+            result = POWLDiscoverer()(process_description=process_description)
+    else:
+        result = POWLDiscoverer()(process_description=process_description)
 
-    with dspy.context(lm=lm):
-        discoverer = POWLDiscoverer()
-        result = discoverer(process_description=process_description)
-        return result.powl_model_string
+    return result.powl_model_string
 
 
-def compare_powl_models(
-    powl_1: POWL, powl_2: POWL, lm: Optional[Any] = None
-) -> Dict[str, Any]:
+def compare_powl_models(powl_1: POWL, powl_2: POWL, lm=None) -> Dict[str, Any]:
     """
     Compare two POWL models and identify structural differences using DSPy.
 
@@ -122,38 +113,37 @@ def compare_powl_models(
         First POWL model
     powl_2 : POWL
         Second POWL model
-    lm : Optional[dspy.LM]
-        DSPy language model to use. If None, uses dspy.settings.lm
+    lm : dspy.LM, optional
+        DSPy language model. If None, uses the globally configured LM.
 
     Returns
     -------
     Dict[str, Any]
-        Dictionary with keys:
-        - "comparison": detailed textual comparison of the models
-        - "confidence": confidence in the comparison (0.0 to 1.0)
+        Dictionary with "comparison" (str) and "confidence" (float) keys
 
     Example
     -------
-    >>> import pm4py
-    >>> import dspy
-    >>> dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
+    >>> import pm4py, dspy
+    >>> dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
     >>> log = pm4py.read_xes("log.xes")
-    >>> powl_1 = pm4py.discover_powl(log)
-    >>> powl_2 = pm4py.discover_powl(log, variant=POWLDiscoveryVariant.MAXIMAL_ORDER)
-    >>> result = pm4py.llm.compare_powl_models(powl_1, powl_2)
+    >>> result = pm4py.llm.compare_powl_models(pm4py.discover_powl(log), pm4py.discover_powl(log))
     >>> print(result["comparison"])
-    >>> print(f"Confidence: {result['confidence']}")
     """
     from pm4py.llm import abstract_powl
 
-    if lm is None:
-        lm = dspy.settings.lm
+    powl_1_text = abstract_powl(powl_1)
+    powl_2_text = abstract_powl(powl_2)
 
-    with dspy.context(lm=lm):
-        comparator = POWLComparator()
-        powl_1_text = abstract_powl(powl_1)
-        powl_2_text = abstract_powl(powl_2)
-        result = comparator(
-            powl_1_description=powl_1_text, powl_2_description=powl_2_text
+    if lm is not None:
+        with dspy.context(lm=lm):
+            result = POWLComparator()(
+                powl_1_description=powl_1_text,
+                powl_2_description=powl_2_text,
+            )
+    else:
+        result = POWLComparator()(
+            powl_1_description=powl_1_text,
+            powl_2_description=powl_2_text,
         )
-        return {"comparison": result.comparison, "confidence": result.confidence}
+
+    return {"comparison": result.comparison, "confidence": result.confidence}

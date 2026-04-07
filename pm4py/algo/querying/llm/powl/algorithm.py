@@ -24,7 +24,7 @@ try:
     import dspy
 except ImportError:
     raise ImportError(
-        "DSPy is required for POWL v2 functionality. Install it with: pip install dspy-ai"
+        "DSPy is required for POWL v2 functionality. Install it with: pip install dspy"
     )
 
 from pm4py.algo.querying.llm.powl.signatures import (

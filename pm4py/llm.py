@@ -656,10 +656,10 @@ def explain_powl(powl_model, lm: Optional[Any] = None) -> str:
     """
     Explain a POWL model in plain language using DSPy with Chain-of-Thought reasoning.
 
-    Requires DSPy to be installed. Configure the LM first with dspy.settings.configure().
+    Requires DSPy to be installed. Configure the LM first with dspy.configure().
 
     :param powl_model: The POWL model to explain.
-    :param lm: (Optional) DSPy language model to use. If None, uses dspy.settings.lm.
+    :param lm: (Optional) DSPy LM to use. If None, uses the globally configured LM.
     :return: Natural language explanation of the POWL model.
 
     .. code-block:: python3
@@ -667,7 +667,7 @@ def explain_powl(powl_model, lm: Optional[Any] = None) -> str:
         import pm4py
         import dspy
 
-        dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
+        dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
         log = pm4py.read_xes("tests/input_data/running-example.xes")
         powl_model = pm4py.discover_powl(log)
         explanation = pm4py.llm.explain_powl(powl_model)
@@ -677,7 +677,7 @@ def explain_powl(powl_model, lm: Optional[Any] = None) -> str:
         from pm4py.algo.querying.llm.powl import powl_llm
     except ImportError:
         raise ImportError(
-            "DSPy is required for explain_powl(). Install it with: pip install dspy-ai"
+            "DSPy is required for explain_powl(). Install it with: pip install dspy"
         )
 
     return powl_llm.explain_powl(powl_model, lm=lm)
@@ -689,10 +689,10 @@ def discover_powl_from_description(
     """
     Discover a POWL model string from a natural language process description using DSPy.
 
-    Requires DSPy to be installed. Configure the LM first with dspy.settings.configure().
+    Requires DSPy to be installed. Configure the LM first with dspy.configure().
 
     :param process_description: Natural language description of the business process.
-    :param lm: (Optional) DSPy language model to use. If None, uses dspy.settings.lm.
+    :param lm: (Optional) DSPy LM to use. If None, uses the globally configured LM.
     :return: POWL model string (can be parsed with pm4py.objects.powl.parser.parse_powl_model_string).
 
     .. code-block:: python3
@@ -700,7 +700,7 @@ def discover_powl_from_description(
         import pm4py
         import dspy
 
-        dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
+        dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
         desc = "A process starts with activity A, then either B or C in parallel, then D at the end."
         powl_string = pm4py.llm.discover_powl_from_description(desc)
         powl_model = pm4py.objects.powl.parser.parse_powl_model_string(powl_string)
@@ -709,7 +709,7 @@ def discover_powl_from_description(
         from pm4py.algo.querying.llm.powl import powl_llm
     except ImportError:
         raise ImportError(
-            "DSPy is required for discover_powl_from_description(). Install it with: pip install dspy-ai"
+            "DSPy is required for discover_powl_from_description(). Install it with: pip install dspy"
         )
 
     return powl_llm.discover_powl_from_description(process_description, lm=lm)
@@ -721,11 +721,11 @@ def compare_powl_models(
     """
     Compare two POWL models and identify structural differences using DSPy.
 
-    Requires DSPy to be installed. Configure the LM first with dspy.settings.configure().
+    Requires DSPy to be installed. Configure the LM first with dspy.configure().
 
     :param powl_1: First POWL model.
     :param powl_2: Second POWL model.
-    :param lm: (Optional) DSPy language model to use. If None, uses dspy.settings.lm.
+    :param lm: (Optional) DSPy LM to use. If None, uses the globally configured LM.
     :return: Dictionary with "comparison" and "confidence" keys.
 
     .. code-block:: python3
@@ -733,7 +733,7 @@ def compare_powl_models(
         import pm4py
         import dspy
 
-        dspy.settings.configure(lm=dspy.OpenAI(model="gpt-4", api_key="..."))
+        dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key="..."))
         log = pm4py.read_xes("tests/input_data/running-example.xes")
         powl_1 = pm4py.discover_powl(log)
         powl_2 = pm4py.discover_powl(log, variant=POWLDiscoveryVariant.MAXIMAL_ORDER)
@@ -744,7 +744,7 @@ def compare_powl_models(
         from pm4py.algo.querying.llm.powl import powl_llm
     except ImportError:
         raise ImportError(
-            "DSPy is required for compare_powl_models(). Install it with: pip install dspy-ai"
+            "DSPy is required for compare_powl_models(). Install it with: pip install dspy"
         )
 
     return powl_llm.compare_powl_models(powl_1, powl_2, lm=lm)

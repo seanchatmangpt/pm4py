@@ -32,102 +32,61 @@ except ImportError:
 import pm4py
 
 
-@unittest.skipIf(
-    not DSPY_AVAILABLE,
-    "DSPy not installed. Install with: pip install dspy-ai",
-)
+@unittest.skipIf(not DSPY_AVAILABLE, "DSPy not installed. Install with: pip install dspy")
 class DSPyPOWLTest(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        """Set up DSPy with a mock/test LM for testing."""
-        import dspy
-
-        # Use a simple mock if no API key is available
+        """Configure DSPy with a real LM if API key available, skip integration tests otherwise."""
         api_key = os.getenv("OPENAI_API_KEY")
         if api_key:
-            # If API key is available, use real LM
-            lm = dspy.OpenAI(model="gpt-4", api_key=api_key)
-        else:
-            # Use mock for testing without API key
-            lm = dspy.ChainOfThought(
-                dspy.Signature(
-                    "input -> output"
-                )  # Placeholder mock signature
-            )
-
-        try:
-            dspy.settings.configure(lm=lm)
-        except Exception:
-            # If configuration fails, skip these tests
-            pass
+            dspy.configure(lm=dspy.LM("openai/gpt-4o", api_key=api_key))
 
     def test_powl_explainer_module_instantiation(self):
-        """Test that POWLExplainer can be instantiated."""
         from pm4py.algo.querying.llm.powl.algorithm import POWLExplainer
-
-        explainer = POWLExplainer()
-        self.assertIsNotNone(explainer)
+        self.assertIsNotNone(POWLExplainer())
 
     def test_powl_discoverer_module_instantiation(self):
-        """Test that POWLDiscoverer can be instantiated."""
         from pm4py.algo.querying.llm.powl.algorithm import POWLDiscoverer
-
-        discoverer = POWLDiscoverer()
-        self.assertIsNotNone(discoverer)
+        self.assertIsNotNone(POWLDiscoverer())
 
     def test_powl_comparator_module_instantiation(self):
-        """Test that POWLComparator can be instantiated."""
         from pm4py.algo.querying.llm.powl.algorithm import POWLComparator
-
-        comparator = POWLComparator()
-        self.assertIsNotNone(comparator)
+        self.assertIsNotNone(POWLComparator())
 
     def test_signatures_exist(self):
-        """Test that DSPy signatures are properly defined."""
         from pm4py.algo.querying.llm.powl.signatures import (
             ExplainPOWL,
             DiscoverPOWLFromDescription,
             ComparePOWLModels,
         )
-
         self.assertTrue(hasattr(ExplainPOWL, "__doc__"))
         self.assertTrue(hasattr(DiscoverPOWLFromDescription, "__doc__"))
         self.assertTrue(hasattr(ComparePOWLModels, "__doc__"))
 
     def test_powl_llm_functions_exist(self):
-        """Test that high-level POWL LLM functions are available."""
         from pm4py.algo.querying.llm.powl import powl_llm
-
         self.assertTrue(callable(powl_llm.explain_powl))
         self.assertTrue(callable(powl_llm.discover_powl_from_description))
         self.assertTrue(callable(powl_llm.compare_powl_models))
 
     def test_public_api_functions_exist(self):
-        """Test that public API functions are available in pm4py.llm."""
         self.assertTrue(callable(pm4py.llm.explain_powl))
         self.assertTrue(callable(pm4py.llm.discover_powl_from_description))
         self.assertTrue(callable(pm4py.llm.compare_powl_models))
 
-    @unittest.skipIf(
-        not os.getenv("OPENAI_API_KEY"),
-        "OPENAI_API_KEY not set. Skipping LLM integration tests.",
-    )
+    @unittest.skipIf(not os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not set.")
     def test_explain_powl_with_real_lm(self):
-        """Test explain_powl with a real LM (requires API key)."""
         log = pm4py.read_xes("input_data/running-example.xes", return_legacy_log_object=True)
         powl = pm4py.discover_powl(log)
         explanation = pm4py.llm.explain_powl(powl)
         self.assertGreater(len(explanation), 0)
 
-    @unittest.skipIf(
-        not os.getenv("OPENAI_API_KEY"),
-        "OPENAI_API_KEY not set. Skipping LLM integration tests.",
-    )
+    @unittest.skipIf(not os.getenv("OPENAI_API_KEY"), "OPENAI_API_KEY not set.")
     def test_compare_powl_models_with_real_lm(self):
-        """Test compare_powl_models with a real LM (requires API key)."""
         log = pm4py.read_xes("input_data/running-example.xes", return_legacy_log_object=True)
         powl_1 = pm4py.discover_powl(log)
-        powl_2 = pm4py.discover_powl(log)  # In practice, different variant
+        powl_2 = pm4py.discover_powl(log)
         result = pm4py.llm.compare_powl_models(powl_1, powl_2)
         self.assertIn("comparison", result)
         self.assertIn("confidence", result)
