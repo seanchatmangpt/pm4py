@@ -24,6 +24,7 @@ import type {
 } from "./types.js";
 
 export type * from "./types.js";
+export * from "./utils.js";
 
 // ─── Lazy WASM loader ─────────────────────────────────────────────────────────
 
