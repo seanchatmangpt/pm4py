@@ -241,16 +241,26 @@ The few-shot demonstrations (Section 3.4) are the primary mechanism for teaching
 
 #### 3.2.3 Tool Functions
 
-The agent has access to two tool functions:
+The agent has access to three tool functions:
 
 **`validate_powl(powl_string)`**: Parses the POWL string using pm4py's parser and returns:
 - `is_valid`: Boolean indicating whether the string is syntactically valid POWL.
 - `error`: Error message if parsing failed.
-- `node_count`: Number of nodes in the parsed model.
+- `return_value`: The parsed POWL object (for internal use).
+
+**`analyze_powl(powl_string)`**: Performs comprehensive programmatic analysis using pm4py's real analysis functions and returns:
+- `is_valid`: Boolean indicating whether the POWL is structurally sound.
+- `metrics`: Concrete structural metrics (node count, operator counts, nesting depth, activity count).
+- `structure`: Structural information (start nodes, end nodes, potential orphans, connectivity valid, partial orders valid).
+- `conversion`: Conversion results (Petri net success, BPMN success, process tree success).
+- `issues`: List of detected structural issues (orphans, dead ends, validation failures).
+- `visualization_b64`: Base64-encoded SVG visualization (if requested).
 
 **`finish(powl_string)`**: Returns the final POWL model. Called when the agent is satisfied with the model.
 
-Both tools are wrapped with timeout protection (30 seconds) and metadata descriptions that the DSPy framework uses to decide when to call each tool.
+All tools are wrapped with timeout protection (30 seconds) and metadata descriptions that the DSPy framework uses to decide when to call each tool.
+
+The `analyze_powl` tool enables the agent to proactively check its own work before calling `finish()`, providing a self-correction mechanism that reduces the burden on the judge.
 
 ### 3.3 Stage 2: Verification
 
@@ -279,6 +289,57 @@ The `POWLJudge` is an LLM-based judge, prompted as "Dr. Wil van der Aalst," that
 The judge returns a binary verdict (True/False) with a textual reasoning explanation. It does NOT compare against any specific ground truth model—it evaluates whether the POWL is a **good** process model in isolation.
 
 This design is deliberate. In natural language process discovery, there is no single "correct" model. The same process description can produce multiple valid models with different levels of abstraction. The judge evaluates structural quality, not exact match.
+
+#### 3.3.3 Real Analysis Integration
+
+The `POWLJudge` is enhanced with **programmatic analysis capabilities** that run concrete pm4py functions before LLM reasoning. This hybrid approach combines the best of both worlds:
+
+**Programmatic analysis provides:**
+- **Concrete metrics**: Node count, operator counts, nesting depth, activity count (computed by traversing the POWL object tree)
+- **Structural validation**: Orphaned node detection, dead end detection, connectivity validation, partial order validation (using pm4py's `validate_partial_orders()` and `validate_connectivity()` methods)
+- **Conversion testing**: Petri net conversion, BPMN conversion, process tree conversion (tests whether the POWL can be successfully converted to other formats)
+- **Visualization generation**: Base64-encoded SVG diagrams (for human inspection and debugging)
+
+**LLM reasoning provides:**
+- **Behavioral interpretation**: Understanding whether the operators match the natural language description
+- **Nuanced feedback**: Explaining WHY a structural issue matters in the context of the specific process
+- **Suggestions for improvement**: Proposing simplifications, better abstractions, or alternative structures
+
+The integration flow is:
+
+```
+POWL string
+    ↓
+[Programmatic Analysis]
+    ├─ Parse POWL object
+    ├─ Calculate metrics (node count, depth, etc.)
+    ├─ Detect issues (orphans, dead ends)
+    ├─ Test conversions (Petri net, BPMN)
+    └─ Generate visualization
+    ↓
+[Format analysis results for LLM]
+    ↓
+[LLM receives: POWL + analysis context]
+    ├─ Syntactic validity: ✓/✗
+    ├─ Metrics: "5 nodes, 2 operators, depth 3"
+    ├─ Issues: "No orphaned nodes detected"
+    └─ Conversion: "Petri net: SUCCESS, BPMN: FAILED"
+    ↓
+[LLM reasoning + verdict]
+```
+
+This hybrid design ensures that:
+1. **Factual correctness** is verified programmatically (not left to LLM hallucination)
+2. **Contextual interpretation** is provided by the LLM (understanding the process description)
+3. **Actionable feedback** combines concrete issue detection with nuanced explanation
+
+The analysis results are formatted as a structured context string and passed to the LLM via the enhanced signature:
+
+```
+powl_string, context_description, analysis_results → reasoning, verdict: bool
+```
+
+Where `analysis_results` contains the formatted analysis summary (metrics, issues, conversion results) that the LLM incorporates into its reasoning.
 
 ### 3.4 Stage 3: Refinement
 
@@ -324,7 +385,55 @@ A 21-activity multi-agent orchestration protocol where a human submits a task to
 
 **Key lesson:** Complex real-world processes with multiple feedback loops (escalation, reconciliation, revision) can be captured in a single verified POWL model. The XOR vs. PO distinction applies even in multi-agent contexts.
 
-The demonstrations were selected to cover the three operator types (X, *, PO) and their common misapplication patterns, progressing from simple (loan approval) to complex (multi-agent orchestration).
+#### Demo 5: Judge Refinement Loop (Healthcare Process)
+
+A patient intake process where the patient checks in, vitals are taken, and a decision is made (urgent vs. non-urgent). The initial POWL model had structural issues: the "urgent" branch led to "Doctor Notified" with no connection to consultation, and the "admit" branch ended at "Admission Paperwork" without a terminal state.
+
+**Key lesson:** The refinement loop corrects specific structural issues identified by the judge. The judge's feedback pinpointed exact problems: (1) "Doctor Notified" had no outgoing edge, creating a dead end. (2) "Admission Paperwork" needed a terminal activity ("Admission Complete"). The refined POWL fixed both issues, demonstrating how programmatic analysis (detecting orphaned nodes, dead ends) combines with LLM reasoning to provide actionable correction guidance.
+
+**Initial POWL (rejected):**
+```
+X(
+    'Doctor Notified',  # Dead end — no outgoing edge
+    'Wait in Waiting Room'
+)
+```
+
+**Refined POWL (accepted):**
+```
+PO=(
+    nodes={
+        'Patient Arrives',
+        'Patient Checks In',
+        'Nurse Takes Vitals',
+        X('Doctor Notified', 'Wait in Waiting Room'),
+        'Doctor Consultation',
+        X('Prescribe Medication', 'Order Lab Tests'),
+        'Create Treatment Plan',
+        X(
+            'Patient Checks Out',
+            PO=('Begin Admission Paperwork', 'Admission Complete')
+        )
+    },
+    order={
+        'Patient Arrives'-->'Patient Checks In',
+        'Patient Checks In'-->'Nurse Takes Vitals',
+        'Nurse Takes Vitals'-->X('Doctor Notified', 'Wait in Waiting Room'),
+        'Doctor Notified'-->'Doctor Consultation',
+        'Wait in Waiting Room'-->'Doctor Consultation',
+        'Doctor Consultation'-->X('Prescribe Medication', 'Order Lab Tests'),
+        'Prescribe Medication'-->'Create Treatment Plan',
+        'Order Lab Tests'-->'Go to Lab',
+        'Go to Lab'-->'Lab Tests Performed',
+        'Lab Tests Performed'-->'Lab Results to Doctor',
+        'Lab Results to Doctor'-->'Doctor Reviews Results',
+        'Doctor Reviews Results'-->'Create Treatment Plan',
+        'Create Treatment Plan'-->X('Patient Checks Out', PO=(...))
+    }
+)
+```
+
+The demonstrations were selected to cover the three operator types (X, *, PO) and their common misapplication patterns, progressing from simple (loan approval) to complex (multi-agent orchestration), and finally to the refinement loop pattern itself (healthcare process correction).
 
 ---
 
@@ -342,27 +451,79 @@ Without verification, these defects propagate to the BPMN output and into produc
 
 ### 4.2 The POWLJudge Design
 
-The `POWLJudge` is implemented as a DSPy module with the signature:
+The `POWLJudge` is implemented as a DSPy module with real pm4py analysis integration:
 
 ```
-powl_string, context_description → reasoning, verdict: bool
+powl_string, context_description, analysis_results → reasoning, verdict: bool, analysis
 ```
 
 The judge receives:
 - **powl_string:** The POWL model to evaluate.
 - **context_description:** The original natural language description (for behavioral plausibility checking).
+- **analysis_results:** (Optional) Pre-computed programmatic analysis results.
 
-The judge evaluates against four criteria:
+#### 4.2.1 Programmatic Analysis Layer
 
-**1. Syntactic validity.** Is the POWL string well-formed? Are parentheses balanced? Are operators used correctly? Does it contain at least one structural element?
+Before LLM reasoning, the judge runs concrete pm4py analysis functions:
 
-**2. Structural soundness.** Is every path from start to end reachable? Does every path terminate? Are there no dead branches? This maps to van der Aalst's deadlock freedom and liveness properties.
+| Analysis Function | Purpose | Output |
+|---|---|---|
+| `calculate_complexity_metrics()` | Extract structural metrics | Node count, operator counts, nesting depth, activity count |
+| `detect_structural_issues()` | Find structural problems | Orphaned nodes, dead ends, connectivity valid, partial orders valid |
+| `convert_and_validate()` | Test format conversions | Petri net success, BPMN success, process tree success |
+| `generate_visualization_svg()` | Create diagram | Base64-encoded SVG (for debugging) |
 
-**3. Behavioral plausibility.** Given the natural language description, are the correct operators used? If the description says "either A or B," is XOR used (not partial order)? If it says "A and B in parallel," is partial order used (not XOR)?
+These functions provide **objective, factual data** about the POWL model that the LLM incorporates into its reasoning.
 
-**4. Modeling quality.** Is the model at an appropriate level of abstraction? Does it capture the essential structure without unnecessary complexity? Are related activities grouped logically?
+#### 4.2.2 Enhanced Evaluation Criteria
 
-The judge's reasoning is structured as an evaluation of each criterion, followed by a final verdict. This structured reasoning serves two purposes: it produces actionable feedback for the refinement loop, and it makes the judge's decision process auditable.
+The judge evaluates against five criteria (expanded from four):
+
+| Criterion | Question | Basis |
+|---|---|---|
+| **Syntactic validity** | Does the POWL follow correct syntax? | POWL v2 grammar (Appendix A) |
+| **Structural soundness** | Is the model deadlock-free and live? | Soundness theorems (Section 5.5) + programmatic detection |
+| **Behavioral plausibility** | Are the right operators used for the patterns? | Workflow patterns (Section 2.4) |
+| **Modeling quality** | Is the model appropriately abstract? | Quality dimensions (Section 2.5) + metrics |
+| **Conversion feasibility** | Can the model be converted to BPMN? | Conversion test results |
+
+The fifth criterion—conversion feasibility—is unique to the enhanced judge. It ensures that the POWL model can actually be converted to BPMN 2.0 XML for execution in production systems (Camunda, Signavio, Bizagi).
+
+#### 4.2.3 Constructive Feedback for Correct POWLs
+
+A key innovation is the **autofail-once pattern**: the judge always provides feedback, even when the POWL model is correct. This enables continuous improvement:
+
+**For correct POWLs, the judge provides suggestions:**
+- **Simplification:** "Consider flattening deeply nested structures (depth > 4)"
+- **Parallel extraction:** "Consider extracting concurrent activities to partial orders"
+- **Naming improvements:** "Use more descriptive activity names (avoid 'A', 'B', 'Task')"
+- **Edge case handling:** "Consider what happens if all branches fail simultaneously"
+
+This constructive feedback turns the judge from a binary gatekeeper into a **process model quality advisor**, helping users improve their models even when they're already sound.
+
+#### 4.2.4 Analysis Result Formatting
+
+Programmatic analysis results are formatted as a structured context string and passed to the LLM:
+
+```
+STRUCTURAL ANALYSIS RESULTS:
+- Nodes: 5
+- Activities: 4
+- Nesting depth: 2
+- Operators: {'XOR': 1, 'LOOP': 0, 'PO': 1}
+- DEAD-ENDS DETECTED: ['Task C']
+- CONNECTIVITY INVALID
+- Petri net conversion: SUCCESS
+- BPMN conversion: FAILED
+- DETECTED ISSUES: Node 'Task C' unreachable from start
+```
+
+The LLM then incorporates these facts into its reasoning, producing judgments that are:
+- **More specific:** References exact node names ("Task C is orphaned") instead of vague descriptions
+- **More accurate:** Uses concrete detection results instead of guessing
+- **More actionable:** Provides precise correction guidance based on real analysis
+
+The judge's reasoning is structured as an evaluation of each criterion, followed by a final verdict and constructive feedback. This structured reasoning serves three purposes: it produces actionable feedback for the refinement loop, it makes the judge's decision process auditable, and it provides a learning signal for future generations.
 
 ### 4.3 Ground Truth Independence
 
@@ -391,6 +552,76 @@ This is only possible because:
 - The verification is **formal** (not subjective, not requiring human judgment).
 
 The result: verified models with minimal human intervention.
+
+### 4.5 The Autofail-Once Pattern: Always-On Feedback
+
+A critical innovation in the verification framework is the **autofail-once pattern**: the judge always runs at least once, providing feedback even when the POWL model is correct.
+
+#### 4.5.1 Design Rationale
+
+Traditional feedback systems only activate on failure:
+- Model passes → No feedback, silent success
+- Model fails → Feedback, refinement loop
+
+The autofail-once pattern changes this:
+- Model passes → **Constructive feedback** with improvement suggestions
+- Model fails → **Specific feedback** with correction guidance
+
+This ensures that **every POWL generation receives feedback**, creating a continuous learning signal for the LLM agent.
+
+#### 4.5.2 Implementation
+
+The pattern is implemented by tracking a `first_judgment_complete` flag:
+
+```
+for attempt in range(max_refinements + 1):  # +1 for mandatory first run
+    [Generate POWL]
+    [Validate syntax]
+
+    if not first_judgment_complete:
+        # ALWAYS run judge once (autofail-once)
+        judge_result = judge_powl(powl, enable_analysis=True)
+        first_judgment_complete = True
+
+        if judge_result["verdict"]:
+            # POWL is correct - but still provide feedback
+            feedback = get_constructive_feedback(powl, judge_result)
+            return {
+                powl, verdict=True, reasoning=judge_reasoning,
+                feedback=feedback, analysis=judge_result["analysis"]
+            }
+
+        # POWL is incorrect - provide correction feedback
+        if attempt < max_refinements:
+            [Append judge feedback to description]
+            [Refine]
+```
+
+The key insight: `max_refinements=0` means "no refinements after the first judgment," but the first judgment **still runs** to provide feedback.
+
+#### 4.5.3 Constructive Feedback Generation
+
+For correct POWL models, the system generates constructive suggestions based on the analysis results:
+
+| Metric | Threshold | Suggestion |
+|---|---|---|
+| Nesting depth | > 4 | "Consider flattening deeply nested structures" |
+| Sequential ratio | > 0.8 | "Consider extracting concurrent activities" |
+| Generic names | > 30% | "Use more descriptive activity names" |
+| Petri net conversion | Failed | "Model may have non-block-structured elements" |
+| BPMN conversion | Failed | "Some structures may not map cleanly" |
+
+These suggestions are **not rejections**—they are improvement opportunities that help users iterate toward even better models.
+
+#### 4.5.4 Benefits
+
+The autofail-once pattern provides three key benefits:
+
+1. **Continuous learning**: Every generation receives feedback, creating a rich learning signal for the LLM
+2. **User guidance**: Users see suggestions even when their models are correct, encouraging improvement
+3. **Quality trend**: Over time, the average quality of generated models increases as the agent learns from consistent feedback
+
+This pattern transforms the judge from a gatekeeper into a **quality advisor**, aligning with the thesis's central argument that process mining's primary value is providing formal verification for AI-generated workflows.
 
 ---
 
@@ -861,7 +1092,7 @@ python -m pm4py.cli DiscoverPOWL running-example.xes output.powl
 | `pm4py/algo/dspy/powl/data.py` | Training data creation from event logs |
 | `pm4py/cli.py` | CLI integration (DiscoverPOWL, DiscoverPOWLFromText, DiscoverPOWLToBPMN) |
 | `examples/nl_to_bpmn_example.py` | End-to-end example: NL → POWL → BPMN |
-| `powl-wasm/` | Rust/WASM browser-native POWL execution |
+| `pm4wasm/` | Rust/WASM browser-native POWL execution |
 
 ---
 
