@@ -1,0 +1,48 @@
+{
+  "name": "@pm4py/powl-wasm",
+  "version": "0.1.0",
+  "description": "POWL v2 (Partially Ordered Workflow Language) compiled to WebAssembly",
+  "license": "AGPL-3.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "pkg"
+  ],
+  "scripts": {
+    "build:wasm": "wasm-pack build .. --target bundler --out-dir js/pkg --out-name powl_wasm",
+    "build:ts": "tsc && vite build",
+    "build": "npm run build:wasm && npm run build:ts",
+    "dev": "npm run build:wasm && vite",
+    "demo": "npm run build:wasm && vite --config vite.demo.config.ts",
+    "test": "wasm-pack test .. --headless --firefox",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.0",
+    "vite-plugin-wasm": "^3.3.0",
+    "vite-plugin-top-level-await": "^1.4.4"
+  },
+  "keywords": [
+    "process-mining",
+    "powl",
+    "wasm",
+    "webassembly",
+    "petri-net",
+    "conformance-checking"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pm4py/pm4py-core"
+  }
+}
