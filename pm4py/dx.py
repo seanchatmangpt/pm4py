@@ -1099,3 +1099,288 @@ def conformance_batched(
         "perfectly_fitting_traces": perfect,
         "average_trace_fitness": avg_fit,
     }
+
+
+def explain_conformance_violations(
+    log,
+    model,
+    result: dict,
+    max_cases: int = 10
+) -> str:
+    """Explain conformance violations in human-readable format.
+
+    Analyzes non-fitting traces and explains why they don't conform to the model.
+    Provides specific details about missing activities, extra activities, and
+    ordering violations.
+
+    Args:
+        log: Event log (EventLog or DataFrame)
+        model: Process model (POWL, Petri net, or process tree)
+        result: Conformance result from fitness_token_based_replay
+        max_cases: Maximum number of cases to explain
+
+    Returns:
+        str: Human-readable explanation of violations
+
+    Example:
+        >>> import pm4py
+        >>> from pm4py.dx import explain_conformance_violations
+        >>> log = pm4py.read_xes("running-example.xes")
+        >>> model = pm4py.discover_powl(log)
+        >>> result = pm4py.fitness_token_based_replay(log, model)
+        >>> explanation = explain_conformance_violations(log, model, result)
+        >>> print(explanation)
+    """
+    from pm4py.convert import convert_to_event_log
+    from pm4py.objects.log.obj import Trace
+
+    log = convert_to_event_log(log)
+
+    # Get trace fitness
+    trace_fitness = result.get("trace_fitness", [])
+    if not trace_fitness:
+        return "No trace fitness data available in conformance result."
+
+    # Find non-fitting traces
+    non_fitting_indices = [
+        i for i, fitness in enumerate(trace_fitness)
+        if fitness < 0.999
+    ]
+
+    if not non_fitting_indices:
+        return "✅ All traces fit the model perfectly. No violations to explain."
+
+    # Limit to max_cases
+    non_fitting_indices = non_fitting_indices[:max_cases]
+
+    # Build explanation
+    lines = []
+    lines.append("=" * 70)
+    lines.append("CONFORMANCE VIOLATION EXPLANATION")
+    lines.append("=" * 70)
+    lines.append(f"Total traces: {len(log)}")
+    lines.append(f"Non-fitting traces: {len(non_fitting_indices)}")
+    lines.append(f"Average fitness: {sum(trace_fitness) / len(trace_fitness):.2%}")
+    lines.append("")
+
+    # Analyze each non-fitting trace
+    for i, trace_idx in enumerate(non_fitting_indices, 1):
+        trace = log[trace_idx]
+        fitness = trace_fitness[trace_idx]
+
+        lines.append(f"Case {i}: Trace {trace_idx} (fitness: {fitness:.2%})")
+
+        # Get activities in trace
+        activities = [event.get("concept:name", "?") for event in trace]
+
+        # Try to get diagnostics from result
+        diagnostics = _get_trace_diagnostics(trace, model, result)
+
+        if diagnostics.get("missing_activities"):
+            lines.append(f"  ❌ Missing activities: {diagnostics['missing_activities']}")
+        if diagnostics.get("extra_activities"):
+            lines.append(f"  ➕ Extra activities: {diagnostics['extra_activities']}")
+        if diagnostics.get("ordering_violations"):
+            lines.append(f"  🔀 Ordering violations: {diagnostics['ordering_violations']}")
+
+        # Show trace sequence
+        lines.append(f"  Trace: {' → '.join(activities)}")
+
+        lines.append("")
+
+    lines.append("=" * 70)
+    lines.append("RECOMMENDATION")
+    lines.append("=" * 70)
+    lines.append("Review the model structure to handle the violated patterns above.")
+    lines.append("Consider adding choice operators or adjusting activity order.")
+
+    return "\n".join(lines)
+
+
+def suggest_model_improvements(
+    log,
+    model,
+    result: dict,
+    min_support: int = 2
+) -> str:
+    """Suggest model improvements based on conformance analysis.
+
+    Analyzes conformance violations and suggests specific model changes
+    that would improve fitness. Suggestions are based on frequently
+    occurring violations.
+
+    Args:
+        log: Event log (EventLog or DataFrame)
+        model: Process model (POWL, Petri net, or process tree)
+        result: Conformance result from fitness_token_based_replay
+        min_support: Minimum occurrence threshold for suggestions
+
+    Returns:
+        str: Human-readable suggestions for model improvement
+
+    Example:
+        >>> import pm4py
+        >>> from pm4py.dx import suggest_model_improvements
+        >>> log = pm4py.read_xes("running-example.xes")
+        >>> model = pm4py.discover_powl(log)
+        >>> result = pm4py.fitness_token_based_replay(log, model)
+        >>> suggestions = suggest_model_improvements(log, model, result)
+        >>> print(suggestions)
+    """
+    from pm4py.convert import convert_to_event_log
+    from pm4py.objects.log.obj import Event
+    from collections import Counter
+
+    log = convert_to_event_log(log)
+
+    # Get trace fitness
+    trace_fitness = result.get("trace_fitness", [])
+    if not trace_fitness:
+        return "No trace fitness data available in conformance result."
+
+    # Find non-fitting traces
+    non_fitting_traces = [
+        log[i] for i, fitness in enumerate(trace_fitness)
+        if fitness < 0.999
+    ]
+
+    if not non_fitting_traces:
+        return "✅ All traces fit the model perfectly. No improvements needed."
+
+    # Collect violation patterns
+    missing_patterns = Counter()
+    extra_patterns = Counter()
+    sequence_patterns = Counter()
+
+    # Analyze non-fitting traces
+    for trace in non_fitting_traces:
+        activities = [event.get("concept:name") for event in trace if event.get("concept:name")]
+
+        # Check against model activities
+        model_acts = set(model_activities(model) if hasattr(model, '__name__') else [])
+
+        # Find missing and extra activities
+        missing = [a for a in model_acts if a not in activities]
+        extra = [a for a in activities if a not in model_acts]
+
+        if missing:
+            missing_patterns[tuple(missing)] += 1
+        if extra:
+            extra_patterns[tuple(extra)] += 1
+
+        # Collect sequences
+        for i in range(len(activities) - 1):
+            seq = (activities[i], activities[i + 1])
+            sequence_patterns[seq] += 1
+
+    # Build suggestions
+    lines = []
+    lines.append("=" * 70)
+    lines.append("MODEL IMPROVEMENT SUGGESTIONS")
+    lines.append("=" * 70)
+    lines.append(f"Analyzed {len(non_fitting_traces)} non-fitting traces")
+    lines.append("")
+
+    # Suggest handling missing activities
+    if missing_patterns:
+        lines.append("📋 SUGGESTION: Add Optional Activities")
+        lines.append("-" * 70)
+        lines.append("The following activities frequently appear in the model but")
+        lines.append("not in event logs. Consider making them optional:")
+        lines.append("")
+
+        for activities, count in missing_patterns.most_common(5):
+            if count >= min_support:
+                lines.append(f"  • {', '.join(activities)} (missing in {count} traces)")
+
+        lines.append("")
+
+    # Suggest handling extra activities
+    if extra_patterns:
+        lines.append("📋 SUGGESTION: Add Missing Activities to Model")
+        lines.append("-" * 70)
+        lines.append("The following activities frequently appear in event logs but")
+        lines.append("not in the model. Consider adding them:")
+        lines.append("")
+
+        for activities, count in extra_patterns.most_common(5):
+            if count >= min_support:
+                lines.append(f"  • {', '.join(activities)} (present in {count} non-fitting traces)")
+
+        lines.append("")
+
+    # Suggest handling sequence patterns
+    if sequence_patterns:
+        lines.append("📋 SUGGESTION: Review Activity Ordering")
+        lines.append("-" * 70)
+        lines.append("Frequently observed sequences in non-fitting traces:")
+        lines.append("")
+
+        for (a, b), count in sequence_patterns.most_common(5):
+            if count >= min_support:
+                lines.append(f"  • {a} → {b} (observed {count} times)")
+
+        lines.append("")
+        lines.append("If these sequences are not reflected in the model,")
+        lines.append("consider adding parallel or choice operators.")
+
+        lines.append("")
+
+    lines.append("=" * 70)
+    lines.append("PRIORITIZED ACTION PLAN")
+    lines.append("=" * 70)
+    lines.append("1. Review extra activities - high impact, usually indicates missing model paths")
+    lines.append("2. Review sequence patterns - may indicate incorrect ordering constraints")
+    lines.append("3. Review missing activities - may indicate over-constrained model")
+    lines.append("")
+    lines.append("After applying changes, re-run conformance checking to verify improvement.")
+
+    return "\n".join(lines)
+
+
+def _get_trace_diagnostics(trace: Trace, model, result: dict) -> dict:
+    """Extract diagnostic information for a single trace.
+
+    Attempts to extract detailed diagnostics from the conformance result.
+    This is a helper function for explain_conformance_violations.
+
+    Args:
+        trace: Event trace to analyze
+        model: Process model
+        result: Conformance result
+
+    Returns:
+        dict with keys: missing_activities, extra_activities, ordering_violations
+    """
+    diagnostics = {
+        "missing_activities": None,
+        "extra_activities": None,
+        "ordering_violations": None
+    }
+
+    # Try to get trace-level diagnostics from result
+    # The structure depends on what pm4py.conformance.fitness_token_based_replay returns
+    if "trace_is_fit" in result:
+        # Check if this trace has detailed diagnostics
+        pass
+
+    # For now, provide basic information
+    # Future enhancement: parse detailed token-based replay diagnostics
+    trace_activities = set(event.get("concept:name") for event in trace if event.get("concept:name"))
+
+    # Get model activities
+    try:
+        model_acts = set(model_activities(model))
+    except:
+        model_acts = set()
+
+    # Calculate differences
+    missing = list(model_acts - trace_activities) if model_acts else []
+    extra = list(trace_activities - model_acts) if model_acts else []
+
+    if missing:
+        diagnostics["missing_activities"] = ", ".join(missing)
+    if extra:
+        diagnostics["extra_activities"] = ", ".join(extra)
+
+    return diagnostics

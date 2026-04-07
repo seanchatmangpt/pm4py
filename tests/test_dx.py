@@ -37,6 +37,8 @@ from pm4py.dx import (
     conformance_table,
     fitness_histogram,
     conformance_batched,
+    explain_conformance_violations,
+    suggest_model_improvements,
     LogStats,
     VariantInfo,
     FitnessBucket,
@@ -456,6 +458,158 @@ class TestPetriNetUtilities(unittest.TestCase):
         self.assertIn("A", result)
         self.assertIn("B", result)
         self.assertIn("C", result)
+
+
+class TestConformanceDiagnostics(unittest.TestCase):
+    """Test suite for conformance diagnostics utilities."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Create test log and model."""
+        from pm4py.objects.log.obj import Event, EventLog, Trace
+
+        # Create test log with some fitting and some non-fitting traces
+        trace1 = Trace([
+            Event({"concept:name": "A", "time:timestamp": 1000000}),
+            Event({"concept:name": "B", "time:timestamp": 2000000}),
+            Event({"concept:name": "C", "time:timestamp": 3000000}),
+        ])
+
+        trace2 = Trace([
+            Event({"concept:name": "A", "time:timestamp": 1000000}),
+            Event({"concept:name": "B", "time:timestamp": 2000000}),
+            Event({"concept:name": "C", "time:timestamp": 3000000}),
+        ])
+
+        trace3 = Trace([
+            Event({"concept:name": "A", "time:timestamp": 1000000}),
+            Event({"concept:name": "C", "time:timestamp": 2000000}),
+        ])
+
+        cls.log = EventLog([trace1, trace2, trace3])
+        cls.model = None  # Will be set in tests
+
+    def test_explain_conformance_violations_all_fitting(self):
+        """Test explanation when all traces fit perfectly."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        # Create model that matches traces
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with all fitting traces
+        result = {
+            "trace_fitness": [1.0, 1.0, 1.0],
+            "log_fitness": 1.0
+        }
+
+        explanation = explain_conformance_violations(self.log, model, result)
+
+        self.assertIn("All traces fit the model perfectly", explanation)
+        self.assertIn("No violations to explain", explanation)
+
+    def test_explain_conformance_violations_non_fitting(self):
+        """Test explanation when some traces don't fit."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with non-fitting traces
+        result = {
+            "trace_fitness": [1.0, 1.0, 0.5],
+            "log_fitness": 0.83
+        }
+
+        explanation = explain_conformance_violations(self.log, model, result)
+
+        self.assertIn("CONFORMANCE VIOLATION EXPLANATION", explanation)
+        self.assertIn("Non-fitting traces: 1", explanation)
+        self.assertIn("RECOMMENDATION", explanation)
+
+    def test_explain_conformance_violations_max_cases(self):
+        """Test max_cases parameter limits output."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with multiple non-fitting traces
+        result = {
+            "trace_fitness": [0.8, 0.7, 0.6, 0.5],
+            "log_fitness": 0.65
+        }
+
+        explanation = explain_conformance_violations(self.log, model, result, max_cases=2)
+
+        # Should only explain 2 cases
+        lines = explanation.split("\n")
+        case_lines = [l for l in lines if l.startswith("Case")]
+        self.assertLessEqual(len(case_lines), 2)
+
+    def test_suggest_model_improvements_all_fitting(self):
+        """Test suggestions when all traces fit perfectly."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with all fitting traces
+        result = {
+            "trace_fitness": [1.0, 1.0, 1.0],
+            "log_fitness": 1.0
+        }
+
+        suggestions = suggest_model_improvements(self.log, model, result)
+
+        self.assertIn("All traces fit the model perfectly", suggestions)
+        self.assertIn("No improvements needed", suggestions)
+
+    def test_suggest_model_improvements_non_fitting(self):
+        """Test suggestions when some traces don't fit."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with non-fitting traces
+        result = {
+            "trace_fitness": [1.0, 1.0, 0.5],
+            "log_fitness": 0.83
+        }
+
+        suggestions = suggest_model_improvements(self.log, model, result)
+
+        self.assertIn("MODEL IMPROVEMENT SUGGESTIONS", suggestions)
+        self.assertIn("PRIORITIZED ACTION PLAN", suggestions)
+        self.assertIn("Review extra activities", suggestions)
+
+    def test_suggest_model_improvements_min_support(self):
+        """Test min_support parameter filters suggestions."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("PO=(nodes={A,B,C},order={A-->B,B-->C})")
+
+        # Create mock result with non-fitting traces
+        result = {
+            "trace_fitness": [0.8, 0.7, 0.6],
+            "log_fitness": 0.7
+        }
+
+        # High min_support should filter out suggestions
+        suggestions = suggest_model_improvements(self.log, model, result, min_support=10)
+
+        self.assertIn("MODEL IMPROVEMENT SUGGESTIONS", suggestions)
+
+    def test_explain_conformance_empty_result(self):
+        """Test explanation with empty trace_fitness."""
+        from pm4py.objects.powl.parser import parse_powl_model_string
+
+        model = parse_powl_model_string("A")
+
+        # Create mock result without trace_fitness
+        result = {
+            "log_fitness": 0.8
+        }
+
+        explanation = explain_conformance_violations(self.log, model, result)
+
+        self.assertIn("No trace fitness data available", explanation)
 
 
 if __name__ == '__main__':
