@@ -35,6 +35,7 @@ from pm4py import (
     conformance,
     convert,
     discovery,
+    dx,
     filtering,
     hof,
     ml,
@@ -156,6 +157,8 @@ from pm4py.discovery import (
     discover_dfg_typed,
     discover_declare,
     discover_powl,
+    discover_powl_from_partially_ordered_log,
+    discover_oc_powl,
     correlation_miner,
     discover_otg,
     discover_etot,
@@ -323,16 +326,36 @@ from pm4py.ml import (
     extract_outcome_enriched_dataframe,
     extract_target_vector,
 )
-from pm4py.org import (
-    discover_handover_of_work_network,
-    discover_activity_based_resource_similarity,
-    discover_subcontracting_network,
-    discover_working_together_network,
-    discover_organizational_roles,
-    discover_network_analysis,
-)
+from pm4py.org import discover_organizational_roles
 
 # from pm4py.hof import filter_log, filter_trace, sort_trace, sort_log
+
+
+def doctor():
+    """
+    Run comprehensive health checks on pm4py installation.
+
+    This is a convenience function that calls the CLI doctor command.
+    For more direct control, use: python -m pm4py.cli Doctor
+
+    Examples
+    --------
+    >>> import pm4py
+    >>> pm4py.doctor()  # doctest: +SKIP
+    """
+    import sys
+    import subprocess
+
+    # Call the CLI doctor command
+    result = subprocess.run(
+        [sys.executable, "-m", "pm4py.cli", "Doctor"],
+        capture_output=False,
+        text=True
+    )
+
+    return result.returncode
+
+
 from pm4py.meta import (
     __name__,
     __version__,
