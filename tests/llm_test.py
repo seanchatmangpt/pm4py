@@ -79,6 +79,12 @@ class LlmTest(unittest.TestCase):
         abstr = pm4py.llm.abstract_petri_net(net, im, fm)
         self.assertGreater(len(abstr), 0)
 
+    def test_abstract_powl(self):
+        log = pm4py.read_xes("input_data/running-example.xes", return_legacy_log_object=True)
+        powl_model = pm4py.discover_powl(log)
+        abstr = pm4py.llm.abstract_powl(powl_model)
+        self.assertGreater(len(abstr), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

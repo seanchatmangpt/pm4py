@@ -622,6 +622,36 @@ def abstract_log_skeleton(log_skeleton, include_header: bool = True) -> str:
     return logske_to_descr.apply(log_skeleton, parameters=parameters)
 
 
+def abstract_powl(
+    powl_model,
+    response_header: bool = True,
+    max_len: int = constants.OPENAI_MAX_LEN,
+) -> str:
+    """
+    Obtains an abstraction of a POWL (Partially Ordered Workflow Language) model.
+
+    :param powl_model: The POWL model to abstract.
+    :param response_header: Whether to include a header explaining POWL semantics.
+    :param max_len: Maximum length of the string abstraction (default: constants.OPENAI_MAX_LEN).
+    :return: The POWL model abstraction as a string.
+
+    .. code-block:: python3
+
+        import pm4py
+
+        log = pm4py.read_xes("tests/input_data/running-example.xes")
+        powl_model = pm4py.discover_powl(log)
+        print(pm4py.llm.abstract_powl(powl_model))
+    """
+    parameters = {}
+    parameters["response_header"] = response_header
+    parameters["max_len"] = max_len
+
+    from pm4py.algo.querying.llm.abstractions import powl_to_descr
+
+    return powl_to_descr.apply(powl_model, parameters=parameters)
+
+
 def clustering(log: pd.DataFrame, executor=openai_query, case_id_key: str = "case:concept:name", activity_key: str = "concept:name", **kwargs) -> List[Tuple[str, pd.DataFrame]]:
     """
     Performs LLM-based clustering on the variants' list.
