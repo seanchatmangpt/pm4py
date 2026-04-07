@@ -10,3 +10,4 @@ tqdm
 wheel
 setuptools
 cvxopt;python_version<'3.15'
+mcp
