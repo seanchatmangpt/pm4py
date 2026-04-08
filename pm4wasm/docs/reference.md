@@ -15,6 +15,8 @@ Complete API documentation for the `pm4wasm` library.
    - [To Process Tree](#to-process-tree)
 8. [Analysis](#analysis)
    - [Footprints](#footprints)
+9. [Process Discovery](#process-discovery)
+10. [Object-Centric Event Logs](#object-centric-event-logs-ocel)
 
 ---
 
@@ -693,6 +695,338 @@ console.log("End:", Array.from(fp.end_activities));           // ["C"]
 console.log("Always:", Array.from(fp.activities_always_happening));  // ["A", "C"]
 console.log("Skippable:", Array.from(fp.skippable_activities));      // ["B"]
 console.log("Min length:", fp.min_trace_length);              // 2 (A, C)
+```
+
+---
+
+## Process Discovery
+
+### Alpha+ Miner
+
+#### `discover_petri_net_alpha_plus(log_json: &str) -> Result<String, JsValue>`
+
+Extended Alpha miner that handles loops of length 1 (A→A), loops of length 2 (A→B→A), and non-free-choice constructs.
+
+**Arguments:**
+- `log_json`: JSON string of an event log (same format as `parse_csv_log` output)
+
+**Returns:** JSON string of Petri net result
+
+**Throws:** JavaScript `Error` if parsing fails
+
+**Examples:**
+
+```javascript
+// Loop of length 1 (self-loop)
+const log1 = [
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "B" }
+];
+const net1 = discover_petri_net_alpha_plus(JSON.stringify(log1));
+console.log(net1);  // Petri net with loop transition
+
+// Loop of length 2 (short loop)
+const log2 = [
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "B" },
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "C" }
+];
+const net2 = discover_petri_net_alpha_plus(JSON.stringify(log2));
+console.log(net2);  // Petri net with A→B→A loop structure
+```
+
+---
+
+### Prefix Tree Discovery
+
+#### `discover_prefix_tree(log_json: &str, max_path_length: Option<usize>) -> Result<String, JsValue>`
+
+Build a trie (prefix tree) of all trace prefixes in the event log.
+
+**Arguments:**
+- `log_json`: JSON string of an event log
+- `max_path_length`: Optional maximum depth for the trie (None = unlimited)
+
+**Returns:** JSON string of TrieNode structure
+
+**Throws:** JavaScript `Error` if parsing fails
+
+**TrieNode Structure:**
+
+```typescript
+type TrieNode = {
+  label: string | null;        // Activity name (null for root)
+  parent: number | null;       // Parent node index (null for root)
+  children: number[];          // Child node indices
+  is_final: boolean;           // True if this node is end of a trace
+  depth: number;               // Depth in tree
+}
+```
+
+**Examples:**
+
+```javascript
+const log = [
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "B" },
+  { case_id: "1", activity: "C" },
+  { case_id: "2", activity: "A" },
+  { case_id: "2", activity: "C" }
+];
+
+// Build full trie
+const trie = discover_prefix_tree(JSON.stringify(log), null);
+console.log(trie);
+
+// Build trie with max depth of 2
+const shallow_trie = discover_prefix_tree(JSON.stringify(log), 2);
+console.log(shallow_trie);
+```
+
+---
+
+### DFG Typed
+
+#### `discover_dfg_typed(log_json: &str) -> Result<String, JsValue>`
+
+Discover a Directly-Follows Graph with structured return format.
+
+**Arguments:**
+- `log_json`: JSON string of an event log
+
+**Returns:** JSON string of DFGTyped object
+
+**DFGTyped Structure:**
+
+```typescript
+type DFGTyped = {
+  graph: Array<[string, string, number]>;  // (from, to, frequency) triples
+  start_activities: Array<[string, number]>;  // (activity, count)
+  end_activities: Array<[string, number]>;    // (activity, count)
+}
+```
+
+**Examples:**
+
+```javascript
+const log = [
+  { case_id: "1", activity: "A" },
+  { case_id: "1", activity: "B" },
+  { case_id: "1", activity: "C" },
+  { case_id: "2", activity: "A" },
+  { case_id: "2", activity: "B" }
+];
+
+const dfg = discover_dfg_typed(JSON.stringify(log));
+const result = JSON.parse(dfg);
+
+console.log("Graph edges:", result.graph);
+// [["A", "B", 2], ["B", "C", 1]]
+
+console.log("Start activities:", result.start_activities);
+// [["A", 2]]
+
+console.log("End activities:", result.end_activities);
+// [["C", 1], ["B", 1]]
+```
+
+---
+
+## Object-Centric Event Logs (OCEL)
+
+### Parse OCEL JSON
+
+#### `parse_ocel_json(json: &str) -> Result<String, JsValue>`
+
+Parse an OCEL (Object-Centric Event Log) in JSON-OCEL 1.0/2.0 format.
+
+**Arguments:**
+- `json`: JSON-OCEL string
+
+**Returns:** JSON string of OCEL object
+
+**OCEL Structure:**
+
+```typescript
+type OCEL = {
+  events: OCELEvent[];
+  objects: OCELObject[];
+  relations: OCELRelation[];
+  globals: Record<string, any>;
+  o2o: Record<string, any>;      // Object-to-object relations (optional)
+  e2e: Record<string, any>;      // Event-to-event relations (optional)
+}
+
+type OCELEvent = {
+  id: string;
+  activity: string;
+  timestamp: string | null;
+  attributes: Record<string, any>;
+}
+
+type OCELObject = {
+  id: string;
+  object_type: string;
+  attributes: Record<string, any>;
+}
+
+type OCELRelation = {
+  event_id: string;
+  object_id: string;
+}
+```
+
+**Examples:**
+
+```javascript
+const ocelJson = JSON.stringify({
+  objectTypes: ["order", "item"],
+  eventTypes: ["Create Order"],
+  objects: [
+    { id: "o1", type: "order" },
+    { id: "i1", type: "item" }
+  ],
+  events: [
+    {
+      id: "e1",
+      type: "Create Order",
+      timestamp: "2024-01-01T00:00:00Z",
+      objects: ["o1", "i1"]
+    }
+  ]
+});
+
+const ocel = parse_ocel_json(ocelJson);
+const result = JSON.parse(ocel);
+console.log("Events:", result.events.length);
+console.log("Objects:", result.objects.length);
+```
+
+---
+
+### OCEL Flattening
+
+#### `ocel_flatten_by_object_type(ocel_json: &str, object_type: &str) -> Result<String, JsValue>`
+
+Flatten an OCEL to a traditional event log by expanding events for a specific object type.
+
+**Arguments:**
+- `ocel_json`: JSON string of OCEL object (from `parse_ocel_json`)
+- `object_type`: Object type to flatten by (e.g., "order", "item")
+
+**Returns:** JSON string of traditional event log
+
+**Examples:**
+
+```javascript
+const ocel = parse_ocel_json(ocelJson);
+
+// Flatten by "order" object type
+const orderLog = ocel_flatten_by_object_type(ocel, "order");
+const result = JSON.parse(orderLog);
+
+console.log("Traces:", result.length);
+// Each trace represents the lifecycle of one order object
+```
+
+---
+
+### OCEL ETOT Discovery
+
+#### `discover_ocel_etot(ocel_json: &str) -> Result<String, JsValue>`
+
+Discover the Event-Type / Object-Type graph from an OCEL.
+
+**Arguments:**
+- `ocel_json`: JSON string of OCEL object
+
+**Returns:** JSON string of ETOT graph with edge frequencies
+
+**Examples:**
+
+```javascript
+const ocel = parse_ocel_json(ocelJson);
+const etot = discover_ocel_etot(ocel);
+const result = JSON.parse(etot);
+
+console.log("ETOT edges:", result.edges);
+// [["Create Order", "order", 5], ["Create Order", "item", 10]]
+```
+
+---
+
+### OCEL Summary
+
+#### `ocel_get_summary(ocel_json: &str) -> Result<String, JsValue>`
+
+Get summary statistics for an OCEL.
+
+**Arguments:**
+- `ocel_json`: JSON string of OCEL object
+
+**Returns:** JSON string with summary statistics
+
+**Examples:**
+
+```javascript
+const ocel = parse_ocel_json(ocelJson);
+const summary = ocel_get_summary(ocel);
+const result = JSON.parse(summary);
+
+console.log("Total events:", result.total_events);
+console.log("Total objects:", result.total_objects);
+console.log("Event types:", result.event_types);
+console.log("Object types:", result.object_types);
+```
+
+---
+
+### OCEL Object Types
+
+#### `ocel_get_object_types(ocel_json: &str) -> Result<String, JsValue>`
+
+List all object types in an OCEL.
+
+**Arguments:**
+- `ocel_json`: JSON string of OCEL object
+
+**Returns:** JSON array of object type strings
+
+**Examples:**
+
+```javascript
+const ocel = parse_ocel_json(ocelJson);
+const types = ocel_get_object_types(ocel);
+const result = JSON.parse(types);
+
+console.log("Object types:", result);
+// ["order", "item", "customer"]
+```
+
+---
+
+### OCEL Event Types
+
+#### `ocel_get_event_types(ocel_json: &str) -> Result<String, JsValue>`
+
+List all event types in an OCEL.
+
+**Arguments:**
+- `ocel_json`: JSON string of OCEL object
+
+**Returns:** JSON array of event type strings
+
+**Examples:**
+
+```javascript
+const ocel = parse_ocel_json(ocelJson);
+const types = ocel_get_event_types(ocel);
+const result = JSON.parse(types);
+
+console.log("Event types:", result);
+// ["Create Order", "Pay Order", "Ship Order"]
 ```
 
 ---

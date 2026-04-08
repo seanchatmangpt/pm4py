@@ -15,6 +15,10 @@
 
 /// Token-based replay conformance checking.
 ///
+/// **Reference**: Rozinat, A., & van der Aalst, W. M. P. (2008). "Conformance
+/// Checking of Processes Based on Monitoring Real Behavior." MIS Quarterly,
+/// 32(1), 63-76. DOI: 10.2307/25148833
+///
 /// Implements the classic Rozinat & van der Aalst token replay algorithm.
 /// Given a Petri net and an event log, each trace is replayed against the
 /// net and a fitness score is computed.

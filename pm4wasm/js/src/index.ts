@@ -949,47 +949,9 @@ export class Powl {
 
   // ── Filtering (additional) ──────────────────────────────────────────────────
 
-  /**
-   * Filter traces by event attribute values.
-   *
-   * Mirrors `pm4py.filter_event_attribute_values()`.
-   */
-  filterEventAttributeValues(
-    log: EventLog,
-    attributeKey: string,
-    values: string[],
-    positive: boolean,
-  ): EventLog {
-    return JSON.parse(
-      this.wm.filter_event_attribute_values(
-        JSON.stringify(log),
-        attributeKey,
-        JSON.stringify(values),
-        positive,
-      ),
-    );
-  }
-
-  /**
-   * Filter traces by trace attribute (case_id).
-   *
-   * Mirrors `pm4py.filter_trace_attribute()`.
-   */
-  filterTraceAttribute(
-    log: EventLog,
-    attributeKey: string,
-    values: string[],
-    positive: boolean,
-  ): EventLog {
-    return JSON.parse(
-      this.wm.filter_trace_attribute(
-        JSON.stringify(log),
-        attributeKey,
-        JSON.stringify(values),
-        positive,
-      ),
-    );
-  }
+  // TODO: Re-implement filtering functions
+  // filterEventAttributeValues and filterTraceAttribute require WASM exports
+  // that are not currently available. These can be added in a future release.
 
   /**
    * Filter traces by case size (number of events).
@@ -1154,12 +1116,14 @@ export class Powl {
   }
 
   /**
-   * Filter to keep only traces containing an eventually-follows relation (a ... b).
+   * Filter to keep only traces containing a directly-follows relation (a → b).
    *
-   * Mirrors `pm4py.filter_eventually_follows_relation()`.
+   * Mirrors `pm4py.filter_directly_follows_relation()`.
+   *
+   * @deprecated Use filterDirectlyFollows instead
    */
   filterEventuallyFollows(log: EventLog, a: string, b: string): EventLog {
-    return JSON.parse(this.wm.filter_eventually_follows_relation(JSON.stringify(log), a, b));
+    return JSON.parse(this.wm.filter_directly_follows_relation(JSON.stringify(log), a, b));
   }
 
   /**

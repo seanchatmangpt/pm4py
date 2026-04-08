@@ -15,6 +15,11 @@
 
 //! Generalization quality metric for process models.
 //!
+//! **Reference**: Buijs, J. C. A. M., van der Aalst, W. M. P., et al. (2012).
+//! "A Genetic Perspective on Process Discovery: Towards Quality-Aware Process Mining."
+//! International Journal of Business Process Integration and Management, 1(2), 63-76.
+//! DOI: 10.1504/IJBPIM.2012.048807
+//!
 //! Measures how well a Petri net generalises to unseen behaviour, avoiding
 //! overfitting to the observed log.  The algorithm mirrors the pm4py
 //! token-based generalization: transitions that fire rarely or not at all

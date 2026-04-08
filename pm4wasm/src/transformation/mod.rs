@@ -13,17 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod batches;
-pub mod dfg;
-pub mod inductive_miner;
-pub mod alpha_miner;
-pub mod alpha_plus_miner;
-pub mod log_skeleton;
-pub mod declare;
-pub mod temporal_profile;
-pub mod heuristics_miner;
-pub mod correlation_miner;
-pub mod genetic_miner;
-pub mod performance_spectrum;
-pub mod causal;
-pub mod transition_system;
+//! Log transformation algorithms.
+//!
+//! This module contains algorithms for transforming event logs into
+//! other representations, such as prefix trees (tries).
+
+pub mod log_to_trie;
+
+pub use log_to_trie::discover_prefix_tree;

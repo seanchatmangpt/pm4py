@@ -23,6 +23,7 @@ Translation: Execute A, then choose between B or C, then execute D.
 
 ## Features
 
+### Core Process Mining
 - ✅ **Parse POWL models** — Same format as Python pm4py `__repr__`
 - ✅ **Validate partial orders** — Irreflexive, transitive, acyclic
 - ✅ **Convert to Petri nets** — For conformance checking and simulation
@@ -32,6 +33,26 @@ Translation: Execute A, then choose between B or C, then execute D.
 - ✅ **Conformance checking** — Token-replay fitness against event logs
 - ✅ **Event log parsing** — XES and CSV formats
 - ✅ **100% browser-native** — No server, no upload, no privacy risk
+
+### Process Discovery
+- ✅ **Alpha miner** — Basic process discovery from event logs
+- ✅ **Alpha+ miner** — Extended Alpha miner handling loops of length 1 (A→A) and length 2 (A→B→A), plus non-free-choice constructs
+- ✅ **Inductive miner** — Robust discovery of process trees
+- ✅ **DFG discovery** — Directly-Follows Graph extraction
+- ✅ **DFG typed** — Structured DFG object with (from, to, frequency) triples
+- ✅ **Prefix tree discovery** — Trie (prefix tree) data structure with optional max_path_length parameter
+
+### Object-Centric Event Logs (OCEL)
+- ✅ **Parse OCEL JSON** — JSON-OCEL 1.0/2.0 format support
+- ✅ **OCEL flattening** — Flatten OCEL to traditional EventLog by object type
+- ✅ **ETOT discovery** — Event-Type / Object-Type graph discovery
+- ✅ **OCEL statistics** — Event/object counts, types, and summaries
+
+### Code Generation
+- ✅ **BPMN export** — Convert POWL models to BPMN 2.0 XML
+- ✅ **PNML export** — Petri Net Markup Language format
+- ✅ **Process tree export** — PTML format for process trees
+- ✅ **YAWL export** — YAWL v6 XML format
 
 ## Quick Start
 
@@ -152,11 +173,15 @@ wasm-pack test .. --headless --chrome
 | `src/footprints.rs` | Behavioral signature extraction |
 | `src/conformance/token_replay.rs` | Token-replay conformance checking |
 | `src/event_log.rs` | XES/CSV event log parsing |
+| `src/trie.rs` | Trie (prefix tree) data structure for log analysis |
 | `src/streaming.rs` | Streaming drift detection with EWMA smoothing |
 | `src/diff.rs` | Behavioral diff between two POWL models |
 | `src/complexity.rs` | Model complexity metrics |
-| `src/conversion/` | Converters to BPMN, Petri nets, process trees |
-| `src/algorithms/` | Label replacing, simplification, transitive operations |
+| `src/discovery/` | Process discovery algorithms (Alpha, Alpha+, Inductive, DFG, etc.) |
+| `src/conversion/` | Converters to BPMN, Petri nets, process trees, YAWL |
+| `src/algorithms/` | Marking equation, reduction, simplification, transitive operations |
+| `src/ocel/` | Object-Centric Event Log support (parsing, flattening, ETOT) |
+| `src/transformation/` | Log-to-trie transformation and other log operations |
 
 ### JavaScript/TypeScript Client
 
@@ -277,7 +302,7 @@ For typical models (< 100 nodes), all operations complete in < 10 ms in the brow
 
 ## License
 
-AGPL-3.0 — See [LICENSE](./LICENSE) for details.
+Apache-2.0 — See [LICENSE](./LICENSE) for details.
 
 ## Contributing
 

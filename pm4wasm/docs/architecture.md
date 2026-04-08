@@ -234,6 +234,120 @@ The POWL v2 Rust/WASM crate is organized as a library crate (`pm4wasm`) that com
   - Detect concept drift via statistical tests
   - EWMA (Exponentially Weighted Moving Average) smoothing
 
+#### `src/trie.rs`
+- **Purpose:** Trie (prefix tree) data structure for log analysis
+- **Key Types:**
+  - `TrieNode` — Node with label, parent, children, is_final, depth
+- **Responsibilities:**
+  - Build prefix trees from event log traces
+  - Support efficient prefix-based queries
+  - Track trace endings via is_final flag
+
+---
+
+### Discovery Modules
+
+#### `src/discovery/alpha_miner.rs`
+- **Purpose:** Basic Alpha miner for process discovery
+- **Algorithm:**
+  - Extract causal relations from event log
+  - Build place/transition net from relations
+  - Handle basic control flow patterns
+
+#### `src/discovery/alpha_plus_miner.rs`
+- **Purpose:** Extended Alpha miner handling complex loops
+- **Algorithm:**
+  - Preprocessing: Identify loop-1 activities (A→A), build A/B dictionaries
+  - Get relations: Extended causal/parallel detection (loops of length 2: A→B→A)
+  - Processing: Apply Alpha miner with extended relation handling
+  - Postprocessing: Re-insert loop transitions with proper arcs
+- **Handles:**
+  - Loops of length 1 (self-loops)
+  - Loops of length 2 (short loops)
+  - Non-free-choice constructs
+
+#### `src/discovery/inductive_miner.rs`
+- **Purpose:** Robust process tree discovery
+- **Algorithm:**
+  - Recursively split logs based on cut detection
+  - Build process tree with operators (Sequence, Xor, Parallel, Loop)
+  - Handle invisible and duplicate tasks
+
+#### `src/discovery/dfg.rs`
+- **Purpose:** Directly-Follows Graph discovery
+- **Key Types:**
+  - `DFGTyped` — Structured DFG with (from, to, frequency) triples
+- **Responsibilities:**
+  - Extract activity succession from logs
+  - Compute start/end activities
+  - Return typed DFG object for structured access
+
+---
+
+### OCEL Modules
+
+#### `src/ocel/mod.rs`
+- **Purpose:** Object-Centric Event Log support
+- **Key Types:**
+  - `OCEL` — Events, objects, relations, globals
+  - `OCELEvent` — Event with id, activity, timestamp
+  - `OCELObject` — Object with id, object_type
+  - `OCELRelation` — Event-object mapping
+- **Responsibilities:**
+  - Represent OCEL data structures
+  - Provide OCEL-specific operations
+
+#### `src/ocel/jsonocel.rs`
+- **Purpose:** Parse OCEL JSON format (JSON-OCEL 1.0/2.0)
+- **Algorithm:**
+  - Parse JSON-OCEL structure
+  - Extract events, objects, relations
+  - Handle optional o2o/e2e fields
+- **Responsibilities:**
+  - Validate OCEL JSON format
+  - Build OCEL in-memory representation
+
+#### `src/ocel/flattening.rs`
+- **Purpose:** Flatten OCEL to traditional event logs
+- **Algorithm:**
+  - Select object type to flatten by
+  - Expand events to object-centric traces
+  - Preserve event ordering per object
+- **Responsibilities:**
+  - Convert OCEL to EventLog by object type
+  - Enable traditional process mining on OCEL data
+
+#### `src/ocel/etot.rs`
+- **Purpose:** Event-Type / Object-Type graph discovery
+- **Algorithm:**
+  - Extract event types and object types from OCEL
+  - Build bipartite graph of connections
+  - Compute edge frequencies
+- **Responsibilities:**
+  - Discover ETOT structure
+  - Return typed graph representation
+
+---
+
+### Transformation Modules
+
+#### `src/transformation/mod.rs`
+- **Purpose:** Log transformation operations
+- **Modules:**
+  - `log_to_trie.rs` — Prefix tree discovery from event logs
+
+#### `src/transformation/log_to_trie.rs`
+- **Purpose:** Build trie (prefix tree) from event log
+- **Algorithm:**
+  - Get all variants from log
+  - For each variant, walk down trie creating nodes as needed
+  - Mark final nodes for complete traces
+- **Parameters:**
+  - `max_path_length` — Optional limit on trie depth
+- **Responsibilities:**
+  - Efficient prefix-based log representation
+  - Support for trace pattern analysis
+
 ---
 
 ## Core Data Structures

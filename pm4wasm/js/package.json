@@ -15,7 +15,14 @@
   },
   "files": [
     "dist",
-    "pkg"
+    "pkg/pm4wasm_bg.wasm",
+    "pkg/pm4wasm_bg.js",
+    "pkg/pm4wasm.js",
+    "pkg/pm4wasm.d.ts",
+    "pkg/pm4wasm_bg.wasm.d.ts",
+    "pkg/pm4wasm.js.d.ts",
+    "pkg/LICENSE",
+    "pkg/README.md"
   ],
   "scripts": {
     "build:wasm": "wasm-pack build .. --target bundler --out-dir js/pkg --out-name pm4wasm",

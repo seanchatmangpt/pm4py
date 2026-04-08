@@ -13,17 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod batches;
-pub mod dfg;
-pub mod inductive_miner;
-pub mod alpha_miner;
-pub mod alpha_plus_miner;
-pub mod log_skeleton;
-pub mod declare;
-pub mod temporal_profile;
-pub mod heuristics_miner;
-pub mod correlation_miner;
-pub mod genetic_miner;
-pub mod performance_spectrum;
-pub mod causal;
-pub mod transition_system;
+/// Simulation algorithms for process mining.
+///
+/// Ports `pm4py.algo.simulation` for browser-native log generation.
+///
+/// The main function is `play_out()` which simulates event logs from process models:
+/// - Process tree playout: Generate traces by executing a process tree
+/// - DFG playout: Generate traces from a directly-follows graph
+/// - Petri net playout: Generate traces from a Petri net
+pub mod playout;
+
+pub use playout::{play_out_process_tree, play_out_dfg, PlayOutParameters};

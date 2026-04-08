@@ -74,6 +74,10 @@ pub mod discovery;
 pub mod filtering;
 pub mod llm;
 pub mod quality;
+pub mod simulation;
+pub mod transformation;
+pub mod trie;
+pub mod ocel;
 
 use binary_relation::BinaryRelation;
 use powl::{PowlArena, PowlNode};
@@ -82,6 +86,7 @@ use algorithms::simplify as simplify_algo;
 use algorithms::transitive as transitive_algo;
 use event_log::EventLog;
 use petri_net::PetriNetResult;
+use footprints::Footprints;
 
 // ─── JS-visible wrapper types ────────────────────────────────────────────────
 
@@ -533,6 +538,26 @@ pub fn measure_complexity(model: &PowlModel) -> Result<String, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
+/// Compute simplicity metric for a Petri net.
+///
+/// Simplicity measures how "simple" a model is based on its structure.
+/// Uses the arc_degree variant: 1 - (arcs / (places * transitions)).
+/// Returns a value in [0.0, 1.0] where 1.0 is simplest.
+///
+/// Mirrors `pm4py.analysis.simplicity_petri_net()` with variant="arc_degree".
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn simplicity_petri_net(petri_net_json: &str) -> Result<f64, JsValue> {
+    let pn: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("PetriNetResult JSON error: {}", e)))?;
+    let num_places = pn.net.places.len();
+    let num_transitions = pn.net.transitions.len();
+    let num_arcs = pn.net.arcs.len();
+    Ok(complexity::simplicity_arc_degree(num_places, num_transitions, num_arcs))
+}
+
 /// Compute the structural and behavioural diff between two POWL model strings.
 ///
 /// Returns a JSON object describing added/removed activities, ordering changes,
@@ -630,6 +655,100 @@ pub fn to_pnml(petri_net_json: &str) -> Result<String, JsValue> {
     let pn: PetriNetResult = serde_json::from_str(petri_net_json)
         .map_err(|e| JsValue::from_str(&format!("PetriNetResult JSON error: {}", e)))?;
     Ok(conversion::pnml::to_pnml(&pn))
+}
+
+/// Convert a POWL model string to a process tree.
+///
+/// Returns JSON with `label`, `operator`, and `children` fields.
+/// Leaf nodes have `label` set; internal nodes have `operator` set
+/// to one of: "->" (sequence), "X" (xor), "+" (parallel), "*" (loop).
+///
+/// Mirrors `pm4py.convert_to_process_tree()`.
+///
+/// # Errors
+/// Throws on parse failure.
+#[wasm_bindgen]
+pub fn powl_to_process_tree(powl_string: &str) -> Result<String, JsValue> {
+    let mut arena = PowlArena::new();
+    let root = parse_powl_model_string(powl_string, &mut arena)
+        .map_err(|e| JsValue::from_str(&format!("POWL parse error: {}", e)))?;
+    let result = conversion::to_process_tree::apply(&arena, root);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Convert a process tree (JSON) to a POWL model string.
+///
+/// Takes the JSON output from `powl_to_process_tree` and converts it
+/// back to a POWL model string that can be parsed with `parse_powl`.
+///
+/// Note: Sequence and Parallel operators are converted to StrictPartialOrder.
+///
+/// Mirrors `pm4py.convert_to_powl()` from process tree.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn process_tree_to_powl(process_tree_json: &str) -> Result<String, JsValue> {
+    use crate::powl::Operator;
+    let pt: crate::process_tree::ProcessTree = serde_json::from_str(process_tree_json)
+        .map_err(|e| JsValue::from_str(&format!("Process tree JSON error: {}", e)))?;
+
+    fn build_powl(pt: &crate::process_tree::ProcessTree, arena: &mut PowlArena) -> u32 {
+        match &pt.operator {
+            None => {
+                // Leaf node
+                let label = pt.label.as_deref();
+                if let Some(l) = label {
+                    if l.is_empty() || l == "tau" {
+                        arena.add_transition(None)
+                    } else {
+                        arena.add_transition(Some(l.to_string()))
+                    }
+                } else {
+                    arena.add_transition(None)
+                }
+            }
+            Some(op) => {
+                let children: Vec<u32> = pt.children.iter()
+                    .map(|c| build_powl(c, arena))
+                    .collect();
+
+                match op {
+                    crate::process_tree::PtOperator::Xor => {
+                        // XOR is directly supported
+                        arena.add_operator(Operator::Xor, children)
+                    }
+                    crate::process_tree::PtOperator::Loop => {
+                        // Loop is directly supported
+                        arena.add_operator(Operator::Loop, children)
+                    }
+                    crate::process_tree::PtOperator::Sequence => {
+                        // Sequence → StrictPartialOrder with chain order
+                        let spo_idx = arena.add_strict_partial_order(children.clone());
+                        for i in 0..children.len().saturating_sub(1) {
+                            arena.add_order_edge(spo_idx, i, i + 1);
+                        }
+                        // Add transitive edges
+                        for i in 0..children.len() {
+                            for j in (i + 2)..children.len() {
+                                arena.add_order_edge(spo_idx, i, j);
+                            }
+                        }
+                        spo_idx
+                    }
+                    crate::process_tree::PtOperator::Parallel => {
+                        // Parallel → StrictPartialOrder with no order
+                        arena.add_strict_partial_order(children)
+                    }
+                }
+            }
+        }
+    }
+
+    let mut arena = PowlArena::new();
+    let root = build_powl(&pt, &mut arena);
+    Ok(arena.to_repr(root))
 }
 
 // ─── Statistics API ──────────────────────────────────────────────────────────────
@@ -892,6 +1011,160 @@ pub fn get_rework_cases_per_activity(log_json: &str) -> Result<String, JsValue> 
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
+// ─── Filtering API ───────────────────────────────────────────────────────────────
+
+/// Filter log to keep only traces starting with specified activities.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_start_activities()`.
+#[wasm_bindgen]
+pub fn filter_start_activities(log_json: &str, activities_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let activities: Vec<String> = serde_json::from_str(activities_json)
+        .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
+    let result = filtering::activities::filter_start_activities(&log, &activities);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces ending with specified activities.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_end_activities()`.
+#[wasm_bindgen]
+pub fn filter_end_activities(log_json: &str, activities_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let activities: Vec<String> = serde_json::from_str(activities_json)
+        .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
+    let result = filtering::activities::filter_end_activities(&log, &activities);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces containing a specific activity relation.
+///
+/// Keeps traces where activity `a` is directly followed by activity `b`.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_directly_follows_relation()`.
+#[wasm_bindgen]
+pub fn filter_directly_follows_relation(log_json: &str, a: &str, b: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::activities::filter_directly_follows_relation(&log, a, b);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces between two activities.
+///
+/// Keeps traces that contain both activities and where `act1` appears before `act2`.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_between()`.
+#[wasm_bindgen]
+pub fn filter_between(log_json: &str, act1: &str, act2: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::activities::filter_between(&log, act1, act2);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces starting with a specific prefix.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_prefixes()`.
+#[wasm_bindgen]
+pub fn filter_prefixes(log_json: &str, prefix_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let prefix: Vec<String> = serde_json::from_str(prefix_json)
+        .map_err(|e| JsValue::from_str(&format!("Prefix JSON error: {}", e)))?;
+    let result = filtering::activities::filter_prefixes(&log, &prefix);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces ending with a specific suffix.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_suffixes()`.
+#[wasm_bindgen]
+pub fn filter_suffixes(log_json: &str, suffix_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let suffix: Vec<String> = serde_json::from_str(suffix_json)
+        .map_err(|e| JsValue::from_str(&format!("Suffix JSON error: {}", e)))?;
+    let result = filtering::activities::filter_suffixes(&log, &suffix);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only traces within a case size range.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_case_size()`.
+#[wasm_bindgen]
+pub fn filter_case_size(log_json: &str, min_size: usize, max_size: usize) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::case_size::filter_case_size(&log, min_size, max_size);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only events within a time range.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_time_range()`.
+#[wasm_bindgen]
+pub fn filter_time_range(log_json: &str, start_ms: i64, end_ms: i64) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::time::filter_time_range(&log, start_ms, end_ms);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only the top K most frequent variants.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_variants_top_k()`.
+#[wasm_bindgen]
+pub fn filter_variants_top_k(log_json: &str, k: usize) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::variants::filter_variants_top_k(&log, k);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Filter log to keep only variants covering at least a percentage of traces.
+///
+/// Returns filtered log as JSON.
+///
+/// Mirrors `pm4py.filter_variants_by_coverage_percentage()`.
+#[wasm_bindgen]
+pub fn filter_variants_coverage(log_json: &str, min_coverage: f64) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = filtering::variants::filter_variants_coverage(&log, min_coverage);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
 // ─── Discovery API ──────────────────────────────────────────────────────────────
 
 /// Discover a Directly-Follows Graph from an event log.
@@ -904,6 +1177,24 @@ pub fn discover_dfg(log_json: &str) -> Result<String, JsValue> {
     let log: EventLog = serde_json::from_str(log_json)
         .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
     let result = discovery::dfg::discover_dfg(&log);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover a typed DFG (structured format) from an event log.
+///
+/// Returns JSON with `graph` (from, to, frequency triples), `start_activities`,
+/// `end_activities`, and `activities` (activity, frequency pairs).
+///
+/// Mirrors `pm4py.discover_dfg_typed()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_dfg_typed(log_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::dfg::discover_dfg_typed(&log);
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
@@ -1028,6 +1319,23 @@ pub fn discover_petri_net_alpha(log_json: &str) -> Result<String, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
+/// Discover a Petri net using the Alpha+ miner algorithm (extends Alpha with loop handling).
+///
+/// Input: Event log JSON (same format as other discovery functions).
+/// Output: PetriNetResult JSON with places, transitions, arcs, and markings.
+///
+/// Returns the same JSON format as other discovery functions.
+///
+/// Mirrors `pm4py.discover_petri_net_alpha_plus()`.
+#[wasm_bindgen]
+pub fn discover_petri_net_alpha_plus(log_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::alpha_plus_miner::alpha_plus_miner(&log);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
 /// Check whether a Petri net is sound (deadlock-free, bounded, liveness).
 ///
 /// Returns JSON: `{"sound":true,"deadlock_free":true,"bounded":true,"liveness":true}`
@@ -1043,6 +1351,107 @@ pub fn check_soundness(petri_net_json: &str) -> Result<String, JsValue> {
         &pn_result.final_marking,
     );
     serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+// ============================================================================
+// OCEL (Object-Centric Event Log) Functions
+// ============================================================================
+
+/// Parse an OCEL from JSON string (JSON-OCEL format).
+///
+/// Input: OCEL JSON string (JSON-OCEL 1.0 or 2.0 format).
+/// Output: Serialized OCEL object with events, objects, relations, and globals.
+///
+/// Returns the same JSON format (round-trips through parse/serialize).
+///
+/// Mirrors `pm4py.read_ocel()`.
+#[wasm_bindgen]
+pub fn parse_ocel_json(ocel_json: &str) -> Result<String, JsValue> {
+    let ocel = ocel::parse_ocel_json(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    serde_json::to_string(&ocel)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Get a summary of an OCEL.
+///
+/// Input: OCEL JSON string.
+/// Output: JSON with event_count, object_count, relation_count, object_types, etc.
+///
+/// Mirrors `pm4py.ocel_summary()`.
+#[wasm_bindgen]
+pub fn ocel_get_summary(ocel_json: &str) -> Result<String, JsValue> {
+    let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    let summary = ocel::get_summary(&ocel);
+    serde_json::to_string(&summary)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover Event-Type / Object-Type graph from an OCEL.
+///
+/// Input: OCEL JSON string.
+/// Output: JSON with activities, object_types, edges, and edge_frequencies.
+///
+/// Mirrors `pm4py.discover_ocel_etot()`.
+#[wasm_bindgen]
+pub fn discover_ocel_etot(ocel_json: &str) -> Result<String, JsValue> {
+    let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    let result = ocel::discover_etot(&ocel);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Flatten an OCEL to a traditional event log by object type.
+///
+/// Input: OCEL JSON string and object type name.
+/// Output: Traditional EventLog JSON (traces with case_id and events).
+///
+/// The resulting log can be used with all standard discovery functions:
+/// - discover_dfg()
+/// - discover_petri_net_alpha_plus()
+/// - inductive_miner()
+///
+/// Mirrors `pm4py.ocel_flattening()`.
+#[wasm_bindgen]
+pub fn ocel_flatten_by_object_type(ocel_json: &str, object_type: &str) -> Result<String, JsValue> {
+    let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    let log = ocel::flatten_by_object_type(&ocel, object_type)
+        .map_err(|e| JsValue::from_str(&e))?;
+    serde_json::to_string(&log)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Get all object types in an OCEL.
+///
+/// Input: OCEL JSON string.
+/// Output: JSON array of object type names.
+///
+/// Mirrors `pm4py.ocel_object_types`.
+#[wasm_bindgen]
+pub fn ocel_get_object_types(ocel_json: &str) -> Result<String, JsValue> {
+    let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    let types = ocel::get_object_types(&ocel);
+    serde_json::to_string(&types)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Get all event types (activities) in an OCEL.
+///
+/// Input: OCEL JSON string.
+/// Output: JSON array of activity names.
+///
+/// Mirrors `pm4py.ocel_event_types`.
+#[wasm_bindgen]
+pub fn ocel_get_event_types(ocel_json: &str) -> Result<String, JsValue> {
+    let ocel: ocel::OCEL = serde_json::from_str(ocel_json)
+        .map_err(|e| JsValue::from_str(&format!("OCEL JSON error: {}", e)))?;
+    let types = ocel::get_event_types(&ocel);
+    serde_json::to_string(&types)
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
 }
 
@@ -1100,6 +1509,153 @@ pub fn discover_petri_net_genetic(log_json: &str, config_json: &str) -> Result<S
     let result = discovery::genetic_miner::discover_genetic(&log, config);
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover a Petri net from an event log using the heuristics miner.
+///
+/// The heuristics miner is more lenient than the alpha miner for handling
+/// noise and incomplete data. Uses dependency measures to filter causal relations.
+///
+/// Returns the same JSON format as other discovery functions: `{net, initial_marking, final_marking}`.
+///
+/// Mirrors `pm4py.discover_petri_net_heuristics()`.
+///
+/// # Arguments
+/// * `log_json` - Event log JSON
+/// * `dependency_threshold` - Minimum dependency score for an edge (0.0 to 1.0, typically 0.8-0.99)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_petri_net_heuristics(log_json: &str, dependency_threshold: f64) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let net = discovery::heuristics_miner::discover_heuristics_miner(&log, dependency_threshold);
+    let result = discovery::heuristics_miner::heuristics_to_petri_net(&net);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover a Heuristics Net from an event log.
+///
+/// Returns JSON with activities, dependencies (with dependency scores and frequencies),
+/// and start/end activities. Useful for visualization of causal relations.
+///
+/// Mirrors `pm4py.discover_heuristics_net()`.
+///
+/// # Arguments
+/// * `log_json` - Event log JSON
+/// * `dependency_threshold` - Minimum dependency score for an edge (0.0 to 1.0)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_heuristics_net(log_json: &str, dependency_threshold: f64) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::heuristics_miner::discover_heuristics_miner(&log, dependency_threshold);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover footprints from a POWL model.
+///
+/// Footprints summarize the behavioral properties of a process model:
+/// - Start/end activities
+/// - Sequence (directly-follows) and parallel (concurrent) pairs
+/// - Minimum trace length
+/// - Whether activities are skippable
+///
+/// Mirrors `pm4py.discover_footprints()` for POWL models.
+///
+/// # Errors
+/// Throws if POWL string cannot be parsed.
+#[wasm_bindgen]
+pub fn discover_footprints_from_model(powl_string: &str) -> Result<String, JsValue> {
+    let mut arena = PowlArena::new();
+    let root = parse_powl_model_string(powl_string, &mut arena)
+        .map_err(|e| JsValue::from_str(&format!("POWL parse error: {}", e)))?;
+    let result = footprints::apply(&arena, root);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover footprints from an event log.
+///
+/// Computes footprints from the log's directly-follows graph.
+/// Returns the same structure as `discover_footprints_from_model`.
+///
+/// Mirrors `pm4py.discover_footprints()` for event logs.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_footprints_from_log(log_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = footprints::discover_from_log(&log);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute footprints-based conformance diagnostics.
+///
+/// Compares the log's directly-follows graph against a model's footprints
+/// to compute fitness, precision, recall, and f1-score.
+///
+/// Returns JSON: `{"fitness": 0.95, "precision": 0.85, "recall": 0.95, "f1": 0.90}`
+///
+/// Mirrors `pm4py.conformance_diagnostics_footprints()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn footprints_diagnostics(log_json: &str, model_fp_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let model_fp: Footprints = serde_json::from_str(model_fp_json)
+        .map_err(|e| JsValue::from_str(&format!("Footprints JSON error: {}", e)))?;
+    let result = conformance::footprints_conf::check(&log, &model_fp);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute footprints-based fitness.
+///
+/// Fraction of the log's directly-follows pairs that are allowed by the model.
+/// Returns a value in [0.0, 1.0] where 1.0 is perfect fitness.
+///
+/// Mirrors `pm4py.fitness_footprints()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn footprints_fitness(log_json: &str, model_fp_json: &str) -> Result<f64, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let model_fp: Footprints = serde_json::from_str(model_fp_json)
+        .map_err(|e| JsValue::from_str(&format!("Footprints JSON error: {}", e)))?;
+    let result = conformance::footprints_conf::check(&log, &model_fp);
+    Ok(result.fitness)
+}
+
+/// Compute footprints-based precision.
+///
+/// Fraction of the model's directly-follows pairs that are observed in the log.
+/// Returns a value in [0.0, 1.0] where 1.0 is perfect precision.
+///
+/// Mirrors `pm4py.precision_footprints()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn footprints_precision(log_json: &str, model_fp_json: &str) -> Result<f64, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let model_fp: Footprints = serde_json::from_str(model_fp_json)
+        .map_err(|e| JsValue::from_str(&format!("Footprints JSON error: {}", e)))?;
+    let result = conformance::footprints_conf::check(&log, &model_fp);
+    Ok(result.precision)
 }
 
 /// Discover a process model using correlation mining (case-less / timestamp-based).
@@ -1362,208 +1918,6 @@ pub fn start() {
     console_error_panic_hook::set_once();
 }
 
-// ─── Filtering API ──────────────────────────────────────────────────────────────
-
-/// Filter an event log to keep only traces that start with one of the given activities.
-///
-/// `log_json` is the output of `parse_xes_log` / `parse_csv_log`.
-/// `activities_json` is a JSON array of activity name strings.
-///
-/// Returns the filtered event log as JSON.
-///
-/// Mirrors `pm4py.filter_start_activities()`.
-#[wasm_bindgen]
-pub fn filter_start_activities(log_json: &str, activities_json: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let activities: Vec<String> = serde_json::from_str(activities_json)
-        .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_start_activities(&log, &activities);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only traces that end with one of the given activities.
-///
-/// Mirrors `pm4py.filter_end_activities()`.
-#[wasm_bindgen]
-pub fn filter_end_activities(log_json: &str, activities_json: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let activities: Vec<String> = serde_json::from_str(activities_json)
-        .map_err(|e| JsValue::from_str(&format!("Activities JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_end_activities(&log, &activities);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only the top-k most frequent variants.
-///
-/// Mirrors `pm4py.filter_variants_top_k()`.
-#[wasm_bindgen]
-pub fn filter_variants_top_k(log_json: &str, k: usize) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::variants::filter_variants_top_k(&log, k);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log by time range (Unix milliseconds).
-///
-/// Keeps traces that have at least one event within [start_ms, end_ms].
-///
-/// Mirrors `pm4py.filter_time_range()`.
-#[wasm_bindgen]
-pub fn filter_time_range(log_json: &str, start_ms: i64, end_ms: i64) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::time::filter_time_range(&log, start_ms, end_ms);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only traces containing events with the given attribute values.
-///
-/// Mirrors `pm4py.filter_event_attribute_values()`.
-#[wasm_bindgen]
-pub fn filter_event_attribute_values(
-    log_json: &str,
-    attribute_key: &str,
-    attribute_values_json: &str,
-    positive: bool,
-) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let values: Vec<String> = serde_json::from_str(attribute_values_json)
-        .map_err(|e| JsValue::from_str(&format!("Values JSON error: {}", e)))?;
-    let filtered = filtering::attributes::filter_event_attribute_values(
-        &log,
-        attribute_key,
-        &values,
-        positive,
-    );
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only traces where the case_id matches.
-///
-/// Mirrors `pm4py.filter_trace_attribute()`.
-#[wasm_bindgen]
-pub fn filter_trace_attribute(
-    log_json: &str,
-    attribute_key: &str,
-    attribute_values_json: &str,
-    positive: bool,
-) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let values: Vec<String> = serde_json::from_str(attribute_values_json)
-        .map_err(|e| JsValue::from_str(&format!("Values JSON error: {}", e)))?;
-    let filtered = filtering::attributes::filter_trace_attribute(
-        &log,
-        attribute_key,
-        &values,
-        positive,
-    );
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only traces with event count in [min_size, max_size].
-/// If max_size is 0, only min_size is used as a lower bound.
-///
-/// Mirrors `pm4py.filter_case_size()`.
-#[wasm_bindgen]
-pub fn filter_case_size(log_json: &str, min_size: usize, max_size: usize) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::case_size::filter_case_size(&log, min_size, max_size);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter an event log to keep only variants covering at least the given percentage.
-///
-/// Mirrors `pm4py.filter_variants_reaching()`.
-#[wasm_bindgen]
-pub fn filter_variants_coverage(log_json: &str, min_coverage: f64) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::variants::filter_variants_coverage(&log, min_coverage);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter to keep only events between two activities (inclusive).
-///
-/// Mirrors `pm4py.filter_between()`.
-#[wasm_bindgen]
-pub fn filter_between(log_json: &str, act1: &str, act2: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_between(&log, act1, act2);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter to keep only traces that start with the given prefix activities.
-///
-/// `prefix_json` is a JSON array of activity name strings.
-///
-/// Mirrors `pm4py.filter_prefixes()`.
-#[wasm_bindgen]
-pub fn filter_prefixes(log_json: &str, prefix_json: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let prefix: Vec<String> = serde_json::from_str(prefix_json)
-        .map_err(|e| JsValue::from_str(&format!("Prefix JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_prefixes(&log, &prefix);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter to keep only traces that end with the given suffix activities.
-///
-/// `suffix_json` is a JSON array of activity name strings.
-///
-/// Mirrors `pm4py.filter_suffixes()`.
-#[wasm_bindgen]
-pub fn filter_suffixes(log_json: &str, suffix_json: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let suffix: Vec<String> = serde_json::from_str(suffix_json)
-        .map_err(|e| JsValue::from_str(&format!("Suffix JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_suffixes(&log, &suffix);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter to keep only traces containing a directly-follows relation (a -> b).
-///
-/// Mirrors `pm4py.filter_directly_follows_relation()`.
-#[wasm_bindgen]
-pub fn filter_directly_follows_relation(log_json: &str, a: &str, b: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_directly_follows_relation(&log, a, b);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
-/// Filter to keep only traces containing an eventually-follows relation (a ... b).
-///
-/// Mirrors `pm4py.filter_eventually_follows_relation()`.
-#[wasm_bindgen]
-pub fn filter_eventually_follows_relation(log_json: &str, a: &str, b: &str) -> Result<String, JsValue> {
-    let log: EventLog = serde_json::from_str(log_json)
-        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
-    let filtered = filtering::activities::filter_eventually_follows_relation(&log, a, b);
-    serde_json::to_string(&filtered)
-        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
-}
-
 /// Trim traces to remove events before the first start activity and after the last end activity.
 ///
 /// Mirrors `pm4py.filter_trim()`.
@@ -1739,6 +2093,215 @@ pub fn project_log(log_json: &str, attributes_json: &str) -> Result<String, JsVa
     }
     serde_json::to_string(&log)
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+// ─── Simulation ───────────────────────────────────────────────────────────────────
+
+/// Simulate an event log from a process tree using playout.
+///
+/// Generates synthetic traces by executing the process tree structure.
+/// This is useful for testing, generating training data, and validating models.
+///
+/// Returns JSON with `traces` array, each containing `case_id` and `events`.
+///
+/// Mirrors `pm4py.play_out()` for process trees.
+///
+/// # Arguments
+/// * `process_tree_json` - Process tree JSON (from `powl_to_process_tree`)
+/// * `num_traces` - Number of traces to generate (default: 100)
+/// * `include_timestamps` - Whether to include timestamps (default: true)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn play_out(process_tree_json: &str, num_traces: usize, include_timestamps: bool) -> Result<String, JsValue> {
+    let pt: crate::process_tree::ProcessTree = serde_json::from_str(process_tree_json)
+        .map_err(|e| JsValue::from_str(&format!("Process tree JSON error: {}", e)))?;
+    let params = simulation::PlayOutParameters {
+        num_traces,
+        include_timestamps,
+        ..Default::default()
+    };
+    let result = simulation::play_out_process_tree(&pt, &params);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Simulate an event log from a directly-follows graph using playout.
+///
+/// Generates synthetic traces by random walk through the DFG structure.
+/// This is useful for testing and generating synthetic data.
+///
+/// Returns JSON with `traces` array, each containing `case_id` and `events`.
+///
+/// Mirrors `pm4py.play_out()` for DFGs.
+///
+/// # Arguments
+/// * `dfg_json` - DFG JSON (from `discover_dfg`)
+/// * `start_activities_json` - Start activities JSON array
+/// * `end_activities_json` - End activities JSON array
+/// * `num_traces` - Number of traces to generate (default: 100)
+/// * `include_timestamps` - Whether to include timestamps (default: true)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn play_out_dfg(
+    dfg_json: &str,
+    start_activities_json: &str,
+    end_activities_json: &str,
+    num_traces: usize,
+    include_timestamps: bool,
+) -> Result<String, JsValue> {
+    // Parse DFG JSON
+    let dfg_result: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
+        .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
+
+    // Build DirectedGraph for playout
+    let mut dfg = simulation::playout::DirectedGraph::default();
+    for (activity, _) in &dfg_result.activities {
+        dfg.activities.push(activity.clone());
+    }
+    for edge in &dfg_result.edges {
+        dfg.adj.entry(edge.source.clone()).or_insert_with(Vec::new).push(edge.target.clone());
+    }
+
+    let start_activities: Vec<String> = serde_json::from_str(start_activities_json)
+        .map_err(|e| JsValue::from_str(&format!("Start activities JSON error: {}", e)))?;
+    let end_activities: Vec<String> = serde_json::from_str(end_activities_json)
+        .map_err(|e| JsValue::from_str(&format!("End activities JSON error: {}", e)))?;
+
+    let params = simulation::PlayOutParameters {
+        num_traces,
+        include_timestamps,
+        ..Default::default()
+    };
+
+    let result = simulation::play_out_dfg(&dfg, &start_activities, &end_activities, &params);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+// ─── Causal Graph Discovery ─────────────────────────────────────────────────────
+
+/// Discover causal relations from a directly-follows graph (alpha variant).
+///
+/// Causal relations identify which activities have a one-way dependency:
+/// - A → B is causal if A always precedes B (B never precedes A)
+///
+/// Returns JSON with `relations` map: (from, to) → 1 (binary causal indicator).
+///
+/// Mirrors `pm4py.discover_causal()` with variant="alpha".
+///
+/// # Arguments
+/// * `dfg_json` - DFG JSON (from `discover_dfg`)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_causal_alpha(dfg_json: &str) -> Result<String, JsValue> {
+    let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
+        .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
+    let result = discovery::causal::discover_causal_alpha(&dfg.edges);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover causal relations from a directly-follows graph (heuristic variant).
+///
+/// The heuristic variant uses a threshold-based approach where:
+/// - Relation (A, B) is causal if its frequency is significantly higher than (B, A)
+///
+/// Returns JSON with `relations` map: (from, to) → strength (0-1000).
+///
+/// Mirrors `pm4py.discover_causal()` with variant="heuristic".
+///
+/// # Arguments
+/// * `dfg_json` - DFG JSON (from `discover_dfg`)
+/// * `threshold` - Minimum ratio for causality (default: 0.8)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_causal_heuristic(dfg_json: &str, threshold: f64) -> Result<String, JsValue> {
+    let dfg: discovery::dfg::DFGResult = serde_json::from_str(dfg_json)
+        .map_err(|e| JsValue::from_str(&format!("DFG JSON error: {}", e)))?;
+    let result = discovery::causal::discover_causal_heuristic(&dfg.edges, threshold);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+// ─── Transition System Discovery ───────────────────────────────────────────────
+
+/// Discover a transition system from an event log.
+///
+/// A transition system is a state machine that captures all observed behavior:
+/// - Each state represents a "view" of the trace (window of recent activities)
+/// - Transitions represent activity executions that move between states
+///
+/// Returns JSON with `states` (id, name) and `transitions` (from_state, to_state, activity, count).
+///
+/// Mirrors `pm4py.discover_transition_system()`.
+///
+/// # Arguments
+/// * `log_json` - Event log JSON
+/// * `window` - Size of the lookback window (default: 2)
+/// * `direction` - "forward" (default) or "backward" direction
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_transition_system(log_json: &str, window: usize, direction: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::transition_system::discover_transition_system(&log, window, direction);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover a prefix tree (trie) from an event log.
+///
+/// A prefix tree represents all unique prefixes of activity sequences in the log.
+/// Each node in the tree represents an activity, and paths from root represent trace prefixes.
+/// Nodes that represent the end of a trace are marked as `is_final = true`.
+///
+/// Returns JSON with the trie structure: nodes array with label, parent, children, is_final, depth.
+///
+/// Mirrors `pm4py.discover_prefix_tree()`.
+///
+/// # Arguments
+/// * `log_json` - Event log JSON
+/// * `max_path_length` - Optional maximum trace length (traces are truncated)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_prefix_tree(log_json: &str, max_path_length: Option<usize>) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = transformation::discover_prefix_tree(&log, max_path_length);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover a Petri net using ILP miner (STUB - NOT IMPLEMENTED).
+///
+/// The ILP (Integer Linear Programming) miner requires an LP solver
+/// which is not available in pure WASM. This function returns an error.
+///
+/// Consider using `discover_petri_net_inductive()` or `discover_petri_net_heuristics()` instead.
+///
+/// Mirrors `pm4py.discover_petri_net_ilp()`.
+///
+/// # Errors
+/// Always throws an error explaining ILP miner is not available in WASM.
+#[wasm_bindgen]
+pub fn discover_petri_net_ilp(_log_json: &str, _alpha: f64) -> Result<String, JsValue> {
+    Err(JsValue::from_str(
+        "ILP miner is not available in WASM. \
+         It requires an external LP solver which cannot be bundled in pure WebAssembly. \
+         Please use `discover_petri_net_inductive()` or `discover_petri_net_heuristics()` instead."
+    ))
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────

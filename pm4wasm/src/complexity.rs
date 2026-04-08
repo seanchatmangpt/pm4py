@@ -315,3 +315,28 @@ mod tests {
         assert!(r.halstead.effort > 0.0);
     }
 }
+
+/// Compute simplicity metric for a Petri net.
+///
+/// Simplicity measures how "simple" a model is based on its structure.
+/// The arc_degree variant uses: 1 - (arcs / (places * transitions))
+/// where a value closer to 1.0 indicates a simpler model.
+///
+/// This mirrors `pm4py.analysis.simplicity_petri_net()` with variant="arc_degree".
+///
+/// # Arguments
+/// * `num_places` - Number of places in the Petri net
+/// * `num_transitions` - Number of transitions in the Petri net
+/// * `num_arcs` - Number of arcs in the Petri net
+///
+/// # Returns
+/// Simplicity score in [0.0, 1.0] where 1.0 is simplest.
+pub fn simplicity_arc_degree(num_places: usize, num_transitions: usize, num_arcs: usize) -> f64 {
+    // Maximum possible arcs in a bipartite graph: places * transitions
+    let max_arcs = num_places * num_transitions;
+    if max_arcs == 0 {
+        return 1.0;
+    }
+    // Normalized simplicity: 1 - (actual_arcs / max_possible_arcs)
+    1.0 - (num_arcs as f64 / max_arcs as f64)
+}

@@ -98,6 +98,66 @@ pub fn discover_dfg(log: &EventLog) -> DFGResult {
     }
 }
 
+/// A typed DFG result matching pm4py.objects.dfg.obj.DFG format.
+///
+/// Returns a structured DFG object with graph as (from, to, frequency) triples,
+/// and start/end activities as (activity, frequency) pairs.
+///
+/// Mirrors `pm4py.discover_dfg_typed()`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DFGTyped {
+    /// The graph as (from_activity, to_activity, frequency) triples.
+    pub graph: Vec<(String, String, u32)>,
+    /// Start activities as (activity, frequency) pairs.
+    pub start_activities: Vec<(String, u32)>,
+    /// End activities as (activity, frequency) pairs.
+    pub end_activities: Vec<(String, u32)>,
+    /// All activities as (activity, frequency) pairs.
+    pub activities: Vec<(String, u32)>,
+}
+
+/// Discover a typed DFG from an event log.
+///
+/// Returns a DFGTyped object with graph, start_activities, end_activities, and activities.
+///
+/// Mirrors `pm4py.discover_dfg_typed()`.
+pub fn discover_dfg_typed(log: &EventLog) -> DFGTyped {
+    let dfg = discover_dfg(log);
+
+    // Convert edges to (from, to, frequency) format
+    let graph: Vec<(String, String, u32)> = dfg
+        .edges
+        .into_iter()
+        .map(|edge| (edge.source, edge.target, edge.count as u32))
+        .collect();
+
+    // Convert activities to (activity, frequency) format
+    let activities: Vec<(String, u32)> = dfg
+        .activities
+        .into_iter()
+        .map(|(activity, count)| (activity, count as u32))
+        .collect();
+
+    let start_activities: Vec<(String, u32)> = dfg
+        .start_activities
+        .into_iter()
+        .map(|(activity, count)| (activity, count as u32))
+        .collect();
+
+    let end_activities: Vec<(String, u32)> = dfg
+        .end_activities
+        .into_iter()
+        .map(|(activity, count)| (activity, count as u32))
+        .collect();
+
+    DFGTyped {
+        graph,
+        start_activities,
+        end_activities,
+        activities,
+    }
+}
+
 /// Discover a performance DFG (edges annotated with average duration).
 ///
 /// Mirrors `pm4py.discover_performance_dfg()`.

@@ -468,6 +468,63 @@ pub fn apply(arena: &PowlArena, root: u32) -> Footprints {
     compute(arena, root, &mut cache)
 }
 
+/// Discover footprints from an event log.
+///
+/// Computes footprints from the log's directly-follows graph.
+/// This is useful for comparing log behavior against model footprints.
+pub fn discover_from_log(log: &crate::event_log::EventLog) -> Footprints {
+    let mut sequence: ActivityPairs = ActivityPairs::new();
+    let mut parallel: ActivityPairs = ActivityPairs::new();
+    let mut start_activities: ActivitySet = ActivitySet::new();
+    let mut end_activities: ActivitySet = ActivitySet::new();
+    let mut activities: ActivitySet = ActivitySet::new();
+    let mut sequence_counts: HashMap<(String, String), usize> = HashMap::new();
+
+    // Build statistics from log
+    for trace in &log.traces {
+        let events = &trace.events;
+
+        if !events.is_empty() {
+            start_activities.insert(events[0].name.clone());
+            end_activities.insert(events[events.len() - 1].name.clone());
+        }
+
+        for event in events {
+            activities.insert(event.name.clone());
+        }
+
+        for window in events.windows(2) {
+            let from = window[0].name.clone();
+            let to = window[1].name.clone();
+            *sequence_counts.entry((from.clone(), to.clone())).or_insert(0) += 1;
+            sequence.insert((from, to));
+        }
+    }
+
+    // Detect parallel pairs (bidirectional sequence)
+    for (a, b) in sequence.clone() {
+        if sequence.contains(&(b.clone(), a.clone())) {
+            parallel.insert((a, b));
+        }
+    }
+
+    // Remove parallel pairs from sequence
+    for pair in parallel.clone() {
+        sequence.remove(&pair);
+    }
+
+    Footprints {
+        start_activities,
+        end_activities,
+        activities,
+        skippable: false,
+        sequence,
+        parallel,
+        activities_always_happening: ActivitySet::new(), // Not computed from log
+        min_trace_length: 1, // Simplified; could be computed from log
+    }
+}
+
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

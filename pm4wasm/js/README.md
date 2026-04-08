@@ -47,11 +47,14 @@ pm4wasm ports the core pm4py process mining algorithms to WebAssembly:
 
 ### Discovery (from pm4py)
 - `discoverDFG()` — Directly-Follows Graph
-- `discoverPerformanceDFG()` — Performance DFG
+- `discoverDFGTyped()` — Typed DFG object format
+- `discoverPerformanceDFG()` — Performance DFG with duration stats
 - `discoverEventuallyFollowsGraph()` — Eventually-follows relations
 - `discoverProcessTree()` — Inductive process tree
 - `discoverPetriNet()` — Inductive Petri net
 - `discoverPetriNetAlpha()` — Alpha miner
+- `discoverPetriNetAlphaPlus()` — Alpha+ miner (handles loops)
+- `discoverPrefixTree()` — Trie (prefix tree) of trace prefixes
 - `discoverLogFootprints()` — Footprints discovery
 
 ### Conformance (from pm4py)
@@ -69,6 +72,15 @@ pm4wasm ports the core pm4py process mining algorithms to WebAssembly:
 ### I/O (from pm4py)
 - XES and CSV read/write
 - BPMN 2.0 XML export
+- JSON-OCEL read/write (object-centric event logs)
+
+### OCEL Support
+- `parseOcelJson()` — Parse OCEL 1.0/2.0 JSON
+- `ocelFlattenByObjectType()` — Flatten to traditional log by object type
+- `discoverOcelEtot()` — Event-Type / Object-Type graph
+- `ocelGetSummary()` — OCEL statistics
+- `ocelGetObjectTypes()` — List all object types
+- `ocelGetEventTypes()` — List all event types
 
 ## LLM Integration (Beyond pm4py)
 

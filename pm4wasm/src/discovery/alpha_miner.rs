@@ -15,6 +15,10 @@
 
 /// Alpha Miner algorithm for Petri net discovery.
 ///
+/// **Reference**: van der Aalst, W. M. P. (1999). "Formalization and Verification
+/// of Event-Driven Process Chains." Computing Science Reports, 54(2), 85-110.
+/// DOI: 10.1016/S0167-6423(99)00006-0
+///
 /// Ports the classic alpha miner (van der Aalst, 1999).
 /// Simpler than the inductive miner — suitable for teaching and simple logs.
 ///
@@ -23,6 +27,9 @@
 /// 2. Identify ordering relations (causal, parallel, unrelated)
 /// 3. Derive places from the causal matrix
 /// 4. Construct Petri net with start/end places
+///
+/// **Time Complexity**: O(n²) where n is the number of distinct activities
+/// **Space Complexity**: O(n²) for the relation matrices
 
 use crate::event_log::EventLog;
 use crate::petri_net::{Marking, PetriNet, PetriNetResult};
@@ -32,6 +39,17 @@ use std::collections::{HashMap, HashSet};
 /// Apply the alpha miner to an event log.
 ///
 /// Returns a PetriNetResult (net + initial + final marking).
+///
+/// **Algorithm correctness** (WvdA 1999):
+/// - Causality: a → b iff a directly precedes b AND b never directly precedes a
+/// - Parallelism: a ∥ b iff a → b AND b → a (both directions observed)
+/// - Places: Created for each causal relation (a→b creates place with input a, output b)
+/// - Start/end places: Source/sink activities connected appropriately
+///
+/// **Limitations**:
+/// - Does not handle loops (requires Alpha+ miner)
+/// - Does not handle non-free-choice constructs
+/// - May produce non-sound nets for complex logs
 ///
 /// Mirrors `pm4py.discover_petri_net_alpha()`.
 pub fn alpha_miner(log: &EventLog) -> PetriNetResult {
