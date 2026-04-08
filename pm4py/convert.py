@@ -160,18 +160,21 @@ def convert_to_dataframe(
 
 
 def convert_to_bpmn(
-    *args: Union[Tuple[PetriNet, Marking, Marking], ProcessTree]
+    *args: Union[Tuple[PetriNet, Marking, Marking], ProcessTree, POWL]
 ) -> BPMN:
     """
     Converts an object to a BPMN diagram.
 
-    As input, either a Petri net (with corresponding initial and final markings) or a process tree can be provided.
+    As input, a Petri net (with corresponding initial and final markings),
+    a process tree, or a POWL model can be provided.
     A process tree can always be converted into a BPMN model, ensuring the quality of the resulting object.
     For Petri nets, the quality of the conversion largely depends on the net provided (e.g., sound WF-nets are likely to produce reasonable BPMN models).
+    For POWL models, the direct POWL-to-BPMN converter is used when the 'powl' PyPI package is installed.
 
     :param args:
         - If converting a Petri net: a tuple of (``PetriNet``, ``Marking``, ``Marking``).
         - If converting a process tree: a single ``ProcessTree`` object.
+        - If converting a POWL model: a single ``POWL`` object.
     :return: A ``BPMN`` object.
 
     .. code-block:: python3
@@ -181,6 +184,11 @@ def convert_to_bpmn(
        # Import a Petri net from a file
        net, im, fm = pm4py.read_pnml("tests/input_data/running-example.pnml")
        bpmn_graph = pm4py.convert_to_bpmn(net, im, fm)
+
+       # Convert a POWL model to BPMN (requires: pip install pm4py[powl])
+       log = pm4py.read_xes('tests/input_data/running-example.xes')
+       powl_model = pm4py.discover_powl(log)
+       bpmn = pm4py.convert_to_bpmn(powl_model)
     """
     from pm4py.objects.process_tree.obj import ProcessTree
     from pm4py.objects.bpmn.obj import BPMN
@@ -188,6 +196,12 @@ def convert_to_bpmn(
     if isinstance(args[0], BPMN):
         # the object is already a BPMN
         return args[0]
+    elif isinstance(args[0], POWL):
+        # direct POWL -> BPMN conversion (requires powl package)
+        from pm4py.objects.conversion.powl.converter import Variants
+
+        parameters = args[1] if len(args) > 1 else None
+        return Variants.TO_BPMN.value.apply(args[0], parameters=parameters)
     elif isinstance(args[0], ProcessTree):
         from pm4py.objects.conversion.process_tree.variants import to_bpmn
 
@@ -205,6 +219,53 @@ def convert_to_bpmn(
             pass
     # if no conversion is done, then the format of the arguments is unsupported
     raise Exception("Unsupported conversion of the provided object to BPMN")
+
+
+def convert_to_yawl(
+    *args: Union[POWL, Tuple[PetriNet, Marking, Marking]]
+):
+    """
+    Converts an object to a YAWL specification.
+
+    As input, a POWL model or a Petri net (with corresponding initial and final markings)
+    can be provided. The conversion preserves all 43 workflow patterns and maintains
+    WvdA soundness guarantees (deadlock-free, liveness, boundedness).
+
+    :param args:
+        - If converting a POWL model: a single ``POWL`` object.
+        - If converting a Petri net: a tuple of (``PetriNet``, ``Marking``, ``Marking``).
+    :return: A ``YAWLSpecification`` object.
+
+    .. code-block:: python3
+
+       import pm4py
+
+       # Convert a POWL model to YAWL
+       log = pm4py.read_xes('tests/input_data/running-example.xes')
+       powl_model = pm4py.discover_powl(log)
+       yawl_spec = pm4py.convert_to_yawl(powl_model)
+
+       # Export to YAWL XML file
+       pm4py.write_yawl(yawl_spec, "process.yawl")
+    """
+    from pm4py.objects.conversion.yawl.converter import Variants as YAWLVariants
+
+    if isinstance(args[0], POWL):
+        # Direct POWL -> YAWL conversion
+        parameters = args[1] if len(args) > 1 else None
+        return YAWLVariants.FROM_POWL.value.apply(args[0], parameters=parameters)
+    else:
+        # Try to convert to Petri net first, then to YAWL
+        try:
+            net, im, fm = convert_to_petri_net(*args)
+            # For Petri nets, we go back to POWL first for better conversion
+            from pm4py.objects.conversion.powl.converter import Variants as POWLVariants
+            powl = POWLVariants.TO_POWL.value.apply((net, im, fm))
+            return YAWLVariants.FROM_POWL.value.apply(powl, parameters=None)
+        except BaseException:
+            pass
+
+    raise Exception("Unsupported conversion of the provided object to YAWL")
 
 
 def convert_to_petri_net(

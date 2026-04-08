@@ -876,6 +876,84 @@ Every agent framework will need to cross this chasm. PM4Py starts on the far sid
 - [x] BPMN round-trip conversion
 - [x] CLI integration (DiscoverPOWLFromText, DiscoverPOWLToBPMN)
 - [x] WASM-native POWL execution (browser)
+- [x] **YAWL export: Historical continuity and pattern validation**
+
+#### YAWL Export: Why Obsolete Technology Matters
+
+The inclusion of YAWL (Yet Another Workflow Language) export capability in Phase 1 requires justification. YAWL is a 2003-era workflow system that has been largely superseded by BPMN 2.0 in industry adoption. Why, then, implement YAWL export in 2026?
+
+**1. Historical Continuity**
+
+YAWL is the original system that inspired the 43 workflow patterns (van der Aalst et al., 2003). These patterns—Sequence, Parallel Split, Synchronization, Multi-Choice, Discriminator, and 38 others—are the foundational vocabulary of process modeling. Every modern process modeling language (BPMN, Process Trees, UML Activity Diagrams) is, in some sense, a descendant of YAWL's pattern catalog.
+
+Implementing YAWL export completes the historical circle:
+- **2003:** van der Aalst publishes 43 patterns from YAWL research
+- **2025:** Kourani & van der Aalst publish POWL v2 with DecisionGraph
+- **2026:** This thesis implements NL→POWL→BPMN, **and POWL→YAWL**
+
+The chain is unbroken. The patterns that emerged from YAWL research can now be exported back to YAWL format, executed in YAWL engines, and verified against the original specification. This is not nostalgia; it is validation that the theoretical foundation remains sound.
+
+**2. Academic Reproducibility**
+
+The process mining research community—particularly van der Aalst's lineage at Eindhoven University of Technology and its collaborators—uses YAWL as a validation environment for new algorithms. When a researcher proposes a new process discovery algorithm, the question is inevitably: "Does it capture all 43 patterns correctly?"
+
+YAWL export enables reproducible validation:
+1. Generate a process model using the new algorithm
+2. Export to YAWL XML
+3. Import into YAWL engine
+4. Execute the process and verify behavior matches expected pattern semantics
+
+Without YAWL export, researchers must manually verify that discovered models "look right." With YAWL export, verification is automated and reproducible.
+
+**3. Round-Trip Verification**
+
+A critical test for any formalism is whether conversion is lossless. Can we export a model to format X, import it back, and get the same model?
+
+YAWL export enables round-trip verification:
+- POWL → YAWL → POWL
+- BPMN → POWL → YAWL
+- Event log → POWL → YAWL
+
+If the round-trip preserves behavior, the conversion is sound. If not, something was lost. This capability is essential for building trustworthy process model conversion tools.
+
+**4. Pattern Language Completeness**
+
+"The 43 Workflow Patterns with POWL v2" (Chatman, 2026) documents all 43 patterns with both POWL implementations and YAWL construct mappings. Each pattern includes a "YAWL Implementation" section describing the equivalent YAWL XML (XOR-split, OR-join, cancellation set, etc.).
+
+YAWL export validates that these mappings are correct. When the book says "Multi-Choice maps to OR-split in YAWL," the export functionality can be tested: generate a POWL model with Multi-Choice, export to YAWL, and verify that OR-split elements appear in the XML.
+
+Without working export, the YAWL mappings in the book remain theoretical. With export, they become empirically validated.
+
+**5. Strategic Positioning: Switzerland of Process Modeling**
+
+Process modeling tools fragment into camps: BPMN purists (Camunda, Signavio), low-code platforms (Appian, Pega), academic tools (ProM, WoPeet), and research prototypes (POWL itself). Each camp has its format, its community, its blind spots.
+
+By supporting **all** formats—BPMN, PNML, YAWL, Process Trees, OCEL—pm4py positions itself as the "Switzerland" of process modeling: neutral, interoperable, and format-agnostic. A practitioner can import from any format, verify soundness, and export to any other format.
+
+This interoperability is strategically valuable. In heterogeneous enterprise environments, different systems use different formats. A tool that speaks all languages becomes the integration layer of choice.
+
+**Why YAWL Specifically?**
+
+YAWL occupies a unique niche: it is the **reference implementation** for the 43 patterns. When the patterns say "Arbitrary Cycles are supported in YAWL via explicit back-edge flows," the claim is testable because YAWL actually exists and can be executed.
+
+BPMN 2.0 is the industry standard, but it does not have a reference implementation for the 43 patterns. Different BPMN vendors implement the patterns differently (or not at all). YAWL, as the origin of the patterns, serves as the canonical semantics against which all other implementations are compared.
+
+**The Counterargument: "Nobody Uses YAWL Anymore"**
+
+This objection misses the point. YAWL is not being positioned as a production execution engine. It is being positioned as:
+
+1. A **verification target** for algorithm researchers
+2. A **reference semantics** for pattern definitions
+3. A **historical anchor** connecting modern work to foundational research
+4. An **interoperability format** in a heterogeneous tool ecosystem
+
+The value of YAWL export is not that thousands of enterprises will deploy YAWL engines in production. The value is that researchers, students, and practitioners can verify that the theoretical foundations of process mining remain connected to practical implementation.
+
+**Conclusion: YAWL Export as Validation, Not Production**
+
+YAWL export in Phase 1 serves a validation purpose: it demonstrates that the 43 workflow patterns documented in the pattern book are not merely theoretical constructs, but executable, verifiable process models. The fact that YAWL itself is obsolete in production deployment is irrelevant; what matters is that it serves as the reference implementation against which all other process modeling formalisms are measured.
+
+When a future process modeling formalism emerges—let's call it "ProcessML 2030"—it too will need to be validated against the 43 foundational patterns. YAWL export, and the tooling around it, will enable that validation. This is how theoretical research endures: not by chasing the latest technology, but by maintaining the connection between formal theory and executable artifacts.
 
 #### Phase 2: Enterprise Integration (2027)
 

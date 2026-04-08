@@ -243,6 +243,47 @@ def write_bpmn(
     exporter.apply(model, file_path, parameters={"encoding": encoding})
 
 
+def write_yawl(
+    model,
+    file_path: str,
+) -> None:
+    """
+    Writes a YAWL specification object to disk in the ``.yawl`` format.
+
+    :param model: YAWL specification object (or POWL model to auto-convert).
+    :param file_path: Target file path on disk to write the YAWL object to.
+
+    .. code-block:: python3
+
+       import pm4py
+
+       # Convert POWL to YAWL and write
+       log = pm4py.read_xes('tests/input_data/running-example.xes')
+       powl_model = pm4py.discover_powl(log)
+       pm4py.write_yawl(powl_model, '<path_to_export_to>')
+
+       # Or write an existing YAWL specification
+       yawl_spec = pm4py.convert_to_yawl(powl_model)
+       pm4py.write_yawl(yawl_spec, '<path_to_export_to>')
+    """
+    file_path = str(file_path)
+    if not file_path.lower().endswith("yawl"):
+        file_path = file_path + ".yawl"
+
+    # Check if model is already a YAWL specification
+    from pm4py.objects.yawl.obj import YAWLSpecification
+    if isinstance(model, YAWLSpecification):
+        yawl_spec = model
+    else:
+        # Auto-convert POWL to YAWL
+        from pm4py.objects.conversion.yawl.converter import apply as convert_to_yawl
+        yawl_spec = convert_to_yawl(model)
+
+    from pm4py.objects.yawl.exporter import exporter
+
+    exporter.apply(yawl_spec, file_path)
+
+
 def write_ocel(
     ocel: OCEL,
     file_path: str,

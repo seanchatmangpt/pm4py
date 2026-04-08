@@ -381,6 +381,11 @@ methods = {
         "output_extension": ".bpmn",
         "method": lambda x: __write_powl_to_bpmn(x[0], x[1]),
     },
+    "DiscoverPOWLToYAWL": {
+        "inputs": [None],
+        "output_extension": ".yawl",
+        "method": lambda x: __write_powl_to_yawl(x[0], x[1]),
+    },
 }
 
 
@@ -756,6 +761,35 @@ def __write_powl_to_bpmn(description_or_path, output_path):
 
     verdict_str = "VERIFIED" if result["verdict"] else "NOT VERIFIED"
     print(f"BPMN model ({verdict_str}) written to {output_path}")
+
+
+def __write_powl_to_yawl(description_or_path, output_path):
+    """Convert natural language description to YAWL XML via POWL."""
+    import os as _os
+    if _os.path.exists(description_or_path):
+        with open(description_or_path, "r") as f:
+            description = f.read()
+    else:
+        description = description_or_path
+
+    from pm4py.algo.dspy.powl.natural_language import generate_powl_from_text
+    result = generate_powl_from_text(description, max_refinements=1)
+    powl_string = result["powl"]
+
+    if not powl_string:
+        raise Exception("Failed to generate POWL model")
+
+    from pm4py.objects.powl.parser import parse_powl_model_string
+    parsed = parse_powl_model_string(powl_string)
+    if parsed is None:
+        raise Exception("Generated POWL could not be parsed")
+
+    # POWL → YAWL
+    yawl_model = pm4py.convert_to_yawl(parsed)
+    pm4py.write_yawl(yawl_model, output_path)
+
+    verdict_str = "VERIFIED" if result["verdict"] else "NOT VERIFIED"
+    print(f"YAWL model ({verdict_str}) written to {output_path}")
 
 
 def cli_interface():

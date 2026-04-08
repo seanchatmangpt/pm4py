@@ -79,6 +79,7 @@ from pm4py.write import (
     write_ocel2_sqlite,
     write_ocel2_xml,
     write_ocel2_json,
+    write_yawl,
 )
 from pm4py.utils import (
     format_dataframe,
@@ -264,6 +265,7 @@ from pm4py.convert import (
     convert_petri_net_to_networkx,
     convert_petri_net_type,
     convert_to_powl,
+    convert_to_yawl,
 )
 from pm4py.analysis import (
     cluster_log,
