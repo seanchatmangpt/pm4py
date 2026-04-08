@@ -50,7 +50,7 @@ pub fn alpha_miner(log: &EventLog) -> PetriNetResult {
 
     // Step 2: Compute ordering relations
     let causal = compute_causal(&dfg, &all_activities);
-    let parallel = compute_parallel(&dfg, &causal);
+    let _parallel = compute_parallel(&dfg, &causal);
 
     // Step 3: Derive places
     let mut net = PetriNet::new("alpha");
@@ -146,7 +146,7 @@ fn compute_causal(
 
 /// Compute parallel relations: a || b iff a → b and b → a in DFG.
 fn compute_parallel(
-    dfg: &HashMap<String, HashSet<String>>,
+    _dfg: &HashMap<String, HashSet<String>>,
     causal: &HashSet<(String, String)>,
 ) -> HashSet<(String, String)> {
     let mut parallel = HashSet::new();

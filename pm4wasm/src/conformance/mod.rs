@@ -17,3 +17,4 @@ pub mod token_replay;
 pub mod footprints_conf;
 pub mod soundness;
 pub mod precision;
+pub mod alignments;

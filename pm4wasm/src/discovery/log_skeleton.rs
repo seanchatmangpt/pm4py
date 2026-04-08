@@ -155,7 +155,7 @@ fn equivalence(
 /// Discover always-after relations.
 fn always_after(
     logs_traces: &[(Vec<String>, usize)],
-    all_activs: &HashMap<String, usize>,
+    _all_activs: &HashMap<String, usize>,
     noise_threshold: f64,
 ) -> HashSet<(String, String)> {
     // Count traces containing each activity
@@ -191,7 +191,7 @@ fn always_after(
 /// Discover always-before relations.
 fn always_before(
     logs_traces: &[(Vec<String>, usize)],
-    all_activs: &HashMap<String, usize>,
+    _all_activs: &HashMap<String, usize>,
     noise_threshold: f64,
 ) -> HashSet<(String, String)> {
     // Count traces containing each activity
@@ -228,7 +228,7 @@ fn always_before(
 fn never_together(
     logs_traces: &[(Vec<String>, usize)],
     all_activs: &HashMap<String, usize>,
-    len_log: usize,
+    _len_log: usize,
     noise_threshold: f64,
 ) -> HashSet<(String, String)> {
     let all_activities: Vec<&String> = all_activs.keys().collect();

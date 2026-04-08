@@ -125,11 +125,13 @@ impl InductiveDFG {
     }
 
     /// Check if there is an edge in either direction between a and b.
+    #[allow(dead_code)]
     fn has_any_edge(&self, a: &str, b: &str) -> bool {
         self.has_edge(a, b) || self.has_edge(b, a)
     }
 
     /// Get outgoing edges for a node.
+    #[allow(dead_code)]
     fn outgoing_edges(&self, node: &str) -> Vec<(String, usize)> {
         self.graph
             .iter()
@@ -139,6 +141,7 @@ impl InductiveDFG {
     }
 
     /// Get incoming edges for a node.
+    #[allow(dead_code)]
     fn incoming_edges(&self, node: &str) -> Vec<(String, usize)> {
         self.graph
             .iter()

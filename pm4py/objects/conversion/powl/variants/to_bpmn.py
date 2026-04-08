@@ -19,15 +19,11 @@ Contact: info@processintelligence.solutions
 """
 
 
-
-import importlib.util
-
-
 def apply(powl, parameters=None):
     """
-    Converts a POWL model to a BPMN model.
+    Converts a POWL model to a BPMN model via ProcessTree.
 
-    Requires the 'powl' PyPI package: ``pip install pm4py[powl]``.
+    Pipeline: POWL → ProcessTree → BPMN.
 
     Parameters
     ----------
@@ -41,16 +37,10 @@ def apply(powl, parameters=None):
     bpmn_graph
         BPMN model (as a pm4py BPMN object)
     """
-    if importlib.util.find_spec("powl") is None:
-        raise ImportError(
-            "The 'powl' package is required for POWL to BPMN conversion. "
-            "Install it with: pip install pm4py[powl]"
-        )
-    from powl.conversion.variants.to_bpmn import apply as powl_to_bpmn
+    from pm4py.objects.conversion.powl.variants.to_process_tree import apply as to_pt
+    from pm4py.convert import convert_to_bpmn
 
-    bpmn_graph, _, _ = powl_to_bpmn(powl, parameters=parameters)
-
-    from pm4py.objects.bpmn.layout import layouter as bpmn_layouter
-    bpmn_graph = bpmn_layouter.apply(bpmn_graph)
+    pt = to_pt(powl)
+    bpmn_graph = convert_to_bpmn(pt)
 
     return bpmn_graph

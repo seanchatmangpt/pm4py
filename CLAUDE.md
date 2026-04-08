@@ -1,108 +1,43 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+PM4Py is a Python process mining library (v2.7.22.1, AGPL-3.0) with `pm4wasm/` — a Rust/WASM crate for browser-native POWL v2 process mining.
 
-## Project Overview
-
-PM4Py is a Python process mining library (v2.7.22.1) providing state-of-the-art algorithms for process discovery, conformance checking, and analysis. Licensed AGPL-3.0.
-
-This fork also includes `pm4wasm/` — a Rust crate compiling POWL v2 (Partially Ordered Workflow Language) to WebAssembly for browser-native process mining.
-
-## Environment Setup
-
-### Prerequisites
-
-- **Python:** 3.9–3.14 (3.8 supported in `third_party/old_python_deps/`)
-- **System packages:** Graphviz (for visualization)
-  - macOS: `brew install graphviz`
-  - Ubuntu: `sudo apt-get install graphviz`
-- **Rust/WASM:** Rust toolchain + wasm-pack for pm4wasm development
-
-### Quick Setup
+## Setup
 
 ```bash
-# Clone and create virtual environment
-git clone <repo>
-cd pm4py
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Python
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .                    # Core
+pip install openai dspy-ai litellm groq  # LLM features
 
-# Install editable (includes core dependencies)
-pip install -e .
-
-# Install optional dependencies for LLM features
-pip install openai dspy-ai litellm groq
+# Prerequisites
+brew install graphviz                # macOS (visualization)
 ```
 
-## Build & Development Commands
+## Commands
 
-### Python (pm4py)
+### Python
 
 ```bash
-pip install -e .                  # Editable install
-python tests/execute_tests.py     # Full test suite (primary runner, unittest-based)
-python -m pm4py.cli               # CLI interface
-python -m pytest tests/           # Also works (pytest runs unittest tests)
+pip install -e .                    # Editable install
+python tests/execute_tests.py       # Full test suite (unittest-based)
+python -m pytest tests/              # Alternative runner
 python -m pytest tests/alpha_test.py -k "test_name"  # Single test
-
-# NL → POWL → BPMN (AI-assisted process discovery)
-python -m pm4py.cli DiscoverPOWLFromText "A customer orders a product..." output.powl
-python -m pm4py.cli DiscoverPOWLToBPMN "A customer orders a product..." output.bpmn
-python -m pm4py.cli DiscoverPOWLToBPMN process_description.txt output.bpmn
-python -m pm4py.cli DiscoverPOWL running-example.xes output.powl
-```
-
-### LLM Integration (Groq/DSPy)
-
-```bash
-# Set Groq API key for fast inference
-export GROQ_API_KEY='gsk_...'
-
-# Configure litellm for multiple providers
-python -c "from pm4py.algo.querying.llm.connectors import litellm_connector; help(litellm_connector)"
-
-# Natural language → POWL → BPMN pipeline
-python -m pm4py.cli DiscoverPOWLToBPMN "A customer orders a product, then pays, then receives confirmation" output.bpmn
-```
-
-**Note:** See `GROQ_DSPY_QUICKSTART.md` for detailed DSPy configuration.
-
-### Testing Strategy
-
-**Primary runner:** `python tests/execute_tests.py` (unittest-based)
-- Dynamically loads test classes from `enabled_tests` list
-- Conditionally includes Polars tests if `polars` is installed
-- Configured in `tests/config/test_config.py`
-
-**Alternative:** `python -m pytest tests/`
-- Also works (pytest runs unittest tests)
-- Better for filtering: `pytest -k "test_name"`
-
-**Single test:** `python -m pytest tests/alpha_test.py -k "test_name"`
-
-### Documentation
-
-```bash
-cd docs && bash build.sh          # Sphinx docs build (pydata_sphinx_theme)
+python -m pm4py.cli DiscoverPOWLToBPMN "description..." output.bpmn  # NL → BPMN
 ```
 
 ### Rust / WASM (pm4wasm)
 
 ```bash
 cd pm4wasm
-cargo build                       # Build native
-cargo test                        # Run Rust tests
-wasm-pack test --headless --firefox  # WASM tests in browser
-
-# JS/TS browser client
-cd js
-npm install
-npm run build:wasm                # Build WASM via wasm-pack
-npm run build:ts                  # Build TypeScript bundle
-npm run dev                       # Dev server with HMR
-npm run demo                      # Demo page
-npm run test                      # WASM browser tests
+cargo check                         # Type-check (fast)
+cargo test                          # 247 tests (245 pass; 2 pre-existing LLM failures)
+wasm-pack build --target web --release  # WASM package → pkg/
 ```
+
+No `Makefile` — use `cargo`/`wasm-pack` directly (global `cargo make` rule doesn't apply here).
+
+WASM binary size budget: <500KB gzipped (currently ~374KB).
 
 ### Docker
 
@@ -110,103 +45,50 @@ npm run test                      # WASM browser tests
 docker build -t pm4py .
 ```
 
+## pm4wasm Patterns
+
+### WASM Export Pattern
+
+All browser-callable functions use `#[wasm_bindgen]` in `src/lib.rs`:
+
+```rust
+#[wasm_bindgen]
+pub fn my_function(input_json: &str) -> Result<String, JsValue> {
+    let input: MyType = serde_json::from_str(input_json)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))?;
+    let result = my_module::do_thing(&input);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+```
+
+Prefer `lib.rs` wrappers over `#[wasm_bindgen]` in individual module files.
+
+### Known Test Failures
+
+Two LLM tests always fail (pre-existing, not caused by new work):
+- `llm::demos::tests::test_get_demos`
+- `llm::judge::tests::test_validate_sound_loop_with_exit`
+
 ## Architecture
 
-### Python Package (`pm4py/`)
+- **`pm4py/`** — Python package. Public API via flat modules (`pm4py.read`, `pm4py.discovery`, etc.) delegating to `pm4py/algo/` variants. Core types in `pm4py/objects/` (petri_net, powl, bpmn, dfg, ocel).
+- **`pm4wasm/`** — Rust/WASM crate. Arena-based `PowlModel` in `src/lib.rs`. Modules: `conformance/` (alignments, token replay, precision, footprints), `discovery/` (inductive, alpha, genetic, correlation, batches, heuristics, log skeleton, declare, temporal profile, performance spectrum), `conversion/` (BPMN, PNML, PTML, DFG, Petri nets, YAWL), `algorithms/` (marking equation, reduction, simplification, transitive), `quality/` (generalization), `streaming/`, `diff/`, `complexity/`, `statistics/`, `filtering/`, `llm/`.
+- **`pm4wasm/js/`** — TypeScript/Vite browser client wrapping WASM output.
 
-The public API is exposed through flat modules at the package root — `pm4py.read`, `pm4py.discovery`, `pm4py.conformance`, `pm4py.filtering`, `pm4py.vis`, etc. These delegate to implementations in:
-
-- **`pm4py/algo/`** — Algorithm implementations organized by domain: `discovery/`, `conformance/`, `filtering/`, `analysis/`, `evaluation/`, `simulation/`, etc. Each contains multiple variant implementations with a factory selection mechanism.
-- **`pm4py/objects/`** — Core data structures: `petri_net/`, `process_tree/`, `bpmn/`, `dfg/`, `powl/`, `ocel/` (object-centric event logs), `log/`, `transition_system/`.
-- **`pm4py/util/`** — Shared utilities: `pandas_utils.py`, `variants_util.py`, `xes_constants.py`, `dt_parsing/`, `prefixspan.py`, `lp/` (linear programming), `compression/`.
-- **`pm4py/statistics/`** — Event log and dataframe statistics.
-- **`pm4py/streaming/`** — Streaming event log processing.
-- **`pm4py/visualization/`** — Visualization backends.
-
-### POWL Rust/WASM Crate (`pm4wasm/`)
-
-**Documentation:**
-- **[README.md](pm4wasm/README.md)** — Project overview, quick start, features
-- **[docs/architecture.md](pm4wasm/docs/architecture.md)** — Module organization, data structures, algorithms
-- **[docs/tutorial.md](pm4wasm/docs/tutorial.md)** — Getting started guide with examples
-- **[docs/reference.md](pm4wasm/docs/reference.md)** — Complete API documentation
-- **[docs/quick-reference.md](pm4wasm/docs/quick-reference.md)** — Common operations and patterns
-- **[docs/troubleshooting.md](pm4wasm/docs/troubleshooting.md)** — Common issues and solutions
-- **[docs/vision-2030.md](pm4wasm/docs/vision-2030.md)** — Roadmap and future directions
-
-**Module Structure:**
-- **`src/lib.rs`** — wasm-bindgen entry point, arena-based `PowlModel` storage. All nodes referenced by `u32` index; root is always the last node.
-- **`src/powl.rs`** — POWL v2 node types (silent, visible, operator nodes: sequence, parallel, loop, choice, move_merge, silent_move_merge, transitive).
-- **`src/parser.rs`** — Parses POWL model strings (same format as Python `__repr__`).
-- **`src/binary_relation.rs`** — Bit-packed `BinaryRelation` with Warshall's algorithm for transitive closure/reduction.
-- **`src/petri_net.rs`** — Petri net conversion with `Place`, `Transition`, `Arc` types.
-- **`src/footprints.rs`** — Behavioral signature extraction.
-- **`src/conformance/token_replay.rs`** — Token-based replay conformance checking.
-- **`src/event_log.rs`** — XES/CSV event log parsing.
-- **`src/streaming.rs`** — Streaming drift detection with EWMA smoothing.
-- **`src/diff.rs`** — Behavioral diff between two POWL models.
-- **`src/complexity.rs`** — Model complexity metrics.
-- **`src/conversion/`** — Converters to BPMN, Petri nets, process trees.
-- **`src/algorithms/`** — Label replacing, simplification, transitive operations.
-- **`js/`** — TypeScript/Vite browser client wrapping the WASM output.
-
-### DSPy POWL Generation (`pm4py/algo/dspy/powl/`)
-
-AI-assisted process model generation and verification using DSPy framework:
-
-- **`natural_language.py`** — NL → POWL generation with judge-refinement loop. `generate_powl_from_text(description)` returns verified POWL model.
-- **`judge.py`** — "Dr. van der Aalst" POWL quality judge. Evaluates structural soundness (deadlock freedom, liveness, boundedness) without ground truth.
-- **`nl_demos.py`** — 4 few-shot demos: loan approval, software release, e-commerce, A2A+MCP multi-agent orchestration.
-- **`react_agent.py`** — Event log → POWL agent (programmatic discovery from DFG+variants abstraction).
-- **`generation.py`** — Tool functions: `validate_powl()`, `check_activity_coverage()`, `check_fitness()`, `finish()`.
-- **`optimize.py`** — SIMBA optimization, LM configuration, agent save/load.
-- **`metrics.py`** — Quality metrics: parse-only, structural, conformance.
-- **`data.py`** — Training data creation from event logs.
-- **`demos.py`** — 5 few-shot demos for event log generation.
-
-### Key Data Flows
-
-```
-# Event log discovery (programmatic)
-Event log (XES/CSV/Pandas DataFrame)
-  → pm4py.read_xes() / pm4py.read_csv()
-  → pm4py.discover_petri_net_inductive() / discover_powl()
-  → pm4py.check_fitness() / conformance checking
-  → pm4py.view_petri_net() / visualization
-
-# NL → POWL → BPMN (AI-assisted, central paradigm)
-Natural language description
-  → generate_powl_from_text(description)
-  → POWLJudge verification + refinement loop
-  → parse_powl_model_string()
-  → pm4py.convert_to_bpmn() / write_bpmn()
-  → BPMN 2.0 XML (open in Camunda, Signavio, etc.)
-```
-
-## Python Version & Dependencies
-
-- Supports Python 3.9–3.14 (see `third_party/old_python_deps/` for 3.8)
-- Core: numpy, pandas, networkx, graphviz, scipy, lxml, matplotlib
-- Optional: openai, scikit-learn, polars, pyarrow, pyvis, workalendar, pyemd
+Full module docs: [pm4wasm/docs/architecture.md](pm4wasm/docs/architecture.md)
 
 ## Troubleshooting
 
-### Issue: Graphviz visualization fails
-**Symptom:** `ExecutableNotFound: failed to execute ['dot', '-Tpng']`
-**Fix:** Install Graphviz system package (see Environment Setup above)
-
-### Issue: Import errors for optional modules
-**Symptom:** `ModuleNotFoundError: No module named 'polars'`
-**Fix:** Install optional dependencies: `pip install polars pyarrow scikit-learn`
-
-### Issue: WASM build fails on macOS ARM64
-**Symptom:** `wasm-pack` compilation errors
-**Fix:** Ensure Rust is up-to-date: `rustup update`
-
-### Issue: Tests fail with pandas errors
-**Symptom:** `AttributeError: 'DataFrame' object has no attribute ...`
-**Fix:** Ensure pandas >= 3.0.0: `pip install --upgrade pandas`
+| Issue | Fix |
+|-------|-----|
+| `quick_xml` misses self-closing elements | Handle both `Empty` (self-closing `<tag/>`) and `Start`/`End` (non-self-closing `<tag>...</tag>`) events |
+| `#[allow(dead_code)]` on struct doesn't suppress field warnings | Place `#[allow(dead_code)]` on each unused field directly |
+| Graphviz `ExecutableNotFound` | `brew install graphviz` |
+| `ModuleNotFoundError: polars` | `pip install polars pyarrow scikit-learn` |
+| WASM build fails on macOS ARM64 | `rustup update` |
+| pandas attribute errors | `pip install --upgrade pandas` (>= 3.0.0) |
 
 ## Test Data
 
-Test event logs and models live in `tests/input_data/`. Compressed variants in `tests/compressed_input_data/`.
+`tests/input_data/` — event logs and models. Compressed variants in `tests/compressed_input_data/`.

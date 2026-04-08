@@ -162,7 +162,7 @@ fn is_chain_response_satisfied(
 /// Check if alternate precedence constraint is satisfied.
 /// AltPrecedence(a,b): for each b, there exists a before it and after previous b.
 fn is_alternate_precedence_satisfied(
-    trace: &[String],
+    _trace: &[String],
     act_idxs: &HashMap<String, Vec<usize>>,
     a: &str,
     b: &str,
@@ -428,10 +428,8 @@ fn get_rules_from_table(
         // Find best rule by support * confidence
         let mut best_prod = 0.0;
         let mut best_support = 0;
-        let mut best_conf = 0;
-
         for rules_row in table {
-            for (key, &value) in rules_row {
+            for (_key, &value) in rules_row {
                 if value != 0 {
                     let support = rules_row.len();
                     let confidence = if value > 0 { 1 } else { 0 };
@@ -439,7 +437,6 @@ fn get_rules_from_table(
                     if prod > best_prod {
                         best_prod = prod;
                         best_support = support;
-                        best_conf = confidence;
                     }
                 }
             }

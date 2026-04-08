@@ -73,6 +73,7 @@ pub mod statistics;
 pub mod discovery;
 pub mod filtering;
 pub mod llm;
+pub mod quality;
 
 use binary_relation::BinaryRelation;
 use powl::{PowlArena, PowlNode};
@@ -414,6 +415,69 @@ pub fn token_replay_fitness(petri_net_json: &str, log_json: &str) -> Result<Stri
         &pn_result.final_marking,
         &log,
     );
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute A* alignment for a single trace against a Petri net.
+///
+/// Returns JSON with `cost`, `is_fit`, `moves` (each with `type`, `label`, `cost`).
+/// Move types: "sync" (model+log match), "log" (log only), "model" (model only).
+///
+/// Mirrors `pm4py.align_trace()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn align_trace(petri_net_json: &str, trace_json: &str) -> Result<String, JsValue> {
+    let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    let trace: event_log::Trace = serde_json::from_str(trace_json)
+        .map_err(|e| JsValue::from_str(&format!("Trace JSON error: {}", e)))?;
+    let result = conformance::alignments::astar::align_trace(
+        &pn_result.net,
+        &pn_result.initial_marking,
+        &pn_result.final_marking,
+        &trace,
+    );
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute A* alignments for every trace in an event log against a Petri net.
+///
+/// Returns JSON with `total_cost`, `avg_cost`, `trace_alignments` (per-trace breakdown).
+///
+/// Mirrors `pm4py.align_log()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn align_log(petri_net_json: &str, log_json: &str) -> Result<String, JsValue> {
+    let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = conformance::alignments::astar::align_log(
+        &pn_result.net,
+        &pn_result.initial_marking,
+        &pn_result.final_marking,
+        &log,
+    );
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Import a PNML 2.0 XML string into a PetriNetResult JSON.
+///
+/// Mirrors `pm4py.read_pnml()`.
+///
+/// # Errors
+/// Throws if the PNML XML cannot be parsed.
+#[wasm_bindgen]
+pub fn from_pnml(xml: &str) -> Result<String, JsValue> {
+    let result = conversion::pnml::from_pnml(xml)
+        .map_err(|e| JsValue::from_str(&format!("PNML parse error: {}", e)))?;
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
 }
@@ -1010,6 +1074,154 @@ pub fn discover_declare(log_json: &str) -> Result<String, JsValue> {
     let result = discovery::declare::discover_declare(&log, None, None, None);
     serde_json::to_string(&result)
         .map_err(|e| JsValue::from_str(&format!("JSON error: {}", e)))
+}
+
+/// Discover a Petri net using the genetic miner (evolutionary algorithm).
+///
+/// Returns the same JSON format as other discovery functions: `{net, initial_marking, final_marking}`.
+/// Optionally accepts a JSON config object with `population_size`, `generations`,
+/// `mutation_rate`, `crossover_rate`.
+///
+/// Mirrors `pm4py.discover_petri_net_genetic()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_petri_net_genetic(log_json: &str, config_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let config: Option<discovery::genetic_miner::GeneticMinerConfig> =
+        if config_json.is_empty() {
+            None
+        } else {
+            Some(serde_json::from_str(config_json)
+                .map_err(|e| JsValue::from_str(&format!("Config JSON error: {}", e)))?)
+        };
+    let result = discovery::genetic_miner::discover_genetic(&log, config);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover a process model using correlation mining (case-less / timestamp-based).
+///
+/// Unlike other discovery algorithms, correlation mining works without case IDs
+/// by detecting temporal gaps between activity occurrences.
+///
+/// Returns JSON with `start_activity`, `end_activity`, `trace_count`, `edges`.
+///
+/// Mirrors `pm4py.discover_correlation()`.
+///
+/// # Arguments
+/// * `log_json` - Event log JSON
+/// * `correlation_threshold` - Gap threshold in seconds (typically 5.0-3600.0)
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_correlation(log_json: &str, correlation_threshold: f64) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let mut config = discovery::correlation_miner::CorrelationConfig::default();
+    config.correlation_threshold = correlation_threshold;
+    let result = discovery::correlation_miner::discover_correlation_from_log(&log, Some(config));
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Detect batch processing patterns in an event log.
+///
+/// Returns JSON with `batches` array, each containing `type` (sequential, concurrent,
+/// parallel, concurrent_parallel), `activity`, `instances` with start/end timestamps.
+///
+/// Mirrors `pm4py.discover_batches()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_batches(log_json: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::batches::discover_batches(&log);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Discover performance spectrum for a specific activity.
+///
+/// Returns JSON with `activity`, `overall_stats`, `instance_data` for visualization.
+/// Useful for D3.js or similar charting libraries.
+///
+/// Mirrors `pm4py.discover_performance_spectrum()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn discover_performance_spectrum(log_json: &str, activity: &str) -> Result<String, JsValue> {
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = discovery::performance_spectrum::discover_performance_spectrum(&log, activity);
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Compute generalization quality metric for a Petri net against an event log.
+///
+/// Returns JSON with `generalization` score in [0.0, 1.0].
+/// Higher scores indicate the model generalizes well (not overfitting).
+///
+/// Mirrors `pm4py.generalization()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn generalization(petri_net_json: &str, log_json: &str) -> Result<String, JsValue> {
+    let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    let log: EventLog = serde_json::from_str(log_json)
+        .map_err(|e| JsValue::from_str(&format!("Event log JSON error: {}", e)))?;
+    let result = quality::generalization::compute_quality(
+        &pn_result.net,
+        &pn_result.initial_marking,
+        &pn_result.final_marking,
+        &log,
+    );
+    serde_json::to_string(&result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Reduce a Petri net by applying structural reduction rules.
+///
+/// Applies fusion of series places, fusion of series transitions,
+/// elimination of self-loop places, and other reduction rules.
+///
+/// Returns the reduced Petri net as JSON (same format as discovery functions).
+///
+/// Mirrors `pm4py.reduce_petri_net()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn reduce_petri_net(petri_net_json: &str) -> Result<String, JsValue> {
+    let mut pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    algorithms::reduction::reduce_petri_net(&mut pn_result.net);
+    serde_json::to_string(&pn_result)
+        .map_err(|e| JsValue::from_str(&format!("JSON serialisation error: {}", e)))
+}
+
+/// Count the number of reducible elements in a Petri net.
+///
+/// Returns the count of elements that could be reduced by `reduce_petri_net()`.
+///
+/// Mirrors `pm4py.count_reducible_elements()`.
+///
+/// # Errors
+/// Throws if JSON cannot be deserialised.
+#[wasm_bindgen]
+pub fn count_reducible_elements(petri_net_json: &str) -> Result<usize, JsValue> {
+    let pn_result: PetriNetResult = serde_json::from_str(petri_net_json)
+        .map_err(|e| JsValue::from_str(&format!("Petri net JSON error: {}", e)))?;
+    Ok(algorithms::reduction::count_reducible_elements(&pn_result.net))
 }
 
 // ─── Temporal Profile API ──────────────────────────────────────────────────────

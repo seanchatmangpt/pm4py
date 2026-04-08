@@ -239,7 +239,7 @@ pub fn replay_trace(
     // Compute fitness
     let trace_is_fit = missing == 0 && remaining == 0;
     let fitness = if produced == 0 && consumed == 0 {
-        1.0
+        if missing == 0 { 1.0 } else { 0.0 }
     } else {
         let c = consumed as f64;
         let p = produced as f64;

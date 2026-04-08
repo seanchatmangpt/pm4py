@@ -20,3 +20,5 @@ pub mod from_bpmn;
 pub mod to_yawl;
 pub mod process_tree_to_bpmn;
 pub mod pnml;
+pub mod dfg;
+pub mod ptml;

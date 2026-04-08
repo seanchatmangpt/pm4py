@@ -65,6 +65,7 @@ fn log_footprints(log: &EventLog) -> LogFootprints {
     }
 }
 
+#[allow(dead_code)]
 struct LogFootprints {
     sequence: HashMap<(String, String), usize>,
     start_activities: HashMap<String, usize>,
