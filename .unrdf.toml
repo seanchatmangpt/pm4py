@@ -1,0 +1,52 @@
+[project]
+name = "pm4py-mcp"
+version = "2.7.22.1"
+description = "FastMCP server for pm4py process mining — generated from ontology via unrdf sync"
+
+[ontology]
+source = "ontology/pm4py_mcp.nt"
+format = "ntriples"
+
+[generation]
+output_dir = "pm4py_mcp"
+
+[[generation.rules]]
+name = "fastmcp-server"
+description = "Generate FastMCP server.py from ontology/pm4py_mcp.nt"
+enabled = true
+template = "templates/fastmcp-server.njk"
+output_file = "server.py"
+mode = "overwrite"
+
+query = """
+PREFIX pm4py: <urn:pm4py-mcp:>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+
+SELECT
+  ?toolName
+  ?toolDescription
+  ?pythonModule
+  ?pythonFunction
+  ?argName
+  ?argType
+  ?argDescription
+  ?required
+  ?defaultValue
+WHERE {
+  ?tool a pm4py:McpTool ;
+        pm4py:toolName ?toolName ;
+        pm4py:toolDescription ?toolDescription ;
+        pm4py:pythonModule ?pythonModule ;
+        pm4py:pythonFunction ?pythonFunction .
+
+  OPTIONAL {
+    ?tool pm4py:hasArg ?arg .
+    ?arg pm4py:argName ?argName ;
+         pm4py:argType ?argType .
+    OPTIONAL { ?arg pm4py:argDescription ?argDescription }
+    OPTIONAL { ?arg pm4py:required ?required }
+    OPTIONAL { ?arg pm4py:defaultValue ?defaultValue }
+  }
+}
+ORDER BY ?toolName ?argName
+"""
