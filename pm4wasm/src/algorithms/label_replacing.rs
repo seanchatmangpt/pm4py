@@ -1,8 +1,24 @@
+// PM4Py – A Process Mining Library for Python (POWL v2 WASM)
+// Copyright (C) 2024 Process Intelligence Solutions
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /// Label replacement utility for POWL models.
 ///
 /// Ports `pm4py/objects/powl/utils/label_replacing.py:apply`.
 use crate::powl::{PowlArena, PowlNode};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
 
 /// Replace activity labels in a POWL subtree according to a dictionary.
 ///
@@ -66,6 +82,42 @@ pub fn apply(
             spo_idx
         }
     }
+}
+
+// ─── WASM exports ─────────────────────────────────────────────────────────────
+
+/// Replace activity labels in a POWL model.
+///
+/// # Arguments
+/// * `model_str` - POWL model string representation
+/// * `label_map_json` - JSON string mapping old labels to new labels (e.g., {"A": "Start", "B": "End"})
+///
+/// # Returns
+/// * New POWL model string with labels replaced
+///
+/// # Example
+/// ```javascript
+/// const powl = await Powl.init();
+/// const result = powl.replaceLabels("X(A, B)", '{"A": "X", "B": "Y"}');
+/// // Returns: "X ( X, Y )"
+/// ```
+#[wasm_bindgen]
+pub fn replace_labels(model_str: &str, label_map_json: &str) -> Result<String, JsValue> {
+    // Parse the model
+    let mut arena = PowlArena::new();
+    let root = crate::parser::parse_powl_model_string(model_str, &mut arena)
+        .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
+
+    // Parse the label map
+    let label_map: HashMap<String, String> = serde_json::from_str(label_map_json)
+        .map_err(|e| JsValue::from_str(&format!("Invalid label map JSON: {}", e)))?;
+
+    // Create destination arena and apply replacement
+    let mut dest_arena = PowlArena::new();
+    let new_root = apply(&arena, root, &label_map, &mut dest_arena);
+
+    // Return the new model as a string
+    Ok(dest_arena.to_repr(new_root))
 }
 
 // ─── tests ───────────────────────────────────────────────────────────────────

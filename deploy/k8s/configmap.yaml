@@ -1,0 +1,17 @@
+# PM4Py ConfigMap for environment configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pm4py-config
+  namespace: pm4py
+data:
+  PM4PY_LOG_LEVEL: "INFO"
+  PM4PY_DB_HOST: "postgres"
+  PM4PY_DB_PORT: "5432"
+  PM4PY_DB_NAME: "pm4py"
+  PM4PY_DB_USER: "pm4py"
+  PM4PY_REDIS_HOST: "redis"
+  PM4PY_REDIS_PORT: "6379"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+  OTEL_SERVICE_NAME: "pm4py"
+  OTEL_DEPLOYMENT_ENVIRONMENT: "production"

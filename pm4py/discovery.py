@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 __doc__ = """
 The ``pm4py.discovery`` module contains the process discovery algorithms implemented in ``pm4py``.
 """
@@ -1375,8 +1375,19 @@ def discover_powl(
     Reference paper:
     Kourani, Humam, and Sebastiaan J. van Zelst. "POWL: partially ordered workflow language." International Conference on Business Process Management. Cham: Springer Nature Switzerland, 2023.
 
+    For DecisionGraph variants (DECISION_GRAPH_CYCLIC, etc.), the optional 'powl'
+    PyPI package is required. Install it with: ``pip install pm4py[powl]``.
+
     :param log: Event log or Pandas DataFrame.
-    :param variant: Variant of the POWL discovery algorithm to use.
+    :param variant: Variant of the POWL discovery algorithm to use. Options:
+        - TREE: base IM with no partial orders
+        - BRUTE_FORCE: brute force partial order cut detection
+        - MAXIMAL: maximal partial order cut detection (default)
+        - DYNAMIC_CLUSTERING: dynamic clustering with frequency filtering
+        - DECISION_GRAPH_MAX: decision graph maximal (requires powl package)
+        - DECISION_GRAPH_CLUSTERING: decision graph with clustering (requires powl package)
+        - DECISION_GRAPH_CYCLIC: decision graph cyclic (requires powl package)
+        - DECISION_GRAPH_CYCLIC_STRICT: strict cyclic decision graph (requires powl package)
     :param filtering_weight_factor: Factoring threshold for filtering weights, accepts values 0 <= x < 1 (default: 0.0).
     :param order_graph_filtering_threshold: Filtering threshold for the order graph, valid for the DYNAMIC_CLUSTERING variant, accepts values 0.5 < x <= 1 (default: None).
     :param activity_key: Attribute to be used for the activity (default: "concept:name").
@@ -1414,8 +1425,6 @@ def discover_powl(
             case_id_key=case_id_key,
         )
 
-    #import pm4py
-    #log = pm4py.convert_to_event_log(log, case_id_key=case_id_key)
     properties = get_properties(log, activity_key=activity_key, timestamp_key=timestamp_key)
 
     if order_graph_filtering_threshold is not None:
@@ -1431,6 +1440,90 @@ def discover_powl(
     from pm4py.algo.discovery.powl import algorithm as powl_discovery
 
     return powl_discovery.apply(log, variant=variant, parameters=properties)
+
+
+def discover_powl_from_partially_ordered_log(
+    log: Union[EventLog, pd.DataFrame],
+    activity_key: str = "concept:name",
+    order_key: str = "time:timestamp",
+    case_id_key: str = "case:concept:name",
+    lifecycle_key: str = "lifecycle:transition",
+    parameters: Optional[Dict[Any, Any]] = None,
+) -> POWL:
+    """
+    Discovers a POWL model from a partially ordered event log.
+
+    Requires the 'powl' PyPI package: ``pip install pm4py[powl]``.
+
+    Reference paper:
+    H Kourani, G Park, WMP van der Aalst. "Revealing Inherent Concurrency in Event Data:
+    A Partial Order Approach to Process Discovery"
+
+    :param log: event log / Pandas dataframe
+    :param activity_key: attribute to be used for the activity (default: "concept:name")
+    :param order_key: attribute to be used for ordering events within traces (default: "time:timestamp")
+    :param case_id_key: attribute to be used as case identifier (default: "case:concept:name")
+    :param lifecycle_key: attribute to be used as lifecycle identifier (default: "lifecycle:transition")
+    :param parameters: optional parameters
+    :return: A POWL object representing the discovered model.
+    :rtype: ``POWL``
+
+    .. code-block:: python3
+
+        import pm4py
+
+        log = pm4py.read_xes('tests/input_data/running-example.xes')
+        powl_model = pm4py.discover_powl_from_partially_ordered_log(log)
+        print(powl_model)
+    """
+    __event_log_deprecation_warning(log)
+
+    if parameters is None:
+        parameters = {}
+    parameters["activity_key"] = activity_key
+    parameters["order_key"] = order_key
+    parameters["case_id_key"] = case_id_key
+    parameters["lifecycle_key"] = lifecycle_key
+
+    from pm4py.algo.discovery.powl.partial_order_based import algorithm
+
+    return algorithm.apply(log, parameters=parameters)
+
+
+def discover_oc_powl(
+    ocel,
+    variant="oc_powl",
+    parameters=None,
+):
+    """
+    Discovers a Petri net from an object-centric event log using POWL-based techniques.
+
+    Requires the 'powl' PyPI package: ``pip install pm4py[powl]``.
+
+    :param ocel: object-centric event log
+    :param variant: variant of the algorithm ("flattening" or "oc_powl", default: "oc_powl")
+    :param parameters: optional parameters
+    :return: A tuple (net, im, fm) representing the discovered Petri net.
+    :rtype: ``Tuple[PetriNet, Marking, Marking]``
+
+    .. code-block:: python3
+
+        import pm4py
+
+        ocel = pm4py.read_ocel("tests/input_data/ocel/example_log.jsonocel")
+        net, im, fm = pm4py.discover_oc_powl(ocel)
+        pm4py.view_petri_net(net, im, fm)
+    """
+    from pm4py.algo.discovery.ocel.powl.algorithm import Variants
+
+    if variant == "flattening":
+        v = Variants.FLATTENING
+    else:
+        v = Variants.OC_POWL
+
+    from pm4py.algo.discovery.ocel.powl import algorithm
+
+    return algorithm.apply(ocel, variant=v, parameters=parameters)
 
 
 def discover_batches(

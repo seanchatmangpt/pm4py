@@ -1,0 +1,125 @@
+name: WASM Build & Test
+
+on:
+  push:
+    branches: [main, release, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main, release]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-rust:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Run tests
+        working-directory: pm4wasm
+        run: cargo test --verbose
+
+      - name: Run clippy
+        working-directory: pm4wasm
+        run: cargo clippy -- -D warnings
+
+      - name: Check formatting
+        working-directory: pm4wasm
+        run: cargo fmt -- --check
+
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    needs: test-rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build WASM
+        working-directory: pm4wasm
+        run: wasm-pack build --target bundler --release --out-dir js/pkg
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm4wasm-wasm
+          path: pm4wasm/js/pkg/
+          retention-days: 7
+
+  test-wasm:
+    name: WASM Browser Tests
+    runs-on: ubuntu-latest
+    needs: build-wasm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download WASM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pm4wasm-wasm
+          path: pm4wasm/js/pkg/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: pm4wasm/js
+        run: npm ci
+
+      - name: Run WASM tests
+        working-directory: pm4wasm/js
+        run: npm run test:wasm
+
+  test-typescript:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: pm4wasm/js
+        run: npm ci
+
+      - name: Build WASM
+        working-directory: pm4wasm/js
+        run: npm run build:wasm
+
+      - name: Run TypeScript tests
+        working-directory: pm4wasm/js
+        run: npm run test:ts
+
+      - name: Type check
+        working-directory: pm4wasm/js
+        run: npx tsc --noEmit

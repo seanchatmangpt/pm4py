@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 
 import time
 import uuid
@@ -37,6 +37,7 @@ from pm4py.objects.powl.obj import (
     StrictPartialOrder,
     OperatorPOWL,
     FrequentTransition,
+    DecisionGraph,
 )
 from pm4py.objects.petri_net.utils import reduction
 from pm4py.objects.process_tree.obj import Operator
@@ -211,6 +212,63 @@ def recursively_add_tree(
                 net.places.add(new_place)
                 add_arc_from_to(final_trans[i], new_place, net)
                 add_arc_from_to(new_place, init_trans[j], net)
+
+    elif isinstance(powl, DecisionGraph):
+        transitive_reduction = powl.order.get_transitive_reduction()
+        tree_children = list(powl.children)
+
+        tau_split = get_new_hidden_trans(counts, type_trans="tauSplit")
+        net.transitions.add(tau_split)
+        add_arc_from_to(initial_place, tau_split, net)
+        tau_join = get_new_hidden_trans(counts, type_trans="tauJoin")
+        net.transitions.add(tau_join)
+        add_arc_from_to(tau_join, final_place, net)
+
+        child_to_trans = {}
+        for subtree in tree_children:
+            i_trans = get_new_hidden_trans(counts, type_trans="init_dg")
+            net.transitions.add(i_trans)
+            f_trans = get_new_hidden_trans(counts, type_trans="final_dg")
+            net.transitions.add(f_trans)
+
+            net, counts, intermediate_place = recursively_add_tree(
+                subtree, net, i_trans, f_trans, counts, rec_depth + 1
+            )
+            child_to_trans[subtree] = (i_trans, f_trans)
+
+        # Add ordering edges from transitive reduction
+        for child1 in tree_children:
+            for child2 in tree_children:
+                if transitive_reduction.is_edge(child1, child2):
+                    _, f_trans1 = child_to_trans[child1]
+                    i_trans2, _ = child_to_trans[child2]
+                    new_place = get_new_place(counts)
+                    net.places.add(new_place)
+                    add_arc_from_to(f_trans1, new_place, net)
+                    add_arc_from_to(new_place, i_trans2, net)
+
+        # Connect start_nodes to tau_split
+        for start_node in powl.start_nodes:
+            i_trans, _ = child_to_trans[start_node]
+            start_place = get_new_place(counts)
+            net.places.add(start_place)
+            add_arc_from_to(tau_split, start_place, net)
+            add_arc_from_to(start_place, i_trans, net)
+
+        # Connect end_nodes to tau_join
+        for end_node in powl.end_nodes:
+            _, f_trans = child_to_trans[end_node]
+            end_place = get_new_place(counts)
+            net.places.add(end_place)
+            add_arc_from_to(f_trans, end_place, net)
+            add_arc_from_to(end_place, tau_join, net)
+
+        # Empty path: start -> end directly
+        if powl.empty_path:
+            skip_place = get_new_place(counts)
+            net.places.add(skip_place)
+            add_arc_from_to(tau_split, skip_place, net)
+            add_arc_from_to(skip_place, tau_join, net)
 
     return net, counts, final_place
 

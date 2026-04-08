@@ -1,0 +1,25 @@
+name: CLA Check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  cla-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if CLA signed
+        uses: cla-assistant/github-action@v2.0.0-alpha
+        with:
+          path-to-signatures: .github/cla-signed
+          path-to-document: https://github.com/process-intelligence-solutions/pm4py/blob/main/.github/cla/individual-cla.md
+          remote-organization-name: process-intelligence-solutions
+          remote-repository-name: pm4py
+          custom-pr-comment: |
+            Thank you for your contribution! Before we can merge this PR, please sign our Contributor License Agreement (CLA).
+            This ensures we have the legal right to distribute your contribution under Apache 2.0.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

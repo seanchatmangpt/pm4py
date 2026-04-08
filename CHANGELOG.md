@@ -1,5 +1,50 @@
 # Changelog of pm4py
 
+# pm4py 2.8.0 (2026.04.07) - License Migration Release
+
+### Breaking Change
+* **License Migration: AGPL-3.0 → Apache 2.0**
+  * pm4py is now licensed under the Apache License, Version 2.0
+  * This change enables enterprise adoption and commercial embedding
+  * **Migration Guide for Existing Users:**
+
+    **For Users (No Action Required)**
+    * Apache 2.0 is *more permissive* than AGPL-3.0
+    * All previous rights are preserved
+    * No source disclosure requirement for network/SaaS deployments
+    * Commercial use explicitly permitted
+
+    **For Contributors (Action Required)**
+    * New CLA (Contributor License Agreement) required for all pull requests
+    * Sign CLA at: https://cla-assistant.io/process-intelligence-solutions/pm4py
+    * Existing contributions automatically covered by Apache 2.0 grant
+
+    **For Enterprise Users**
+    * Can embed pm4py in proprietary products without opening source
+    * No copyleft "viral" effects from AGPL
+    * Patent grant included in Apache 2.0
+    * Compatible with Snowflake, Databricks, Palantir, and other enterprise platforms
+
+  **Compatibility Notes:**
+  * All dependencies verified for Apache 2.0 compatibility
+  * tqdm (MPL-2.0): file-level copyleft, compatible
+  * cvxopt (GPL-3.0): OPTIONAL dependency only
+
+  **Legal Disclaimer:**
+  * This license change is authorized by the copyright holders
+  * Contributors grant Apache 2.0 licenses via CLA
+  * For questions: legal@processintelligence.solutions
+
+### Added
+* CLA bot integration for contributor agreements
+* License compatibility verification script
+
+### Changed
+* LICENSE file updated to Apache 2.0
+* All source file headers updated to Apache 2.0
+* setup.py license field updated
+* pm4wasm/Cargo.toml license field updated
+
 # pm4py 2.7.22 (2026.03.20)
 
 ### Added

@@ -1,0 +1,165 @@
+# PM4Py Docker Compose - Production Stack
+# Includes PM4Py, PostgreSQL, Redis, and OTEL Collector
+
+version: "3.9"
+
+services:
+  # PM4Py API Service
+  pm4py-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: pm4py-api
+    restart: unless-stopped
+    environment:
+      - PM4PY_LOG_LEVEL=INFO
+      - PM4PY_DB_HOST=postgres
+      - PM4PY_DB_PORT=5432
+      - PM4PY_DB_NAME=pm4py
+      - PM4PY_DB_USER=pm4py
+      - PM4PY_DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - PM4PY_REDIS_HOST=redis
+      - PM4PY_REDIS_PORT=6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    ports:
+      - "8000:8000"
+    volumes:
+      - pm4py-data:/app/data
+      - pm4py-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pm4py-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: pm4py-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=pm4py
+      - POSTGRES_USER=pm4py
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - pm4py-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pm4py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: pm4py-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - pm4py-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:0.104.0
+    container_name: pm4py-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - otel-data:/otelcollector/data
+    ports:
+      - "4317:4317"  # OTLP gRPC receiver
+      - "4318:4318"  # OTLP HTTP receiver
+      - "8888:8888"  # Prometheus metrics
+      - "8889:8889"  # Config endpoint
+    networks:
+      - pm4py-network
+    depends_on:
+      - jaeger
+
+  # Jaeger Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: pm4py-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL_STORAGE_ENABLED=true
+    ports:
+      - "5775:5775"  # Accept Jaeger thrift
+      - "16686:16686" # Jaeger UI
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    networks:
+      - pm4py-network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: pm4py-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - pm4py-network
+    depends_on:
+      - prometheus
+
+  # Prometheus Metrics
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: pm4py-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - prometheus-data:/prometheus
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - pm4py-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  pm4py-data:
+  pm4py-logs:
+  otel-data:
+  grafana-data:
+  prometheus-data:
+
+networks:
+  pm4py-network:
+    driver: bridge

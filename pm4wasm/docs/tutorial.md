@@ -28,7 +28,7 @@ This means: Execute A, then choose between B or C, then execute D.
 ### JavaScript (Browser)
 
 ```javascript
-import init, { parse_powl } from './pkg/powl_wasm.js';
+import init, { parse_powl } from './pkg/pm4wasm.js';
 
 await init();
 
@@ -47,8 +47,8 @@ console.log(model.toString());  // Pretty-print the model
 ### Rust (Native)
 
 ```rust
-use powl_wasm::parser::parse_powl_model_string;
-use powl_wasm::powl::PowlArena;
+use pm4wasm::parser::parse_powl_model_string;
+use pm4wasm::powl::PowlArena;
 
 let mut arena = PowlArena::new();
 let root = parse_powl_model_string(
@@ -172,16 +172,16 @@ model.simplify_using_frequent_transitions();
 ### WASM (Browser)
 
 ```bash
-cd powl-wasm
+cd pm4wasm
 wasm-pack build --target web --release
 ```
 
-Output: `pkg/powl_wasm.js` + `pkg/powl_wasm_bg.wasm`
+Output: `pkg/pm4wasm.js` + `pkg/pm4wasm_bg.wasm`
 
 Include in HTML:
 ```html
 <script type="module">
-  import init, { parse_powl } from './pkg/powl_wasm.js';
+  import init, { parse_powl } from './pkg/pm4wasm.js';
   init().then(() => {
     const model = parse_powl("A");
     console.log(model.toString());
@@ -192,7 +192,7 @@ Include in HTML:
 ### Native (Rust)
 
 ```bash
-cd powl-wasm
+cd pm4wasm
 cargo build --release
 cargo test
 ```

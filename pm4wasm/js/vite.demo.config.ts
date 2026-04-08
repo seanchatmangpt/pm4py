@@ -7,11 +7,19 @@ export default defineConfig({
   root: "demo",
   resolve: {
     alias: {
-      "@pm4py/powl-wasm": new URL("./src/index.ts", import.meta.url).pathname,
+      "@pm4py/pm4wasm": new URL("./src/index.ts", import.meta.url).pathname,
     },
   },
   server: {
     port: 5173,
     open: true,
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: './demo/index.html',
+        llm: './demo/llm/index.html'
+      }
+    }
+  }
 });

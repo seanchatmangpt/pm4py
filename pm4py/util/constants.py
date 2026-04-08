@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 
 import os
 import importlib.util
@@ -210,6 +210,9 @@ ANTHROPIC_DEFAULT_MODEL = get_param_from_env(
 )
 GOOGLE_DEFAULT_MODEL = get_param_from_env(
     "PM4PY_GOOGLE_DEFAULT_MODEL", "gemini-2.5-flash"
+)
+LITELLM_DEFAULT_MODEL = get_param_from_env(
+    "PM4PY_LITELLM_DEFAULT_MODEL", "openai/gpt-4.1"
 )
 OPENAI_DEFAULT_STT_MODEL = get_param_from_env(
     "PM4PY_OPENAI_DEFAULT_STT_MODEL", "whisper-1"

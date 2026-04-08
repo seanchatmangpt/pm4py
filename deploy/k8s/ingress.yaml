@@ -1,0 +1,50 @@
+# PM4Py API Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pm4py-api
+  namespace: pm4py
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Optional
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.pm4py.local
+    secretName: pm4py-tls  # Optional - for TLS
+  rules:
+  - host: api.pm4py.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pm4py-api
+            port:
+              number: 8000
+---
+# Grafana UI Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ui
+  namespace: pm4py
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: grafana.pm4py.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000

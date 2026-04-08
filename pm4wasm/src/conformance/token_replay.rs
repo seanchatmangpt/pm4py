@@ -1,3 +1,18 @@
+// PM4Py – A Process Mining Library for Python (POWL v2 WASM)
+// Copyright (C) 2024 Process Intelligence Solutions
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /// Token-based replay conformance checking.
 ///
 /// Implements the classic Rozinat & van der Aalst token replay algorithm.
@@ -16,6 +31,7 @@
 use crate::event_log::{EventLog, Trace};
 use crate::petri_net::{Marking, PetriNet};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ─── Result types ─────────────────────────────────────────────────────────────
 
@@ -25,10 +41,16 @@ pub struct TraceReplayResult {
     pub case_id: String,
     /// Fitness in [0.0, 1.0].
     pub fitness: f64,
+    /// Convenience flag: `true` when `missing_tokens == 0 && remaining_tokens == 0`.
+    pub trace_is_fit: bool,
     pub produced_tokens: u32,
     pub consumed_tokens: u32,
     pub missing_tokens: u32,
     pub remaining_tokens: u32,
+    /// Transition names fired during replay, in order.
+    pub activated_transitions: Vec<String>,
+    /// Final marking after replay (only non-zero token counts).
+    pub reached_marking: HashMap<String, u32>,
 }
 
 impl TraceReplayResult {
@@ -55,7 +77,7 @@ pub struct FitnessResult {
 // ─── Petri net helpers ────────────────────────────────────────────────────────
 
 /// Input places (preset) of a transition.
-fn preset(net: &PetriNet, trans_name: &str) -> Vec<String> {
+pub(crate) fn preset(net: &PetriNet, trans_name: &str) -> Vec<String> {
     net.arcs
         .iter()
         .filter(|a| a.target == trans_name)
@@ -65,7 +87,7 @@ fn preset(net: &PetriNet, trans_name: &str) -> Vec<String> {
 }
 
 /// Output places (postset) of a transition.
-fn postset(net: &PetriNet, trans_name: &str) -> Vec<String> {
+pub(crate) fn postset(net: &PetriNet, trans_name: &str) -> Vec<String> {
     net.arcs
         .iter()
         .filter(|a| a.source == trans_name)
@@ -75,13 +97,13 @@ fn postset(net: &PetriNet, trans_name: &str) -> Vec<String> {
 }
 
 /// Test whether a transition is enabled (all preset places have tokens).
-fn is_enabled(marking: &Marking, pre: &[String]) -> bool {
+pub(crate) fn is_enabled(marking: &Marking, pre: &[String]) -> bool {
     pre.iter().all(|p| marking.get(p).copied().unwrap_or(0) > 0)
 }
 
 /// Fire a transition: consume tokens from preset, produce tokens into postset.
 /// Returns (consumed, produced).
-fn fire(marking: &mut Marking, pre: &[String], post: &[String]) -> (u32, u32) {
+pub(crate) fn fire(marking: &mut Marking, pre: &[String], post: &[String]) -> (u32, u32) {
     for p in pre {
         *marking.entry(p.clone()).or_insert(0) -= 1;
     }
@@ -102,7 +124,7 @@ fn fire(marking: &mut Marking, pre: &[String], post: &[String]) -> (u32, u32) {
 /// A budget cap prevents infinite loops in cyclic nets (e.g. LOOP body).
 ///
 /// Returns (extra_consumed, extra_produced) from the silent firings.
-fn fire_silent_enabled(net: &PetriNet, marking: &mut Marking) -> (u32, u32) {
+pub(crate) fn fire_silent_enabled(net: &PetriNet, marking: &mut Marking) -> (u32, u32) {
     let mut total_c = 0u32;
     let mut total_p = 0u32;
     let mut budget = net.transitions.len() * 4 + 16; // generous but bounded
@@ -141,6 +163,7 @@ pub fn replay_trace(
     let mut produced: u32 = initial_marking.values().sum();
     let mut consumed: u32 = 0;
     let mut missing: u32 = 0;
+    let mut activated_transitions: Vec<String> = Vec::new();
 
     // Fire any initially-enabled silent transitions (e.g. tau-splits at the start)
     let (sc, sp) = fire_silent_enabled(net, &mut marking);
@@ -192,6 +215,7 @@ pub fn replay_trace(
         let (c, p) = fire(&mut marking, &pre, &post);
         consumed += c;
         produced += p;
+        activated_transitions.push(chosen.to_string());
 
         // Fire any newly-enabled silent transitions after visible transition
         let (sc, sp) = fire_silent_enabled(net, &mut marking);
@@ -213,6 +237,7 @@ pub fn replay_trace(
     consumed += final_consumed;
 
     // Compute fitness
+    let trace_is_fit = missing == 0 && remaining == 0;
     let fitness = if produced == 0 && consumed == 0 {
         1.0
     } else {
@@ -224,13 +249,23 @@ pub fn replay_trace(
     }
     .clamp(0.0, 1.0);
 
+    // Capture the final marking state (only non-zero token counts)
+    let reached_marking: HashMap<String, u32> = marking
+        .iter()
+        .filter(|(_, &v)| v > 0)
+        .map(|(k, &v)| (k.clone(), v))
+        .collect();
+
     TraceReplayResult {
         case_id: trace.case_id.clone(),
         fitness,
+        trace_is_fit,
         produced_tokens: produced,
         consumed_tokens: consumed,
         missing_tokens: missing,
         remaining_tokens: remaining,
+        activated_transitions,
+        reached_marking,
     }
 }
 

@@ -6,7 +6,6 @@
 import type {
   EventLog,
   FitnessResult,
-  NodeInfo,
   PetriNetResult,
   Trace,
   TraceReplayResult,

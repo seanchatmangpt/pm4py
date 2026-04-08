@@ -8,8 +8,8 @@ export default defineConfig({
     lib: {
       entry: "src/index.ts",
       name: "PowlWasm",
-      formats: ["es", "cjs"],
-      fileName: (fmt) => `index.${fmt === "es" ? "js" : "cjs"}`,
+      formats: ["es"],
+      fileName: () => `index.js`,
     },
     rollupOptions: {
       // wasm module is inlined by vite-plugin-wasm — nothing external

@@ -6,7 +6,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PM4Py is a Python process mining library (v2.7.22.1) providing state-of-the-art algorithms for process discovery, conformance checking, and analysis. Licensed AGPL-3.0.
 
-This fork also includes `powl-wasm/` — a Rust crate compiling POWL v2 (Partially Ordered Workflow Language) to WebAssembly for browser-native process mining.
+This fork also includes `pm4wasm/` — a Rust crate compiling POWL v2 (Partially Ordered Workflow Language) to WebAssembly for browser-native process mining.
+
+## Environment Setup
+
+### Prerequisites
+
+- **Python:** 3.9–3.14 (3.8 supported in `third_party/old_python_deps/`)
+- **System packages:** Graphviz (for visualization)
+  - macOS: `brew install graphviz`
+  - Ubuntu: `sudo apt-get install graphviz`
+- **Rust/WASM:** Rust toolchain + wasm-pack for pm4wasm development
+
+### Quick Setup
+
+```bash
+# Clone and create virtual environment
+git clone <repo>
+cd pm4py
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install editable (includes core dependencies)
+pip install -e .
+
+# Install optional dependencies for LLM features
+pip install openai dspy-ai litellm groq
+```
 
 ## Build & Development Commands
 
@@ -26,7 +52,33 @@ python -m pm4py.cli DiscoverPOWLToBPMN process_description.txt output.bpmn
 python -m pm4py.cli DiscoverPOWL running-example.xes output.powl
 ```
 
-Test config lives in `tests/config/test_config.py`. The primary test runner is `execute_tests.py` (unittest). It dynamically loads test classes from an `enabled_tests` list and conditionally includes Polars tests if `polars` is installed.
+### LLM Integration (Groq/DSPy)
+
+```bash
+# Set Groq API key for fast inference
+export GROQ_API_KEY='gsk_...'
+
+# Configure litellm for multiple providers
+python -c "from pm4py.algo.querying.llm.connectors import litellm_connector; help(litellm_connector)"
+
+# Natural language → POWL → BPMN pipeline
+python -m pm4py.cli DiscoverPOWLToBPMN "A customer orders a product, then pays, then receives confirmation" output.bpmn
+```
+
+**Note:** See `GROQ_DSPY_QUICKSTART.md` for detailed DSPy configuration.
+
+### Testing Strategy
+
+**Primary runner:** `python tests/execute_tests.py` (unittest-based)
+- Dynamically loads test classes from `enabled_tests` list
+- Conditionally includes Polars tests if `polars` is installed
+- Configured in `tests/config/test_config.py`
+
+**Alternative:** `python -m pytest tests/`
+- Also works (pytest runs unittest tests)
+- Better for filtering: `pytest -k "test_name"`
+
+**Single test:** `python -m pytest tests/alpha_test.py -k "test_name"`
 
 ### Documentation
 
@@ -34,10 +86,10 @@ Test config lives in `tests/config/test_config.py`. The primary test runner is `
 cd docs && bash build.sh          # Sphinx docs build (pydata_sphinx_theme)
 ```
 
-### Rust / WASM (powl-wasm)
+### Rust / WASM (pm4wasm)
 
 ```bash
-cd powl-wasm
+cd pm4wasm
 cargo build                       # Build native
 cargo test                        # Run Rust tests
 wasm-pack test --headless --firefox  # WASM tests in browser
@@ -71,16 +123,16 @@ The public API is exposed through flat modules at the package root — `pm4py.re
 - **`pm4py/streaming/`** — Streaming event log processing.
 - **`pm4py/visualization/`** — Visualization backends.
 
-### POWL Rust/WASM Crate (`powl-wasm/`)
+### POWL Rust/WASM Crate (`pm4wasm/`)
 
 **Documentation:**
-- **[README.md](powl-wasm/README.md)** — Project overview, quick start, features
-- **[docs/architecture.md](powl-wasm/docs/architecture.md)** — Module organization, data structures, algorithms
-- **[docs/tutorial.md](powl-wasm/docs/tutorial.md)** — Getting started guide with examples
-- **[docs/reference.md](powl-wasm/docs/reference.md)** — Complete API documentation
-- **[docs/quick-reference.md](powl-wasm/docs/quick-reference.md)** — Common operations and patterns
-- **[docs/troubleshooting.md](powl-wasm/docs/troubleshooting.md)** — Common issues and solutions
-- **[docs/vision-2030.md](powl-wasm/docs/vision-2030.md)** — Roadmap and future directions
+- **[README.md](pm4wasm/README.md)** — Project overview, quick start, features
+- **[docs/architecture.md](pm4wasm/docs/architecture.md)** — Module organization, data structures, algorithms
+- **[docs/tutorial.md](pm4wasm/docs/tutorial.md)** — Getting started guide with examples
+- **[docs/reference.md](pm4wasm/docs/reference.md)** — Complete API documentation
+- **[docs/quick-reference.md](pm4wasm/docs/quick-reference.md)** — Common operations and patterns
+- **[docs/troubleshooting.md](pm4wasm/docs/troubleshooting.md)** — Common issues and solutions
+- **[docs/vision-2030.md](pm4wasm/docs/vision-2030.md)** — Roadmap and future directions
 
 **Module Structure:**
 - **`src/lib.rs`** — wasm-bindgen entry point, arena-based `PowlModel` storage. All nodes referenced by `u32` index; root is always the last node.
@@ -136,6 +188,24 @@ Natural language description
 - Supports Python 3.9–3.14 (see `third_party/old_python_deps/` for 3.8)
 - Core: numpy, pandas, networkx, graphviz, scipy, lxml, matplotlib
 - Optional: openai, scikit-learn, polars, pyarrow, pyvis, workalendar, pyemd
+
+## Troubleshooting
+
+### Issue: Graphviz visualization fails
+**Symptom:** `ExecutableNotFound: failed to execute ['dot', '-Tpng']`
+**Fix:** Install Graphviz system package (see Environment Setup above)
+
+### Issue: Import errors for optional modules
+**Symptom:** `ModuleNotFoundError: No module named 'polars'`
+**Fix:** Install optional dependencies: `pip install polars pyarrow scikit-learn`
+
+### Issue: WASM build fails on macOS ARM64
+**Symptom:** `wasm-pack` compilation errors
+**Fix:** Ensure Rust is up-to-date: `rustup update`
+
+### Issue: Tests fail with pandas errors
+**Symptom:** `AttributeError: 'DataFrame' object has no attribute ...`
+**Fix:** Ensure pandas >= 3.0.0: `pip install --upgrade pandas`
 
 ## Test Data
 

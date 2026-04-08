@@ -1,0 +1,8 @@
+# PM4Py Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pm4py
+  labels:
+    name: pm4py
+    environment: production

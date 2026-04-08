@@ -1,6 +1,6 @@
 # API Reference: POWL v2 Rust/WASM
 
-Complete API documentation for the `powl-wasm` library.
+Complete API documentation for the `pm4wasm` library.
 
 ## Table of Contents
 

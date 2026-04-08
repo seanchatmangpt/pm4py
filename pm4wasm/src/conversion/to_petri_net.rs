@@ -1,3 +1,18 @@
+// PM4Py – A Process Mining Library for Python (POWL v2 WASM)
+// Copyright (C) 2024 Process Intelligence Solutions
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /// Convert a POWL model to a Petri net.
 ///
 /// Faithfully ports `pm4py/objects/conversion/powl/variants/to_petri_net.py:
@@ -6,6 +21,7 @@
 /// Returns a [`PetriNetResult`] containing the net plus initial and final markings.
 use crate::petri_net::{Counts, Marking, PetriNet, PetriNetResult};
 use crate::powl::{Operator, PowlArena, PowlNode};
+use crate::process_tree::{PtOperator, ProcessTree};
 use std::collections::HashMap;
 
 // ─── Counter helpers ──────────────────────────────────────────────────────────
@@ -301,6 +317,142 @@ pub fn apply(arena: &PowlArena, root: u32) -> PetriNetResult {
     }
 }
 
+// ─── ProcessTree → Petri Net conversion ─────────────────────────────────────────
+
+/// Convert a [`ProcessTree`] to a Petri net with initial and final markings.
+///
+/// Used by the inductive miner to produce Petri nets from discovered process trees.
+pub fn from_process_tree(tree: &ProcessTree) -> PetriNetResult {
+    let mut counts = Counts::default();
+    let mut net = PetriNet::new("inductive_net");
+
+    // Source and sink
+    net.add_place("source");
+    net.add_place("sink");
+
+    let mut initial_marking = Marking::new();
+    let mut final_marking = Marking::new();
+    initial_marking.insert("source".to_string(), 1);
+    final_marking.insert("sink".to_string(), 1);
+
+    // Tau initial / tau final
+    let initial_place = new_place(&mut net, &mut counts);
+    let tau_initial = new_hidden_trans(&mut net, &mut counts, "tau");
+    net.add_arc("source", &tau_initial);
+    net.add_arc(&tau_initial, &initial_place);
+
+    let final_place = new_place(&mut net, &mut counts);
+    let tau_final = new_hidden_trans(&mut net, &mut counts, "tau");
+    net.add_arc(&final_place, &tau_final);
+    net.add_arc(&tau_final, "sink");
+
+    add_process_tree_to_net(tree, &mut net, &initial_place, &final_place, &mut counts);
+
+    net.apply_simple_reduction();
+    remove_dead_places(&mut net, &initial_marking, &final_marking);
+
+    PetriNetResult {
+        net,
+        initial_marking,
+        final_marking,
+    }
+}
+
+/// Recursively add a process tree to a Petri net.
+fn add_process_tree_to_net(
+    tree: &ProcessTree,
+    net: &mut PetriNet,
+    initial_place: &str,
+    final_place: &str,
+    counts: &mut Counts,
+) {
+    match &tree.operator {
+        None => {
+            // Leaf node
+            let trans = match &tree.label {
+                None => new_hidden_trans(net, counts, "tau"),
+                Some(label) => new_visible_trans(net, counts, label, label, false, false),
+            };
+            net.add_arc(initial_place, &trans);
+            net.add_arc(&trans, final_place);
+        }
+        Some(op) => match op {
+            PtOperator::Sequence => {
+                // Chain children: initial → child1 → ... → childN → final
+                let mut prev = initial_place.to_string();
+                for (i, child) in tree.children.iter().enumerate() {
+                    let next = if i == tree.children.len() - 1 {
+                        final_place.to_string()
+                    } else {
+                        new_place(net, counts)
+                    };
+                    add_process_tree_to_net(child, net, &prev, &next, counts);
+                    prev = next;
+                }
+            }
+            PtOperator::Xor => {
+                // Choice: each child gets its own path from initial to final
+                for child in &tree.children {
+                    add_process_tree_to_net(child, net, initial_place, final_place, counts);
+                }
+            }
+            PtOperator::Parallel => {
+                // Fork/join: initial → tau_split → children → tau_join → final
+                let split = new_hidden_trans(net, counts, "tauSplit");
+                net.add_arc(initial_place, &split);
+
+                let join = new_hidden_trans(net, counts, "tauJoin");
+                net.add_arc(&join, final_place);
+
+                for child in &tree.children {
+                    let c_init = new_place(net, counts);
+                    let c_final = new_place(net, counts);
+                    net.add_arc(&split, &c_init);
+                    net.add_arc(&c_final, &join);
+                    add_process_tree_to_net(child, net, &c_init, &c_final, counts);
+                }
+            }
+            PtOperator::Loop => {
+                // Loop: initial → init_loop → do → [exit to final | redo → loop_back → init]
+                let loop_init = new_place(net, counts);
+                let init_loop = new_hidden_trans(net, counts, "init_loop");
+                net.add_arc(initial_place, &init_loop);
+                net.add_arc(&init_loop, &loop_init);
+
+                // do-body
+                let do_final = new_place(net, counts);
+                add_process_tree_to_net(
+                    &tree.children[0],
+                    net,
+                    &loop_init,
+                    &do_final,
+                    counts,
+                );
+
+                // exit branch
+                let exit = new_hidden_trans(net, counts, "skip");
+                net.add_arc(&do_final, &exit);
+                net.add_arc(&exit, final_place);
+
+                // redo-body (if present)
+                if tree.children.len() > 1 {
+                    let redo_final = new_place(net, counts);
+                    add_process_tree_to_net(
+                        &tree.children[1],
+                        net,
+                        &do_final,
+                        &redo_final,
+                        counts,
+                    );
+                    let loop_back = new_hidden_trans(net, counts, "loop");
+                    net.add_arc(&redo_final, &loop_back);
+                    net.add_arc(&loop_back, &loop_init);
+                }
+            }
+        },
+    }
+}
+
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -364,6 +516,53 @@ mod tests {
     fn loop_produces_cycle() {
         let (arena, root) = build("* ( A, B )");
         let result = apply(&arena, root);
+        let labels: Vec<Option<&str>> = result
+            .net
+            .transitions
+            .iter()
+            .map(|t| t.label.as_deref())
+            .collect();
+        assert!(labels.contains(&Some("A")));
+        assert!(labels.contains(&Some("B")));
+    }
+
+    #[test]
+    fn from_process_tree_single_activity() {
+        let tree = ProcessTree::leaf(Some("A".to_string()));
+        let result = from_process_tree(&tree);
+        assert!(result.net.transitions.iter().any(|t| t.label.as_deref() == Some("A")));
+    }
+
+    #[test]
+    fn from_process_tree_sequence() {
+        let tree = ProcessTree::internal(
+            PtOperator::Sequence,
+            vec![
+                ProcessTree::leaf(Some("A".to_string())),
+                ProcessTree::leaf(Some("B".to_string())),
+            ],
+        );
+        let result = from_process_tree(&tree);
+        let labels: Vec<Option<&str>> = result
+            .net
+            .transitions
+            .iter()
+            .map(|t| t.label.as_deref())
+            .collect();
+        assert!(labels.contains(&Some("A")));
+        assert!(labels.contains(&Some("B")));
+    }
+
+    #[test]
+    fn from_process_tree_xor() {
+        let tree = ProcessTree::internal(
+            PtOperator::Xor,
+            vec![
+                ProcessTree::leaf(Some("A".to_string())),
+                ProcessTree::leaf(Some("B".to_string())),
+            ],
+        );
+        let result = from_process_tree(&tree);
         let labels: Vec<Option<&str>> = result
             .net
             .transitions

@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 
 import pandas as pd
 from pm4py.objects.log.obj import EventLog, EventStream, Trace
@@ -104,6 +104,125 @@ def google_query(
         parameters["extra_payload"] = extra_payload
 
     from pm4py.algo.querying.llm.connectors import google as perform_query
+
+    return perform_query.apply(prompt, parameters=parameters)
+
+
+def groq_query(
+    prompt: str,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
+    api_url: Optional[str] = None,
+    extra_payload: Optional[Dict[Any, Any]] = None,
+    **kwargs
+) -> str:
+    """
+    Executes the provided prompt, obtaining the answer from the Groq APIs.
+
+    :param prompt: The prompt to be executed.
+    :param api_key: (Optional) Groq API key. If not provided, uses GROQ_API_KEY env var.
+    :param model: (Optional) Groq model to be used (default: gpt-oss-20b).
+        Available models include:
+        - groq/openai/gpt-oss-20b (default, best value)
+        - groq/openai/gpt-oss-120b (high quality)
+        - groq/openai/gpt-oss-safeguard-20b (safety-focused)
+    :param api_url: (Optional) Groq API URL.
+    :param extra_payload: (Optional) Additional payload fields merged into the request body.
+    :param \\**kwargs: Additional parameters to pass to the Groq API.
+    :return: The response from the Groq API as a string.
+
+    .. code-block:: python3
+
+        import pm4py
+
+        # Basic usage
+        resp = pm4py.llm.groq_query('What is the result of 3+3?')
+        print(resp)
+
+        # With specific model
+        resp = pm4py.llm.groq_query(
+            'Explain process mining',
+            model='gpt-oss-20b'
+        )
+
+        # Using GPT-OSS-120B for higher quality
+        resp = pm4py.llm.groq_query(
+            'Explain token-based replay',
+            model='gpt-oss-120b'
+        )
+    """
+    parameters = copy(kwargs) if kwargs is not None else {}
+    if api_url is not None:
+        parameters["api_url"] = api_url
+    if api_key is not None:
+        parameters["api_key"] = api_key
+    if model is not None:
+        parameters["groq_model"] = model
+    if extra_payload is not None:
+        parameters["extra_payload"] = extra_payload
+
+    from pm4py.algo.querying.llm.connectors import groq as perform_query
+
+    return perform_query.apply(prompt, parameters=parameters)
+
+
+def litellm_query(
+    prompt: str,
+    model: Optional[str] = None,
+    api_key: Optional[str] = None,
+    api_base: Optional[str] = None,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+    extra_payload: Optional[Dict[Any, Any]] = None,
+    **kwargs
+) -> str:
+    r"""
+    Executes the provided prompt via litellm, supporting 100+ LLM providers.
+
+    Uses litellm's unified interface. Model strings follow litellm format:
+        - "openai/gpt-4.1"
+        - "anthropic/claude-sonnet-4-20250514"
+        - "gemini/gemini-2.5-flash"
+        - "groq/openai/gpt-oss-20b"
+
+    :param prompt: The prompt to be executed.
+    :param model: (Optional) Model in litellm format (default: "openai/gpt-4.1").
+    :param api_key: (Optional) API key. If omitted, litellm uses provider env vars.
+    :param api_base: (Optional) Custom API base URL.
+    :param temperature: (Optional) Sampling temperature (default: 0.0 for deterministic output).
+    :param max_tokens: (Optional) Maximum tokens in response.
+    :param extra_payload: (Optional) Additional kwargs merged into the litellm.completion() call.
+    :param \**kwargs: Additional keyword arguments passed through to the connector.
+    :return: The response from the LLM as a string.
+
+    .. code-block:: python3
+
+        import pm4py
+
+        # OpenAI
+        resp = pm4py.llm.litellm_query('What is process mining?', model='openai/gpt-4.1')
+
+        # Groq
+        resp = pm4py.llm.litellm_query('What is process mining?', model='groq/openai/gpt-oss-20b')
+
+        # Claude
+        resp = pm4py.llm.litellm_query('What is process mining?', model='anthropic/claude-sonnet-4-20250514')
+    """
+    parameters = copy(kwargs) if kwargs is not None else {}
+    if api_key is not None:
+        parameters["api_key"] = api_key
+    if api_base is not None:
+        parameters["api_base"] = api_base
+    if model is not None:
+        parameters["litellm_model"] = model
+    if temperature is not None:
+        parameters["temperature"] = temperature
+    if max_tokens is not None:
+        parameters["max_tokens"] = max_tokens
+    if extra_payload is not None:
+        parameters["extra_payload"] = extra_payload
+
+    from pm4py.algo.querying.llm.connectors import litellm_connector as perform_query
 
     return perform_query.apply(prompt, parameters=parameters)
 

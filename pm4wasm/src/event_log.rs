@@ -1,3 +1,18 @@
+// PM4Py – A Process Mining Library for Python (POWL v2 WASM)
+// Copyright (C) 2024 Process Intelligence Solutions
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /// Event log types and parsers (XES and CSV).
 ///
 /// Mirrors the essential pm4py event log concepts used for conformance checking.
@@ -262,6 +277,106 @@ pub fn parse_csv(csv: &str) -> Result<EventLog, String> {
         .collect();
 
     Ok(EventLog { traces })
+}
+
+// ─── XES writer ────────────────────────────────────────────────────────────────
+
+/// Serialize an [`EventLog`] to XES XML format.
+///
+/// Produces a valid XES 1.0 XML document with `<string>`, `<date>`, and
+/// `<int>` elements for typed attributes.
+pub fn write_xes(log: &EventLog) -> String {
+    let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
+    xml.push_str("\n<log xes.version=\"1.0\" xes.features=\"nested-attributes\">\n");
+
+    for trace in &log.traces {
+        xml.push_str("  <trace>\n");
+        xml.push_str(&format!(
+            "    <string key=\"concept:name\" value=\"{}\"/>\n",
+            escape_xml(&trace.case_id)
+        ));
+        for event in &trace.events {
+            xml.push_str("    <event>\n");
+            xml.push_str(&format!(
+                "      <string key=\"concept:name\" value=\"{}\"/>\n",
+                escape_xml(&event.name)
+            ));
+            if let Some(ts) = &event.timestamp {
+                xml.push_str(&format!(
+                    "      <date key=\"time:timestamp\" value=\"{}\"/>\n",
+                    escape_xml(ts)
+                ));
+            }
+            if let Some(lc) = &event.lifecycle {
+                xml.push_str(&format!(
+                    "      <string key=\"lifecycle:transition\" value=\"{}\"/>\n",
+                    escape_xml(lc)
+                ));
+            }
+            for (key, value) in &event.attributes {
+                xml.push_str(&format!(
+                    "      <string key=\"{}\" value=\"{}\"/>\n",
+                    escape_xml(key),
+                    escape_xml(value)
+                ));
+            }
+            xml.push_str("    </event>\n");
+        }
+        xml.push_str("  </trace>\n");
+    }
+
+    xml.push_str("</log>\n");
+    xml
+}
+
+/// Minimal XML entity escaping.
+fn escape_xml(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+// ─── CSV writer ────────────────────────────────────────────────────────────────
+
+/// Serialize an [`EventLog`] to CSV format.
+///
+/// Header: `case_id,activity,timestamp`
+/// If a trace has events with timestamps, the timestamp column is included.
+pub fn write_csv(log: &EventLog) -> String {
+    let has_timestamps = log
+        .traces
+        .iter()
+        .any(|t| t.events.iter().any(|e| e.timestamp.is_some()));
+
+    let mut csv = String::from("case_id,activity");
+    if has_timestamps {
+        csv.push_str(",timestamp");
+    }
+    csv.push('\n');
+
+    for trace in &log.traces {
+        for event in &trace.events {
+            csv.push_str(&trace.case_id);
+            csv.push(',');
+            csv.push_str(&event.name);
+            if has_timestamps {
+                csv.push(',');
+                csv.push_str(event.timestamp.as_deref().unwrap_or(""));
+            }
+            csv.push('\n');
+        }
+    }
+
+    csv
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
