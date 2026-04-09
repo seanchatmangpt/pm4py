@@ -57,13 +57,15 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
 {% elif tool.name === 'convert_to_bpmn' %}
     import ast
     from pm4py.objects.powl.obj import POWL
+    from pm4py.convert import convert_to_bpmn as _convert_to_bpmn
 
-    bpmn = {{ tool.func }}(ast.literal_eval(powl_string))
+    bpmn = _convert_to_bpmn(ast.literal_eval(powl_string))
     return {"bpmn": str(bpmn)}
 {% elif tool.name === 'convert_to_powl' %}
     import ast
+    from pm4py.convert import convert_to_powl as _convert_to_powl
 
-    powl = {{ tool.func }}(ast.literal_eval(bpmn_string))
+    powl = _convert_to_powl(ast.literal_eval(bpmn_string))
     return {"powl": str(powl)}
 {% elif tool.name === 'generate_powl_from_text' %}
     if not os.environ.get("GROQ_API_KEY"):
@@ -92,9 +94,10 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
     return {"object_types": list(ocel.object_types), "events": len(ocel.events), "objects": len(ocel.objects)}
 {% elif tool.name === 'conformance_diagnostics' %}
     from pm4py.read import read_xes
+    from pm4py.algo.conformance.tokenreplay import algorithm as token_replay
 
     log = read_xes(file_path)
-    aligned_traces = {{ tool.func }}(log)
+    aligned_traces = token_replay.apply(log)
     return {"diagnostics": str(aligned_traces)}
 {% elif tool.name === 'judge_powl' %}
     if not os.environ.get("GROQ_API_KEY"):
@@ -105,13 +108,15 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
     return {"verdict": result.get("verdict"), "reasoning": result.get("reasoning"), "suggestions": result.get("suggestions")}
 {% elif tool.name === 'write_bpmn' %}
     import ast
+    from pm4py.write import write_bpmn as _write_bpmn
 
     model = ast.literal_eval(powl_string)
-    {{ tool.func }}(model, output_path)
+    _write_bpmn(model, output_path)
     return {"output_path": output_path, "status": "written"}
 {% elif tool.name === 'powl_to_rdf' %}
     import ast
     from pm4py.objects.powl.parser import parse_powl_model_string
+    from pm4py.objects.powl.serializer import serialize_to_rdf as _serialize_to_rdf
 
     parsed = parse_powl_model_string(powl_string)
     kwargs = {}
@@ -123,7 +128,7 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
         kwargs["fmt"] = "nt"
     else:
         kwargs["fmt"] = "turtle"
-    rdf_str = {{ tool.func }}(parsed, **kwargs)
+    rdf_str = _serialize_to_rdf(parsed, **kwargs)
     result = {"rdf": rdf_str, "format": kwargs["fmt"]}
     if output_path:
         import os
