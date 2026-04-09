@@ -18,8 +18,45 @@ Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 """
 
-
 from pm4py.util import constants as pm4_constants
 
 if pm4_constants.ENABLE_INTERNAL_IMPORTS:
     from pm4py.objects.powl import *
+    from pm4py.objects.powl.extensions import (
+        GuardOperator,
+        GuardCondition,
+        ChoiceRegionWithGuards,
+        CancellationScope,
+        ExtendedPOWL,
+        add_guard_to_choice,
+        add_cancellation_scope,
+    )
+    # Enhanced POWL with frequency, serialization, and graph traversal
+    from pm4py.objects.powl.enhanced import (
+        EnhancedPOWL,
+        EnhancedTransition,
+        EnhancedSilentTransition,
+        EnhancedFrequentTransition,
+        EnhancedStrictPartialOrder,
+        EnhancedSequence,
+        EnhancedOperatorPOWL,
+        EnhancedChoiceGraph,
+    )
+    # API-compatible compatibility layer
+    from pm4py.objects.powl.compat import (
+        Activity,
+        PartialOrder,
+        ChoiceGraph,
+        TaggedPOWL,
+    )
+    from pm4py.objects.powl.types import ModelType
+    # Top-level API functions compatible with official POWL package
+    from pm4py.objects.powl.api import (
+        discover,
+        discover_from_dfg,
+        discover_from_partially_ordered_log,
+        convert_to_bpmn,
+        convert_to_petri_net,
+        view,
+        save_visualization,
+    )

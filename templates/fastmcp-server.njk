@@ -94,11 +94,21 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
     return {"object_types": list(ocel.object_types), "events": len(ocel.events), "objects": len(ocel.objects)}
 {% elif tool.name === 'conformance_diagnostics' %}
     from pm4py.read import read_xes
+    from pm4py.algo.discovery.alpha import algorithm as alpha_miner
     from pm4py.algo.conformance.tokenreplay import algorithm as token_replay
 
     log = read_xes(file_path)
-    aligned_traces = token_replay.apply(log)
-    return {"diagnostics": str(aligned_traces)}
+    # Discover Petri net first, then run conformance
+    net, im, fm = alpha_miner.apply(log)
+    aligned_traces = token_replay.apply(log, net, im, fm)
+    # Return summary statistics
+    fit_traces = sum(1 for t in aligned_traces if t.get('trace_is_fit', False))
+    return {
+        "diagnostics": f"{len(aligned_traces)} traces, {fit_traces} fit",
+        "total_traces": len(aligned_traces),
+        "fit_traces": fit_traces,
+        "fitness": fit_traces / len(aligned_traces) if aligned_traces else 0
+    }
 {% elif tool.name === 'judge_powl' %}
     if not os.environ.get("GROQ_API_KEY"):
         return {"error": "GROQ_API_KEY environment variable is required"}
@@ -108,10 +118,14 @@ def {{ tool.name }}({% for arg in tool.args %}{% if arg.argName %}{% if arg.requ
     return {"verdict": result.get("verdict"), "reasoning": result.get("reasoning"), "suggestions": result.get("suggestions")}
 {% elif tool.name === 'write_bpmn' %}
     import ast
+    from pm4py.objects.powl.parser import parse_powl_model_string
+    from pm4py.convert import convert_to_bpmn as _convert_to_bpmn
     from pm4py.write import write_bpmn as _write_bpmn
 
-    model = ast.literal_eval(powl_string)
-    _write_bpmn(model, output_path)
+    # Parse POWL and convert to BPMN first
+    powl = parse_powl_model_string(powl_string)
+    bpmn = _convert_to_bpmn(powl)
+    _write_bpmn(bpmn, output_path)
     return {"output_path": output_path, "status": "written"}
 {% elif tool.name === 'powl_to_rdf' %}
     import ast
