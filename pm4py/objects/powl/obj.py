@@ -854,6 +854,133 @@ class DecisionGraph(POWL):
             return seq
         return None
 
+    def validate_soundness(self) -> bool:
+        """
+        Validate that the choice graph is sound.
+
+        A choice graph is sound if:
+        1. Every node is on a path from start to end (already enforced by validate_connectivity)
+        2. The graph is acyclic (no unexpected loops)
+        3. The graph is structurally sound (no orphaned nodes)
+
+        This validates that the model can be successfully executed
+        without deadlocks, livelocks, or other anomalies.
+
+        Returns:
+            True if the choice graph is sound, False otherwise
+        """
+        try:
+            # Check 1: Connectivity (all nodes reachable from start, can reach end)
+            self.validate_connectivity()
+
+            # Check 2: Acyclicity (no cycles in the graph)
+            if not self.validate_acyclicity():
+                return False
+
+            # Check 3: Structural soundness (no orphaned nodes)
+            if not self._validate_structural_soundness():
+                return False
+
+            return True
+
+        except Exception as e:
+            # Any validation failure means not sound
+            return False
+
+    def _validate_structural_soundness(self) -> bool:
+        """
+        Validate structural soundness of the choice graph.
+
+        Checks that:
+        - All non-sentril nodes have at least one incoming or outgoing edge
+        - No disconnected components
+        - Start and end nodes are properly connected
+
+        Returns:
+            True if structurally sound, False otherwise
+        """
+        # Check that all children have at least one connection
+        for child in self.children:
+            has_incoming = any(self.order.is_edge(n, child) for n in self.order.nodes if n != self.end)
+            has_outgoing = any(self.order.is_edge(child, n) for n in self.order.nodes if n != self.start)
+
+            # Nodes should have at least one connection (except special cases)
+            if not has_incoming and not has_outgoing:
+                # This could be valid if it's the only node and start/end connect to it
+                if len(self.children) > 1:
+                    return False
+
+        # Verify start and end are properly connected
+        if not self.start_nodes:
+            return False
+        if not self.end_nodes:
+            return False
+
+        # Start should have outgoing edges to its start_nodes
+        for start_node in self.start_nodes:
+            if not self.order.is_edge(self.start, start_node):
+                return False
+
+        # End should have incoming edges from its end_nodes
+        for end_node in self.end_nodes:
+            if not self.order.is_edge(end_node, self.end):
+                return False
+
+        return True
+
+    def get_soundness_report(self) -> Dict[str, Any]:
+        """
+        Generate a detailed soundness report for the choice graph.
+
+        Returns:
+            Dictionary with soundness validation results
+        """
+        from typing import Dict, Any
+
+        report = {
+            "is_sound": False,
+            "errors": [],
+            "warnings": [],
+            "metrics": {}
+        }
+
+        # Check connectivity
+        try:
+            self.validate_connectivity()
+            report["metrics"]["connectivity"] = "valid"
+        except Exception as e:
+            report["errors"].append(f"Connectivity error: {e}")
+            report["metrics"]["connectivity"] = "invalid"
+
+        # Check acyclicity
+        is_acyclic = self.validate_acyclicity()
+        report["metrics"]["acyclicity"] = "valid" if is_acyclic else "invalid"
+        if not is_acyclic:
+            report["errors"].append("Graph contains cycles")
+
+        # Check structural soundness
+        is_structurally_sound = self._validate_structural_soundness()
+        report["metrics"]["structural_soundness"] = "valid" if is_structurally_sound else "invalid"
+        if not is_structurally_sound:
+            report["errors"].append("Structural soundness validation failed")
+
+        # Collect metrics
+        report["metrics"]["num_nodes"] = len(self.children)
+        report["metrics"]["num_edges"] = len(self.get_edges())
+        report["metrics"]["num_start_nodes"] = len(self.start_nodes)
+        report["metrics"]["num_end_nodes"] = len(self.end_nodes)
+        report["metrics"]["has_empty_path"] = self.empty_path
+
+        # Overall soundness
+        report["is_sound"] = (
+            len(report["errors"]) == 0 and
+            report["metrics"]["connectivity"] == "valid" and
+            is_acyclic and
+            is_structurally_sound
+        )
+
+        return report
+
     def validate_acyclicity(self) -> bool:
         """
         Validate that the choice graph is acyclic (Definition 5, condition 5).

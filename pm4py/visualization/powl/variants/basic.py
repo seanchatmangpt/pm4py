@@ -381,6 +381,13 @@ def repr_powl(powl, viz, color_map, level, base_color):
                     add_operator_edge(block, this_node_id, child)
 
     elif isinstance(powl, DecisionGraph):
+        """
+        Render a DecisionGraph (Choice Graph) with blue dashed arcs.
+
+        Following the paper's convention (Figure 2), choice graph edges are
+        rendered as blue dashed arcs to distinguish them from partial order
+        edges (solid black arcs).
+        """
         transitive_reduction = powl.order.get_transitive_reduction()
         with viz.subgraph(name=get_id(powl)) as block:
             block.attr(margin="20,20")
@@ -413,20 +420,30 @@ def repr_powl(powl, viz, color_map, level, base_color):
                 repr_powl(
                     child, block, color_map, level=level + 1, base_color=base_color
                 )
-            # Render edges from transitive reduction
+
+            # Render choice graph edges with blue dashed style
+            # Following the paper's convention for distinguishing choice graphs
             for child in powl.children:
                 for child2 in powl.children:
                     if transitive_reduction.is_edge(child, child2):
-                        add_order_edge(block, child, child2)
-            # Edge from start to start_nodes
+                        # Use blue color and dashed style for choice graph edges
+                        add_order_edge(
+                            block, child, child2,
+                            color="blue",
+                            style="dashed"
+                        )
+
+            # Edge from start to start_nodes (solid black, structural)
             for start_node in powl.start_nodes:
-                add_order_edge(block, powl.start, start_node)
-            # Edge from end_nodes to end
+                add_order_edge(block, powl.start, start_node, color="black", style="solid")
+
+            # Edge from end_nodes to end (solid black, structural)
             for end_node in powl.end_nodes:
-                add_order_edge(block, end_node, powl.end)
-            # Empty path edge
+                add_order_edge(block, end_node, powl.end, color="black", style="solid")
+
+            # Empty path edge (solid black, structural)
             if powl.order.is_edge(powl.start, powl.end):
-                add_order_edge(block, powl.start, powl.end)
+                add_order_edge(block, powl.start, powl.end, color="black", style="solid")
 
 
 def darken_color(color, amount):

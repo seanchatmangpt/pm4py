@@ -20,8 +20,6 @@ Contact: info@processintelligence.solutions
 
 
 
-import importlib.util
-
 from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
 from pm4py.algo.discovery.powl.inductive.variants.im_dynamic_clustering_frequencies import (
     POWLInductiveMinerDynamicClusteringFrequency, )
@@ -34,6 +32,13 @@ from pm4py.algo.discovery.powl.inductive.variants.im_maximal import (
 )
 from pm4py.algo.discovery.powl.inductive.variants.powl_discovery_varaints import (
     POWLDiscoveryVariant, )
+from pm4py.algo.discovery.powl.inductive.variants.im_choice_graph import (
+    InductiveMinerChoiceGraph,
+    InductiveMinerChoiceGraphMaximal,
+    InductiveMinerChoiceGraphClustering,
+    InductiveMinerChoiceGraphCyclic,
+    InductiveMinerChoiceGraphCyclicStrict,
+)
 
 from pm4py import util
 from pm4py.algo.discovery.inductive.algorithm import Parameters
@@ -58,54 +63,20 @@ def get_variant(variant: POWLDiscoveryVariant) -> Type[IMBasePOWL]:
         return POWLInductiveMinerMaximalOrder
     elif variant == POWLDiscoveryVariant.DYNAMIC_CLUSTERING:
         return POWLInductiveMinerDynamicClusteringFrequency
-    elif variant in (
-        POWLDiscoveryVariant.DECISION_GRAPH_MAX,
-        POWLDiscoveryVariant.DECISION_GRAPH_CLUSTERING,
-        POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC,
-        POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC_STRICT,
-    ):
-        if importlib.util.find_spec("powl") is None:
-            raise ImportError(
-                "The 'powl' package is required for DecisionGraph variants. "
-                "Install it with: pip install pm4py[powl]"
-            )
-        from powl.discovery.total_order_based import algorithm as powl_discovery
-        variant_map = {
-            POWLDiscoveryVariant.DECISION_GRAPH_MAX: powl_discovery.POWLDiscoveryVariant.DECISION_GRAPH_MAX,
-            POWLDiscoveryVariant.DECISION_GRAPH_CLUSTERING: powl_discovery.POWLDiscoveryVariant.DECISION_GRAPH_CLUSTERING,
-            POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC: powl_discovery.POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC,
-            POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC_STRICT: powl_discovery.POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC_STRICT,
-        }
-        return _PowlPackageVariantFactory(variant_map[variant])
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_MAX:
+        # Self-contained choice graph discovery (no external powl package needed)
+        return InductiveMinerChoiceGraphMaximal
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CLUSTERING:
+        # Self-contained choice graph discovery with clustering
+        return InductiveMinerChoiceGraphClustering
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC:
+        # Self-contained choice graph discovery with cycle detection
+        return InductiveMinerChoiceGraphCyclic
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC_STRICT:
+        # Self-contained choice graph discovery with strict cycle validation
+        return InductiveMinerChoiceGraphCyclicStrict
     else:
-        raise Exception("Invalid Variant!")
-
-
-class _PowlPackageVariant(IMBasePOWL):
-    """Wrapper that delegates to the PyPI powl package for DecisionGraph variants."""
-
-    def __init__(self, powl_variant):
-        self.powl_variant = powl_variant
-
-    def apply(self, obj, parameters=None):
-        from powl.discovery.total_order_based import algorithm as powl_discovery
-        # The powl package expects a raw UVCL, not an IMDataStructureUVCL wrapper.
-        # Extract the raw UVCL if needed.
-        from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
-        raw_obj = obj._obj if isinstance(obj, IMDataStructureUVCL) else obj
-        return powl_discovery.apply(
-            raw_obj, variant=self.powl_variant, parameters=parameters, simplify=False
-        )
-
-
-class _PowlPackageVariantFactory:
-    """Factory that returns _PowlPackageVariant instances, matching the IMBasePOWL instantiation pattern."""
-
-    def __init__(self, powl_variant):
-        self.powl_variant = powl_variant
-
-    def __call__(self, parameters=None):
-        return _PowlPackageVariant(self.powl_variant)
+        raise Exception(f"Invalid Variant: {variant}")
 
 
 def apply(
