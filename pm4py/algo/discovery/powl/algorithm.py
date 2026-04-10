@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 
 from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
 from pm4py.algo.discovery.powl.inductive.variants.im_dynamic_clustering_frequencies import (
@@ -32,6 +32,13 @@ from pm4py.algo.discovery.powl.inductive.variants.im_maximal import (
 )
 from pm4py.algo.discovery.powl.inductive.variants.powl_discovery_varaints import (
     POWLDiscoveryVariant, )
+from pm4py.algo.discovery.powl.inductive.variants.im_choice_graph import (
+    InductiveMinerChoiceGraph,
+    InductiveMinerChoiceGraphMaximal,
+    InductiveMinerChoiceGraphClustering,
+    InductiveMinerChoiceGraphCyclic,
+    InductiveMinerChoiceGraphCyclicStrict,
+)
 
 from pm4py import util
 from pm4py.algo.discovery.inductive.algorithm import Parameters
@@ -56,8 +63,20 @@ def get_variant(variant: POWLDiscoveryVariant) -> Type[IMBasePOWL]:
         return POWLInductiveMinerMaximalOrder
     elif variant == POWLDiscoveryVariant.DYNAMIC_CLUSTERING:
         return POWLInductiveMinerDynamicClusteringFrequency
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_MAX:
+        # Self-contained choice graph discovery (no external powl package needed)
+        return InductiveMinerChoiceGraphMaximal
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CLUSTERING:
+        # Self-contained choice graph discovery with clustering
+        return InductiveMinerChoiceGraphClustering
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC:
+        # Self-contained choice graph discovery with cycle detection
+        return InductiveMinerChoiceGraphCyclic
+    elif variant == POWLDiscoveryVariant.DECISION_GRAPH_CYCLIC_STRICT:
+        # Self-contained choice graph discovery with strict cycle validation
+        return InductiveMinerChoiceGraphCyclicStrict
     else:
-        raise Exception("Invalid Variant!")
+        raise Exception(f"Invalid Variant: {variant}")
 
 
 def apply(

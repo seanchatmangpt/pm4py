@@ -1,24 +1,24 @@
-'''
+"""
 PM4Py – A Process Mining Library for Python
-Copyright (C) 2026 Process Intelligence Solutions GmbH
+Copyright (C) 2024 Process Intelligence Solutions
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or any later version.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see this software project's root or
-visit <https://www.gnu.org/licenses/>.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
-'''
+"""
+
+
 import importlib.resources
 import tempfile
 from enum import Enum
@@ -33,6 +33,9 @@ from pm4py.objects.powl.obj import (
     StrictPartialOrder,
     OperatorPOWL,
     FrequentTransition,
+    DecisionGraph,
+    StartNode,
+    EndNode,
 )
 
 OPERATOR_BOXES = True
@@ -124,6 +127,8 @@ def get_color(node, color_map):
 
 
 def get_id_base(powl):
+    if isinstance(powl, (StartNode, EndNode)):
+        return str(id(powl))
     if isinstance(powl, Transition):
         return str(id(powl))
     if isinstance(powl, OperatorPOWL):
@@ -131,9 +136,14 @@ def get_id_base(powl):
     if isinstance(powl, StrictPartialOrder):
         for node in powl.children:
             return get_id_base(node)
+    if isinstance(powl, DecisionGraph):
+        for node in powl.children:
+            return get_id_base(node)
 
 
 def get_id(powl):
+    if isinstance(powl, (StartNode, EndNode)):
+        return str(id(powl))
     if isinstance(powl, Transition):
         return str(id(powl))
     if isinstance(powl, OperatorPOWL):
@@ -142,6 +152,8 @@ def get_id(powl):
         else:
             return "clusterINVIS_" + str(id(powl))
     if isinstance(powl, StrictPartialOrder):
+        return "cluster_" + str(id(powl))
+    if isinstance(powl, DecisionGraph):
         return "cluster_" + str(id(powl))
 
 
@@ -367,6 +379,71 @@ def repr_powl(powl, viz, color_map, level, base_color):
                         child, block, color_map, level=level + 1, base_color=base_color
                     )
                     add_operator_edge(block, this_node_id, child)
+
+    elif isinstance(powl, DecisionGraph):
+        """
+        Render a DecisionGraph (Choice Graph) with blue dashed arcs.
+
+        Following the paper's convention (Figure 2), choice graph edges are
+        rendered as blue dashed arcs to distinguish them from partial order
+        edges (solid black arcs).
+        """
+        transitive_reduction = powl.order.get_transitive_reduction()
+        with viz.subgraph(name=get_id(powl)) as block:
+            block.attr(margin="20,20")
+            block.attr(style="filled")
+            block.attr(fillcolor=current_color)
+            # Render start node
+            viz.node(
+                str(id(powl.start)),
+                label="start",
+                shape="circle",
+                width="0.3",
+                height="0.3",
+                fixedsize="true",
+                style="filled",
+                fillcolor="#e1f5fe",
+            )
+            # Render end node
+            viz.node(
+                str(id(powl.end)),
+                label="end",
+                shape="doublecircle",
+                width="0.3",
+                height="0.3",
+                fixedsize="true",
+                style="filled",
+                fillcolor="#fce4ec",
+            )
+            # Render children
+            for child in powl.children:
+                repr_powl(
+                    child, block, color_map, level=level + 1, base_color=base_color
+                )
+
+            # Render choice graph edges with blue dashed style
+            # Following the paper's convention for distinguishing choice graphs
+            for child in powl.children:
+                for child2 in powl.children:
+                    if transitive_reduction.is_edge(child, child2):
+                        # Use blue color and dashed style for choice graph edges
+                        add_order_edge(
+                            block, child, child2,
+                            color="blue",
+                            style="dashed"
+                        )
+
+            # Edge from start to start_nodes (solid black, structural)
+            for start_node in powl.start_nodes:
+                add_order_edge(block, powl.start, start_node, color="black", style="solid")
+
+            # Edge from end_nodes to end (solid black, structural)
+            for end_node in powl.end_nodes:
+                add_order_edge(block, end_node, powl.end, color="black", style="solid")
+
+            # Empty path edge (solid black, structural)
+            if powl.order.is_edge(powl.start, powl.end):
+                add_order_edge(block, powl.start, powl.end, color="black", style="solid")
 
 
 def darken_color(color, amount):
