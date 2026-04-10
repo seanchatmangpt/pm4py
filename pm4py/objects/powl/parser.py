@@ -1,5 +1,5 @@
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

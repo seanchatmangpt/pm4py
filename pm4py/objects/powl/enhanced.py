@@ -1,17 +1,5 @@
-"""
-Enhanced POWL objects with frequency, serialization, and graph traversal mixins.
-
-This module extends PM4Py's POWL implementation with features needed for ostar:
-- Frequency tagging (min_freq, max_freq)
-- Dict serialization (.to_dict()/.from_dict())
-- Graph traversal API (.get_nodes(), .get_edges(), .successors(), .predecessors())
-- Start/end node management for choice-like structures
-
-These additions maintain Apache 2.0 license compatibility by implementing
-functionality independently rather than copying AGPL-licensed code.
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

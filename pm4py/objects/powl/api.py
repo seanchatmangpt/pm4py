@@ -1,14 +1,5 @@
-"""
-Top-level API functions compatible with official POWL package.
-
-Provides discover(), convert_to_bpmn(), convert_to_petri_net(), view(),
-and save_visualization() functions that delegate to PM4Py's existing
-implementation.
-
-All functions are independently implemented to maintain Apache 2.0 license compatibility.
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

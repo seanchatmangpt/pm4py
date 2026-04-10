@@ -1,20 +1,5 @@
-"""
-POWL Extensions for PM4Py.
-
-Extends PM4Py's POWL implementation with:
-- Guard conditions for choice regions
-- Cancellation scopes (workflow-Turing-completeness)
-- Extended POWL model with semantic metadata
-- Integration with μ-operator framework
-
-These extensions align with the thesis framework:
-- A = μ(O): Agent behavior is composition of μ-operators
-- Choice Graphs: workflow-Turing-complete representation
-- Guard conditions: Enable data-driven choices
-- Cancellation scopes: Handle workflow interrupts
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

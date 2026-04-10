@@ -1,18 +1,5 @@
-"""
-POWL 2.0 Choice Graph Discovery Algorithms.
-
-Implements the discovery algorithms from:
-H Kourani, G Park, WMP van der Aalst. "Unlocking Non-Block-Structured Decisions:
-Inductive Mining with Choice Graphs" arXiv preprint arXiv:2505.07052.
-
-Key components:
-- MineDG: Generate candidate partition for choice graph cut
-- Valid choice graph cut detection (Definition 5)
-- Projection operation (Definition 6)
-- Language semantics (Definition 3)
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

@@ -1,11 +1,5 @@
-"""
-Frequency tagging for POWL objects.
-
-Provides mixin class for adding frequency information to POWL nodes.
-This is part of making PM4Py self-contained for POWL functionality.
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

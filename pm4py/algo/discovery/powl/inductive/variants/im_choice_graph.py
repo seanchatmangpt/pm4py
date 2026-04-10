@@ -1,15 +1,5 @@
-"""
-POWL 2.0 Inductive Miner with Choice Graphs (PM×).
-
-Implements the extended Inductive Miner that discovers POWL 2.0 models
-with choice graphs instead of block-structured XOR operators.
-
-Based on:
-H Kourani, G Park, WMP van der Aalst. "Unlocking Non-Block-Structured Decisions:
-Inductive Mining with Choice Graphs" arXiv preprint arXiv:2505.07052.
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify

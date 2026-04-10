@@ -1,14 +1,5 @@
-"""
-API-compatible compatibility layer for POWL.
-
-This module provides adapter classes that expose the official POWL package API
-while using PM4Py's enhanced POWL implementation under the hood.
-
-This allows ostar to use PM4Py's POWL without changing import statements or API calls.
-All code is independently implemented to maintain Apache 2.0 license compatibility.
-"""
 '''
-PM4Py – A Process Mining Library for Python
+PM4Py - A Process Mining Library for Python
 Copyright (C) 2026 Process Intelligence Solutions GmbH
 
 This program is free software: you can redistribute it and/or modify
