@@ -15,6 +15,7 @@ from abc import ABC
 from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
 from pm4py.algo.discovery.powl.inductive.variants.im_tree import IMBasePOWL
 from pm4py.objects.log.obj import EventLog
+from pm4py.util.compression import util as comut
 from pm4py.objects.powl.obj import (
     POWL, Transition, SilentTransition, StrictPartialOrder,
     Sequence, OperatorPOWL, DecisionGraph
@@ -162,8 +163,11 @@ class InductiveMinerChoiceGraph(IMBasePOWL):
             # Project log onto this part
             sub_log = choice_graph_discovery.project_log(log, part)
 
+            # Convert EventLog to UVCL before wrapping
+            sub_uvcl = comut.get_variants(comut.project_univariate(sub_log))
+
             # Recursively discover POWL model for this part
-            sub_model = self.apply(IMDataStructureUVCL(sub_log))
+            sub_model = self.apply(IMDataStructureUVCL(sub_uvcl))
             sub_models[i] = sub_model
 
         # Step 2: Create choice graph from the cut and sub-models
@@ -248,7 +252,8 @@ class InductiveMinerChoiceGraph(IMBasePOWL):
         sub_models = []
         for part in parts:
             sub_log = choice_graph_discovery.project_log(log, part)
-            sub_model = self.apply(IMDataStructureUVCL(sub_log))
+            sub_uvcl = comut.get_variants(comut.project_univariate(sub_log))
+            sub_model = self.apply(IMDataStructureUVCL(sub_uvcl))
             sub_models.append(sub_model)
 
         # Create partial order
@@ -308,11 +313,13 @@ class InductiveMinerChoiceGraph(IMBasePOWL):
 
         # Discover do-part
         do_log = choice_graph_discovery.project_log(log, do_part)
-        do_model = self.apply(IMDataStructureUVCL(do_log))
+        do_uvcl = comut.get_variants(comut.project_univariate(do_log))
+        do_model = self.apply(IMDataStructureUVCL(do_uvcl))
 
         # Discover redo-part
         redo_log = choice_graph_discovery.project_log(log, redo_part)
-        redo_model = self.apply(IMDataStructureUVCL(redo_log))
+        redo_uvcl = comut.get_variants(comut.project_univariate(redo_log))
+        redo_model = self.apply(IMDataStructureUVCL(redo_uvcl))
 
         return OperatorPOWL(Operator.LOOP, [do_model, redo_model])
 
