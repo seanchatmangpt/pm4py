@@ -147,24 +147,41 @@ def recursively_add_tree(
             loop_trans = get_new_hidden_trans(counts, type_trans="loop")
             net.transitions.add(loop_trans)
 
-            exit_node = SilentTransition()
-            do = tree_children[0]
-            redo = tree_children[1]
+            if len(tree_children) == 1:
+                # 1-child loop: *(A) - repeat A zero or more times
+                exit_node = SilentTransition()
+                do = tree_children[0]
 
-            net, counts, int1 = recursively_add_tree(
-                do, net, initial_place, None, counts, rec_depth + 1
-            )
-            net, counts, int2 = recursively_add_tree(
-                redo, net, int1, None, counts, rec_depth + 1
-            )
-            net, counts, int3 = recursively_add_tree(
-                exit_node, net, int1, final_place, counts, rec_depth + 1
-            )
+                net, counts, int1 = recursively_add_tree(
+                    do, net, initial_place, None, counts, rec_depth + 1
+                )
+                net, counts, int3 = recursively_add_tree(
+                    exit_node, net, int1, final_place, counts, rec_depth + 1
+                )
 
-            looping_place = int2
+                # Self-loop: after do, can either exit or loop back to do
+                add_arc_from_to(int1, loop_trans, net)
+                add_arc_from_to(loop_trans, initial_place, net)
+            else:
+                # 2-child loop: *(A,B) - do A, repeat B zero or more times
+                exit_node = SilentTransition()
+                do = tree_children[0]
+                redo = tree_children[1]
 
-            add_arc_from_to(looping_place, loop_trans, net)
-            add_arc_from_to(loop_trans, initial_place, net)
+                net, counts, int1 = recursively_add_tree(
+                    do, net, initial_place, None, counts, rec_depth + 1
+                )
+                net, counts, int2 = recursively_add_tree(
+                    redo, net, int1, None, counts, rec_depth + 1
+                )
+                net, counts, int3 = recursively_add_tree(
+                    exit_node, net, int1, final_place, counts, rec_depth + 1
+                )
+
+                looping_place = int2
+
+                add_arc_from_to(looping_place, loop_trans, net)
+                add_arc_from_to(loop_trans, initial_place, net)
 
     elif isinstance(powl, StrictPartialOrder):
         transitive_reduction = powl.order.get_transitive_reduction()

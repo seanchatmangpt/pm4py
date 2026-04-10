@@ -388,8 +388,9 @@ class OperatorPOWL(POWL):
                     "Cannot create a choice of less than 2 submodels!"
                 )
         elif operator is Operator.LOOP:
-            if len(children) != 2:
-                raise Exception("Only loops of length 2 are supported!")
+            if len(children) not in (1, 2):
+                raise Exception("Loops must have 1 or 2 children! "
+                                "1-child: *(A) repeat A. 2-child: *(A,B) do A, repeat B.")
         else:
             raise Exception("Unsupported Operator!")
         super().__init__()
