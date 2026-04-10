@@ -14,7 +14,7 @@ from abc import ABC
 
 from pm4py.algo.discovery.inductive.dtypes.im_ds import IMDataStructureUVCL
 from pm4py.algo.discovery.powl.inductive.variants.im_tree import IMBasePOWL
-from pm4py.objects.log.obj import EventLog
+from pm4py.objects.log.obj import EventLog, Trace, Event
 from pm4py.util.compression import util as comut
 from pm4py.objects.powl.obj import (
     POWL, Transition, SilentTransition, StrictPartialOrder,
@@ -60,7 +60,12 @@ class InductiveMinerChoiceGraph(IMBasePOWL):
             parameters = {}
 
         # Get the event log from the data structure
-        log = obj if isinstance(obj, EventLog) else obj._obj
+        if isinstance(obj, EventLog):
+            log = obj
+        elif isinstance(obj, IMDataStructureUVCL):
+            log = self._uvcl_to_event_log(obj._obj)
+        else:
+            log = obj
 
         # Base cases
         base_case_result = self._check_base_cases(log)
@@ -87,6 +92,23 @@ class InductiveMinerChoiceGraph(IMBasePOWL):
 
         # Fall-through: handle cases where no cut is detected
         return self._fall_through(log)
+
+    def _uvcl_to_event_log(self, uvcl) -> EventLog:
+        """
+        Convert a UVCL (Counter of variants) to an EventLog.
+
+        Args:
+            uvcl: Counter mapping trace tuples to frequencies
+
+        Returns:
+            EventLog with expanded traces
+        """
+        event_log = EventLog()
+        for trace_tuple, count in uvcl.items():
+            for _ in range(count):
+                events = [Event({'concept:name': act}) for act in trace_tuple]
+                event_log.append(Trace(events))
+        return event_log
 
     def _check_base_cases(self, log: EventLog) -> Optional[POWL]:
         """
