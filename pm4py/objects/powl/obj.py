@@ -1023,6 +1023,33 @@ class DecisionGraph(POWL):
 
         return True
 
+    def get_edges(self) -> list:
+        """
+        Get all edges in the choice graph.
+
+        Returns:
+            List of (source, target) tuples representing edges
+        """
+        edges = []
+        for i, node1 in enumerate(self.order.get_nodes()):
+            for j, node2 in enumerate(self.order.get_nodes()):
+                if self.order.is_edge(node1, node2):
+                    edges.append((node1, node2))
+
+        # Add edges from start to start_nodes
+        for start_node in self.start_nodes:
+            edges.append((self.start, start_node))
+
+        # Add edges from end_nodes to end
+        for end_node in self.end_nodes:
+            edges.append((end_node, self.end))
+
+        # Add empty path edge if exists
+        if self.empty_path:
+            edges.append((self.start, self.end))
+
+        return edges
+
     def get_all_paths(self) -> list:
         """
         Get all execution paths from start to end in the choice graph.
