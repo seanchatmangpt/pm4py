@@ -60,3 +60,21 @@ if pm4_constants.ENABLE_INTERNAL_IMPORTS:
         view,
         save_visualization,
     )
+    # POWL 2.0 Choice Graph discovery (from paper)
+    from pm4py.objects.powl import choice_graph_discovery
+    from pm4py.objects.powl.choice_graph_discovery import (
+        ChoiceGraphCut,
+        compute_dfg,
+        compute_dfg_relation,
+        compute_transitive_closure,
+        get_activities,
+        get_start_activities,
+        get_end_activities,
+        has_empty_trace,
+        mine_dg,
+        is_valid_choice_graph_cut,
+        create_choice_graph_from_cut,
+        project_log,
+        language as choice_graph_language,
+        validate_acyclicity,
+    )

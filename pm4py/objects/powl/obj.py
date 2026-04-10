@@ -853,3 +853,108 @@ class DecisionGraph(POWL):
             seq = Sequence([current_dg] + end_list)
             return seq
         return None
+
+    def validate_acyclicity(self) -> bool:
+        """
+        Validate that the choice graph is acyclic (Definition 5, condition 5).
+
+        From "Unlocking Non-Block-Structured Decisions":
+        (Ai →+ Aj ∧ Aj →+ Ai) ⇒ Ai = Aj
+
+        This ensures no node is reachable from itself through the graph,
+        which is required for proper representation of choice behavior.
+
+        Returns:
+            True if the graph is acyclic, False otherwise
+        """
+        visited = set()
+        rec_stack = set()
+
+        def has_cycle(node):
+            """DFS to detect cycles."""
+            visited.add(node)
+            rec_stack.add(node)
+
+            # Get successors (excluding sentinel nodes for cycle detection)
+            successors = self.order.get_postset(node)
+            for successor in successors:
+                if successor not in (self.start, self.end):
+                    if successor not in visited:
+                        if has_cycle(successor):
+                            return True
+                    elif successor in rec_stack:
+                        return True
+
+            rec_stack.remove(node)
+            return False
+
+        # Check all non-sentinel nodes
+        for node in self.children:
+            if node not in visited:
+                if has_cycle(node):
+                    return False
+
+        return True
+
+    def get_all_paths(self) -> list:
+        """
+        Get all execution paths from start to end in the choice graph.
+
+        Each path is a list of POWL nodes representing a valid execution trace.
+
+        Returns:
+            List of paths (each path is a list of nodes)
+        """
+        from pm4py.objects.powl.obj import StartNode, EndNode
+
+        paths = []
+
+        def dfs(current_node, current_path, visited):
+            """Depth-first search to find all paths."""
+            if isinstance(current_node, EndNode):
+                paths.append(current_path)
+                return
+
+            if current_node in visited:
+                return  # Avoid cycles
+
+            visited.add(current_node)
+            successors = self.order.get_postset(current_node)
+
+            for successor in successors:
+                if isinstance(successor, EndNode):
+                    dfs(successor, current_path, visited.copy())
+                elif successor not in (self.start, self.end):
+                    dfs(successor, current_path + [successor], visited.copy())
+
+        dfs(self.start, [], set())
+        return paths
+
+    def language(self) -> list:
+        """
+        Compute the language of this choice graph (Definition 3).
+
+        L(G) = concatenation of languages along all paths from start to end.
+
+        Returns:
+            List of traces (each trace is a list of activity labels)
+        """
+        paths = self.get_all_paths()
+        traces = []
+
+        for path in paths:
+            trace = []
+            for node in path:
+                if isinstance(node, Transition):
+                    if node._label is not None:
+                        trace.append(node._label)
+                elif isinstance(node, SilentTransition):
+                    pass  # Silent transitions don't add to trace
+                elif hasattr(node, 'language'):
+                    # Recursively get language from nested POWL nodes
+                    nested_lang = node.language()
+                    if nested_lang:
+                        trace.extend(nested_lang[0] if nested_lang else [])
+            traces.append(trace)
+
+        return traces
