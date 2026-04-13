@@ -207,6 +207,8 @@ def get_decorations_from_dfg_spaths_acticount(
         Describe how to decorate the Petri net (could be frequency or performance)
     aggregation_measure
         Specifies the aggregation measure
+    stat_locale
+        Dict to locale the stat strings
 
     Returns
     -----------
@@ -258,7 +260,7 @@ def get_decorations_from_dfg_spaths_acticount(
         arcs_max_value = max(list(decorations_int.values()))
         for arc in decorations_int:
             if "performance" in variant:
-                arc_label = human_readable_stat(decorations_int[arc])
+                arc_label = human_readable_stat(decorations_int[arc], stat_locale)
             else:
                 arc_label = str(decorations_int[arc])
             decorations[arc] = {

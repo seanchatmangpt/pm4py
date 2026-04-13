@@ -53,7 +53,7 @@ def get_decorations(
     ht_perf_method
         Method to use in order to annotate hidden transitions (performance value could be put on the last possible
         point (last) or in the first possible point (first)
-
+    
     Returns
     ------------
     decorations

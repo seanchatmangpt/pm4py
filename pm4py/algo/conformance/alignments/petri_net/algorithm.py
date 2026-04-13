@@ -27,7 +27,7 @@ class Variants(Enum):
     VERSION_STATE_EQUATION_A_STAR = variants.state_equation_a_star
     VERSION_DIJKSTRA_NO_HEURISTICS = variants.dijkstra_no_heuristics
     VERSION_DIJKSTRA_LESS_MEMORY = variants.dijkstra_less_memory
-
+    VERSION_DISCOUNTED_A_STAR = variants.discounted_a_star
 
 class Parameters(Enum):
     PARAM_TRACE_COST_FUNCTION = "trace_cost_function"
@@ -49,6 +49,8 @@ class Parameters(Enum):
     CORES = "cores"
     BEST_WORST_COST_INTERNAL = "best_worst_cost_internal"
     FITNESS_ROUND_DIGITS = "fitness_round_digits"
+    SYNCHRONOUS = "synchronous_dijkstra"
+    EXPONENT="theta"
     ENABLE_BEST_WORST_COST = "enable_best_worst_cost"
 
 
@@ -60,6 +62,8 @@ def __variant_mapper(variant):
             variant = Variants.VERSION_DIJKSTRA_NO_HEURISTICS
         elif variant == "Variants.VERSION_DIJKSTRA_LESS_MEMORY":
             variant = Variants.VERSION_DIJKSTRA_LESS_MEMORY
+        elif variant == "Variants.VERSION_DISCOUNTED_A_STAR":
+            variant = Variants.VERSION_DISCOUNTED_A_STAR
 
     return variant
 
@@ -71,11 +75,13 @@ if solver.DEFAULT_LP_SOLVER_VARIANT is not None:
 VERSION_STATE_EQUATION_A_STAR = Variants.VERSION_STATE_EQUATION_A_STAR
 VERSION_DIJKSTRA_NO_HEURISTICS = Variants.VERSION_DIJKSTRA_NO_HEURISTICS
 VERSION_DIJKSTRA_LESS_MEMORY = Variants.VERSION_DIJKSTRA_LESS_MEMORY
+VERSION_DISCOUNTED_A_STAR = Variants.VERSION_DISCOUNTED_A_STAR
 
 VERSIONS = {
     Variants.VERSION_DIJKSTRA_NO_HEURISTICS,
-    Variants.VERSION_DIJKSTRA_NO_HEURISTICS,
+    Variants.VERSION_STATE_EQUATION_A_STAR,
     Variants.VERSION_DIJKSTRA_LESS_MEMORY,
+    Variants.VERSION_DISCOUNTED_A_STAR,
 }
 
 

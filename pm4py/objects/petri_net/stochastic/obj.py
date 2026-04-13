@@ -1,3 +1,4 @@
+
 from typing import Any, Collection, Dict
 
 from pm4py.objects.petri_net.obj import PetriNet
