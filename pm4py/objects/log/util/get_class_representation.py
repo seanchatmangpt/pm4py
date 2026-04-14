@@ -39,7 +39,7 @@ def get_class_representation_by_str_ev_attr_value_presence(
                 and event[str_attr_name] == str_attr_value
             ):
                 value = True
-        if not str(value) in dictionary:
+        if str(value) not in dictionary:
             dictionary[str(value)] = count
             classes.append(str(value))
             count = count + 1
@@ -78,7 +78,7 @@ def get_class_representation_by_str_ev_attr_value_value(log, str_attr_name):
         for event in trace:
             if str_attr_name in event and event[str_attr_name]:
                 value = event[str_attr_name]
-        if not str(value) in dictionary:
+        if str(value) not in dictionary:
             dictionary[str(value)] = count
             classes.append(str(value))
             count = count + 1
@@ -149,7 +149,7 @@ def get_class_representation_by_trace_duration(
                 diff = (timestamp_et - timestamp_st).total_seconds()
             if diff > target_trace_duration:
                 value = "GREATER"
-        if not str(value) in dictionary:
+        if str(value) not in dictionary:
             dictionary[str(value)] = count
             classes.append(str(value))
             count = count + 1
