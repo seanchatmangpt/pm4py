@@ -5,8 +5,8 @@ import os, time
 
 
 def execute_script():
-    live_trace_stream = LiveTraceStream()
-    trace_stream_printer = TraceStreamPrinter()
+    live_trace_stream: "LiveTraceStream" = LiveTraceStream()
+    trace_stream_printer: "TraceStreamPrinter" = TraceStreamPrinter()
     live_trace_stream.register(trace_stream_printer)
     live_trace_stream.start()
     importer = streaming_xes_importer.apply(os.path.join("..", "tests", "input_data", "running-example.xes"),
