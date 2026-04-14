@@ -79,7 +79,7 @@ def execute_script():
 
     inv_line_map = {}
     for i, v in invoice_lines.items():
-        if not v["InvoiceId"] in inv_line_map:
+        if v["InvoiceId"] not in inv_line_map:
             inv_line_map[v["InvoiceId"]] = []
         inv_line_map[v["InvoiceId"]].append(v["InvoiceLineId"])
 

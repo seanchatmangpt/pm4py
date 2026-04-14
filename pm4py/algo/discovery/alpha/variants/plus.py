@@ -218,7 +218,7 @@ def get_relations(log: EventLog):
                             else:
                                 causal[key] = [element]
                     else:
-                        if not (key in follows[element]):
+                        if key not in follows[element]:
                             if key in causal:
                                 causal[key].append(element)
                             else:
@@ -232,7 +232,7 @@ def get_relations(log: EventLog):
         for key in follows:
             for element in follows[key]:
                 if element in follows:
-                    if not (key in follows[element]):
+                    if key not in follows[element]:
                         if key in causal:
                             causal[key].append(element)
                         else:

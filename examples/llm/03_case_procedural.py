@@ -1,5 +1,4 @@
 import pm4py
-import os
 import duckdb
 
 
@@ -53,12 +52,12 @@ JOIN
     dataframe_pos = dataframe_pos.groupby("case:concept:name").first()
     dataframe_neg = dataframe_neg.groupby("case:concept:name").last()
 
-    tp = len(dataframe_pos[dataframe_pos[protected_attr] == True])
-    fp = len(dataframe_pos[dataframe_pos[protected_attr] == False])
+    tp = len(dataframe_pos[dataframe_pos[protected_attr].eq(True)])
+    fp = len(dataframe_pos[dataframe_pos[protected_attr].eq(False)])
     print("true positives", tp)
     print("false positives", fp)
-    fn = len(dataframe_neg[dataframe_neg[protected_attr] == True])
-    tn = len(dataframe_neg[dataframe_neg[protected_attr] == False])
+    fn = len(dataframe_neg[dataframe_neg[protected_attr].eq(True)])
+    tn = len(dataframe_neg[dataframe_neg[protected_attr].eq(False)])
     print("false negatives", fn)
     print("true negatives", tn)
 
