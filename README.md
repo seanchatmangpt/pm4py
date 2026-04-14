@@ -55,6 +55,10 @@ PM4Py depends on some other Python packages, with different levels of importance
 
 To track the incremental updates, please refer to the `CHANGELOG.md` file.
 
+## Contributing
+
+If you want to contribute to PM4Py, please review the [contributing guidelines and Contributor License Agreement (CLA)](https://processintelligence.solutions/pm4py/contributing).
+
 ## Third Party Dependencies
 
 As scientific library in the Python ecosystem, we rely on external libraries to offer our features.
