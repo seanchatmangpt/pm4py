@@ -1,7 +1,7 @@
 """Polars LazyFrame implementation of the disconnected performance spectrum variant."""
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 import polars as pl
 
@@ -134,7 +134,7 @@ def apply(
         if collected.height == 0:
             continue
 
-        to_drop_indexes: set[int] = set()
+        to_drop_indexes: Set[int] = set()
 
         for row in collected.iter_rows(named=True):
             activities_seq = [row[key(activity_key, i)] for i in range(length)]

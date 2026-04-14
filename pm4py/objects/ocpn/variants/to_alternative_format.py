@@ -1,5 +1,5 @@
 
-from typing import Any, Dict
+from typing import Any, Dict, Set, Tuple
 from pm4py.objects.ocpn.obj import OCMarking, OCPetriNet
 from pm4py.objects.petri_net.obj import Marking, PetriNet
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
@@ -61,7 +61,7 @@ def apply(ocpn: OCPetriNet, parameters=None) -> Dict[str, Any]:
     return alternative_format
 
 
-def _get_activities_per_object_type(ocpn: OCPetriNet) -> Dict[str, set[str]]:
+def _get_activities_per_object_type(ocpn: OCPetriNet) -> Dict[str, Set[str]]:
     activities = {ot: set() for ot in ocpn.object_types}
     for arc in ocpn.arcs:
         transition = None
@@ -112,7 +112,7 @@ def _initialize_ot_activity_metrics(
 
 def _project_ocpn_on_object_type(
     ocpn: OCPetriNet, object_type
-) -> tuple[PetriNet, Marking, Marking]:
+) -> Tuple[PetriNet, Marking, Marking]:
     """
     Projects the OCPetriNet into a tuple containing the Petri net projection and the initial and final marking projections for the object type.
 
