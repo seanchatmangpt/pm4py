@@ -7,15 +7,15 @@ import os, time
 
 def execute_script():
     # imports a XES event log
-    log = pm4py.read_xes(os.path.join("..", "tests", "input_data", "receipt.xes"))
+    log: "pandas.DataFrame" = pm4py.read_xes(os.path.join("..", "tests", "input_data", "receipt.xes"))
     # converts the log into a list of events (not anymore grouped in cases)
-    event_stream = pm4py.convert_to_event_stream(log)
+    event_stream: "EventStream" = pm4py.convert_to_event_stream(log)
     # calculates a process tree using the IMf algorithm (50% noise)
-    tree = pm4py.discover_process_tree_inductive(log, noise_threshold=0.5)
+    tree: "ProcessTree" = pm4py.discover_process_tree_inductive(log, noise_threshold=0.5)
     # discovers the footprint matrix from the process tree
-    footprints = fp_discovery.apply(tree)
+    footprints: "dict[str, Any]" = fp_discovery.apply(tree)
     # creates a live event stream (an object that distributes the messages to the algorithm)
-    live_stream = LiveEventStream()
+    live_stream: "LiveEventStream" = LiveEventStream()
     # creates the TBR streaming conformance checking object
     conf_obj = streaming_fp_conf.apply(footprints)
     # register the conformance checking object to the live event stream
