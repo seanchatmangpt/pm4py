@@ -16,7 +16,7 @@ libraries are added/removed.
 | matplotlib | https://pypi.org/pypi/matplotlib/json | Python Software Foundation License | 3.10.8 |
 | networkx | https://pypi.org/pypi/networkx/json | Unspecified | 3.6.1 |
 | numpy | https://pypi.org/pypi/numpy/json | Unspecified | 2.4.4 |
-| packaging | https://pypi.org/pypi/packaging/json | Unspecified | 26.0 |
+| packaging | https://pypi.org/pypi/packaging/json | Unspecified | 26.1 |
 | pandas | https://pypi.org/pypi/pandas/json | BSD License | 3.0.2 |
 | pillow | https://pypi.org/pypi/pillow/json | Unspecified | 12.2.0 |
 | pyparsing | https://pypi.org/pypi/pyparsing/json | Unspecified | 3.3.2 |
