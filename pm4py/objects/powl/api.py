@@ -22,7 +22,7 @@ Contact: info@processintelligence.solutions
 
 
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Tuple
 from pathlib import Path
 
 # Import PM4Py's existing functions

@@ -20,6 +20,8 @@ Website: https://processintelligence.solutions
 Contact: info@processintelligence.solutions
 '''
 
+from typing import Dict, List
+
 
 def filter4(input_marker_groups, output_marker_groups, threshold, activity_count):
     """

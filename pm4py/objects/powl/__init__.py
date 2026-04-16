@@ -21,6 +21,17 @@ Contact: info@processintelligence.solutions
 from pm4py.util import constants as pm4_constants
 
 if pm4_constants.ENABLE_INTERNAL_IMPORTS:
+    # Export main POWL classes from obj module
+    from pm4py.objects.powl.obj import (
+        POWL,
+        Transition,
+        StrictPartialOrder,
+        Sequence,
+        OperatorPOWL,
+        DecisionGraph,
+    )
+
+    from pm4py.objects.powl import *
     from pm4py.objects.powl import *
     from pm4py.objects.powl.extensions import (
         GuardOperator,

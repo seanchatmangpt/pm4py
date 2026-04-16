@@ -25,7 +25,7 @@ from pm4py.objects.powl.constants import STRICT_PARTIAL_ORDER_LABEL
 from pm4py.objects.process_tree.obj import ProcessTree, Operator
 from pm4py.util import hie_utils
 import sys
-from typing import List as TList, Optional, Union
+from typing import List as TList, Optional, Union, Dict, Any, Tuple
 from abc import ABC, abstractmethod
 
 
@@ -391,8 +391,23 @@ class OperatorPOWL(POWL):
             if len(children) not in (1, 2):
                 raise Exception("Loops must have 1 or 2 children! "
                                 "1-child: *(A) repeat A. 2-child: *(A,B) do A, repeat B.")
+        elif operator is Operator.INTERLEAVING:
+            if len(children) < 2:
+                raise Exception("Interleaving requires at least 2 submodels!")
+        elif operator is Operator.PARALLEL:
+            if len(children) < 2:
+                raise Exception("Parallel requires at least 2 submodels!")
+        elif operator is Operator.SEQUENCE:
+            if len(children) < 2:
+                raise Exception("Sequence requires at least 2 submodels!")
+        elif operator is Operator.OR:
+            if len(children) < 2:
+                raise Exception("OR requires at least 2 submodels!")
+        elif operator is Operator.PARTIALORDER:
+            # PartialOrder can have any number of children
+            pass
         else:
-            raise Exception("Unsupported Operator!")
+            raise Exception(f"Unsupported Operator: {operator}")
         super().__init__()
         self.operator = operator
         self.children = children
