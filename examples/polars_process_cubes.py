@@ -1,6 +1,7 @@
 import pm4py
 import polars as pl
 from pm4py.statistics.process_cube.polars import algorithm as process_cube_builder
+from pm4py.util import pandas_utils
 import traceback
 
 
@@ -8,9 +9,25 @@ def execute_script():
     dataframe: "pandas.DataFrame" = pm4py.read_xes("../tests/input_data/receipt.xes")
     dataframe = pl.LazyFrame(dataframe)
 
-    # builds a complete feature table, including the case ID as first column
-    enriched_df: "polars.LazyFrame" = pl.LazyFrame(pm4py.extract_outcome_enriched_dataframe(dataframe).collect())
-    feature_table = pm4py.extract_features_dataframe(enriched_df, include_case_id=True).collect()
+    # only compute the outcome metrics needed by the cubes
+    enriched_df: "polars.LazyFrame" = pandas_utils.insert_case_arrival_finish_rate(
+        dataframe,
+        timestamp_column="time:timestamp",
+        case_id_column="case:concept:name",
+        start_timestamp_column="time:timestamp",
+    )
+    enriched_df = pandas_utils.insert_case_service_waiting_time(
+        enriched_df,
+        timestamp_column="time:timestamp",
+        case_id_column="case:concept:name",
+        start_timestamp_column="time:timestamp",
+    )
+
+    # only extract the attributes that are actually referenced by the cube queries
+    feature_table = pm4py.extract_features_dataframe(
+        enriched_df,
+        include_case_id=True,
+    )
 
     parameters = {}
     parameters["aggregation_function"] = "max"
