@@ -1,0 +1,137 @@
+groups:
+  - id: registry.dspy.powl
+    type: attribute_group
+    display_name: 'DSPy POWL Natural Language Discovery'
+    brief: >
+      Attributes for DSPy-based natural language to POWL (Partially Ordered Workflow Language)
+      discovery using Groq gpt-oss-20b.
+    attributes:
+      - id: dspy.powl.model.slug
+        type: string
+        stability: stable
+        brief: 'URL-safe slug identifying the discovered POWL process model.'
+        examples: ['purchase-order-approval', 'hotel-room-service', 'online-shop-checkout']
+
+      - id: dspy.powl.model.fitness
+        type: double
+        stability: stable
+        brief: >
+          Semantic fitness score (0.0–1.0) from the DSPy judge validation.
+          Unlike conformance fitness, this measures syntactic and semantic
+          correctness of the generated POWL model.
+        examples: [0.95, 0.82, 1.0]
+
+      - id: dspy.powl.iteration.count
+        type: int
+        stability: stable
+        brief: 'Number of DSPy judge-and-refine iterations performed to reach the final POWL model.'
+        examples: [1, 2, 3]
+
+      - id: dspy.powl.model.operator_types
+        type: string[]
+        stability: stable
+        brief: >
+          POWL operator types present in the generated model (loop, xor, parallel,
+          sequence, interleaving, or, partial_order).
+        examples: [['xor', 'loop'], ['parallel', 'sequence'], ['interleaving']]
+
+      - id: dspy.powl.model.activity_count
+        type: int
+        stability: stable
+        brief: 'Number of unique activities in the discovered POWL model.'
+        examples: [2, 3, 5, 10]
+
+      - id: dspy.powl.model.activities
+        type: string[]
+        stability: stable
+        brief: 'List of activity labels in the discovered POWL model.'
+        examples: [['Submit', 'Review', 'Approve'], ['Validate', 'Submit', 'Retry']]
+
+      - id: dspy.powl.discovery.variant
+        type: string
+        stability: stable
+        brief: 'Discovery method used (always "dspy-groq" for this module).'
+        examples: ['dspy-groq']
+
+      - id: dspy.powl.description
+        type: string
+        stability: stable
+        brief: 'Original natural language description used to generate the POWL model.'
+        examples: ['Approve purchase orders under $1000', 'Process hotel room service orders']
+
+      - id: dspy.powl.domain
+        type: string
+        stability: stable
+        brief: 'Optional domain context provided for the process (e.g., healthcare, finance).'
+        examples: ['finance', 'healthcare', 'retail', 'manufacturing']
+
+      - id: dspy.powl.reasoning
+        type: string
+        stability: stable
+        brief: 'DSPy judge reasoning explaining the validation verdict.'
+        examples: ['The model correctly captures the sequential flow', 'Missing branch for rejected cases']
+
+      - id: dspy.powl.threshold_met
+        type: boolean
+        stability: stable
+        brief: 'Whether the generated POWL model passed the DSPy judge validation.'
+
+      - id: dspy.powl.error_category
+        type: string
+        stability: stable
+        brief: >
+          Category of error detected during POWL generation when threshold_met is false.
+          Values: "schema" (syntax error), "semantic" (judge rejection), "conformance"
+          (fitness below threshold).
+        examples: ['schema', 'semantic', 'conformance']
+
+      - id: dspy.powl.generation.attempts
+        type: int
+        stability: stable
+        brief: 'Number of generation attempts made (for retry logic).'
+        examples: [1, 2, 3]
+
+      - id: dspy.powl.model.patterns
+        type: string[]
+        stability: stable
+        brief: 'High-level patterns detected in the POWL model (loop, xor, parallel, etc.).'
+        examples: [['loop', 'xor'], ['parallel'], ['interleaving', 'sequence']]
+
+      - id: dspy.powl.model.complexity
+        type: string
+        stability: stable
+        brief: 'JSON-encoded complexity metrics (operator_count, activity_count, total_nodes).'
+        examples: ['{"operator_count": 2, "activity_count": 3, "total_nodes": 5}']
+
+  - id: registry.dspy.powl.mcp
+    type: attribute_group
+    display_name: 'DSPy POWL MCP Server Attributes'
+    brief: 'Attributes for DSPy POWL MCP server instrumentation.'
+    attributes:
+      - id: dspy.powl.mcp.server.name
+        type: string
+        stability: stable
+        brief: 'MCP server name (always "dspy-powl").'
+        examples: ['dspy-powl']
+
+      - id: dspy.powl.mcp.tool.name
+        type: string
+        stability: stable
+        brief: 'Name of the MCP tool being invoked.'
+        examples: ['powl_generate', 'powl_validate', 'powl_analyze', 'powl_health', 'powl_list_patterns']
+
+      - id: dspy.powl.mcp.tool.success
+        type: boolean
+        stability: stable
+        brief: 'Whether the MCP tool invocation completed without error.'
+
+      - id: dspy.powl.mcp.tool.args
+        type: string
+        stability: stable
+        brief: 'JSON-serialized arguments passed to the MCP tool (truncated for large payloads).'
+
+      - id: dspy.powl.mcp.tool.result_size
+        type: int
+        stability: stable
+        brief: 'Size in bytes of the JSON-serialized result returned by the MCP tool.'
+        examples: [128, 4096, 16384]

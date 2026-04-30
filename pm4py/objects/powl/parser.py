@@ -114,6 +114,26 @@ def parse_powl_model_string(powl_string, level=0) -> POWL:
 
                 i = i + 1
 
+        elif indented_str_list[0].startswith("SEQ"):
+            # Sequence operator: SEQ(a,b,c) or SEQ=(a,b,c)
+            i = 1
+            while i < len(indented_str_list):
+                if indented_str_list[i] == ")":
+                    break
+                N = parse_powl_model_string(indented_str_list[i], level + 1)
+                nodes.append(N)
+                i = i + 1
+            PO = OperatorPOWL(PTOperator.SEQUENCE, nodes)
+        elif indented_str_list[0].startswith("PAR") or indented_str_list[0].startswith("+"):
+            # Parallel operator: PAR(a,b,c) or +(a,b,c)
+            i = 1
+            while i < len(indented_str_list):
+                if indented_str_list[i] == ")":
+                    break
+                N = parse_powl_model_string(indented_str_list[i], level + 1)
+                nodes.append(N)
+                i = i + 1
+            PO = OperatorPOWL(PTOperator.PARALLEL, nodes)
         elif indented_str_list[0].startswith("X"):
             i = 1
             while i < len(indented_str_list):
@@ -123,6 +143,16 @@ def parse_powl_model_string(powl_string, level=0) -> POWL:
                 nodes.append(N)
                 i = i + 1
             PO = OperatorPOWL(PTOperator.XOR, nodes)
+        elif indented_str_list[0].startswith("OR"):
+            # OR operator: OR(a,b,c)
+            i = 1
+            while i < len(indented_str_list):
+                if indented_str_list[i] == ")":
+                    break
+                N = parse_powl_model_string(indented_str_list[i], level + 1)
+                nodes.append(N)
+                i = i + 1
+            PO = OperatorPOWL(PTOperator.OR, nodes)
         elif indented_str_list[0].startswith("<>"):
             i = 1
             while i < len(indented_str_list):

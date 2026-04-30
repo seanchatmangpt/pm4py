@@ -560,6 +560,153 @@ def get_footprints_of_partial_order(
 
 
 ###############################################################################
+# Handling SEQUENCE
+###############################################################################
+
+def get_footprints_of_sequence(node: OperatorPOWL, footprints_cache: Dict[POWL, Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Footprints for a SEQUENCE node: children=[C0, C1, ..., Cn].
+    Activities flow strictly from left to right:
+      - start_activities = C0.start_activities (if C0 is skippable, also C1.start, etc.)
+      - end_activities = Cn.end_activities (if Cn is skippable, also Cn-1.end, etc.)
+      - sequence edges: for each consecutive pair (Ci, Cj), add Ci.end -> Cj.start
+        also skip edges when intermediate children are all skippable
+      - skippable = AND of all children.skippable
+      - activities_always_happening = union of non-skippable children AAH
+      - min_trace_length = sum of non-skippable children min_trace_length
+    """
+    children = node.children
+    child_fps = [get_footprints_powl(ch, footprints_cache) for ch in children]
+
+    # Collect inner sequence/parallel sets from each child
+    activities = set()
+    sequence = set()
+    parallel = set()
+    aah = set()
+
+    for fp in child_fps:
+        activities |= fp[ACTIVITIES]
+        sequence |= fp[SEQUENCE]
+        parallel |= fp[PARALLEL]
+        if not fp[SKIPPABLE]:
+            aah |= fp[ACTIVITIES_ALWAYS_HAPPENING]
+
+    # skippable only if all children are skippable
+    skippable = all(fp[SKIPPABLE] for fp in child_fps)
+
+    # Build start_activities: C0.start; if C0 is skippable also C1.start; etc.
+    start_activities = set()
+    for fp in child_fps:
+        start_activities |= fp[START_ACTIVITIES]
+        if not fp[SKIPPABLE]:
+            break
+
+    # Build end_activities: Cn.end; if Cn is skippable also Cn-1.end; etc.
+    end_activities = set()
+    for fp in reversed(child_fps):
+        end_activities |= fp[END_ACTIVITIES]
+        if not fp[SKIPPABLE]:
+            break
+
+    # Build sequence edges between consecutive children, accounting for skippable intermediates
+    # For each pair (i, j) where i < j, if all children between i and j (exclusive) are skippable,
+    # add edges from child_fps[i].end_activities to child_fps[j].start_activities
+    n = len(child_fps)
+    for i in range(n):
+        for j in range(i + 1, n):
+            # Check if all children strictly between i and j are skippable
+            all_between_skippable = all(child_fps[k][SKIPPABLE] for k in range(i + 1, j))
+            if all_between_skippable:
+                for a1 in child_fps[i][END_ACTIVITIES]:
+                    for a2 in child_fps[j][START_ACTIVITIES]:
+                        sequence.add((a1, a2))
+
+    sequence, parallel = fix_fp(sequence, parallel)
+
+    min_trace_length = sum(
+        fp.get(Outputs.MIN_TRACE_LENGTH.value, 0)
+        for fp in child_fps
+        if not fp[SKIPPABLE]
+    )
+
+    return {
+        START_ACTIVITIES: start_activities,
+        END_ACTIVITIES: end_activities,
+        ACTIVITIES: activities,
+        SKIPPABLE: skippable,
+        SEQUENCE: sequence,
+        PARALLEL: parallel,
+        ACTIVITIES_ALWAYS_HAPPENING: aah,
+        Outputs.MIN_TRACE_LENGTH.value: min_trace_length,
+    }
+
+
+###############################################################################
+# Handling PARALLEL (AND)
+###############################################################################
+
+def get_footprints_of_parallel(node: OperatorPOWL, footprints_cache: Dict[POWL, Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Footprints for a PARALLEL/AND node: all children execute concurrently.
+      - start_activities = union of all children start_activities
+      - end_activities = union of all children end_activities
+      - activities = union of all children activities
+      - skippable = AND of all children skippable
+      - activities_always_happening = union of non-skippable children AAH
+      - parallel: all pairs (a1, a2) where a1 in child_i.activities, a2 in child_j.activities, i != j
+      - sequence = union of children inner sequence sets (no cross-child sequence)
+      - min_trace_length = sum of non-skippable children min_trace_length
+    """
+    children = node.children
+    child_fps = [get_footprints_powl(ch, footprints_cache) for ch in children]
+
+    start_activities = set()
+    end_activities = set()
+    activities = set()
+    sequence = set()
+    parallel = set()
+    aah = set()
+
+    for fp in child_fps:
+        start_activities |= fp[START_ACTIVITIES]
+        end_activities |= fp[END_ACTIVITIES]
+        activities |= fp[ACTIVITIES]
+        sequence |= fp[SEQUENCE]
+        parallel |= fp[PARALLEL]
+        if not fp[SKIPPABLE]:
+            aah |= fp[ACTIVITIES_ALWAYS_HAPPENING]
+
+    skippable = all(fp[SKIPPABLE] for fp in child_fps)
+
+    # All pairs of activities from different children are concurrent
+    for i in range(len(child_fps)):
+        for j in range(i + 1, len(child_fps)):
+            for a1 in child_fps[i][ACTIVITIES]:
+                for a2 in child_fps[j][ACTIVITIES]:
+                    parallel.add((a1, a2))
+                    parallel.add((a2, a1))
+
+    sequence, parallel = fix_fp(sequence, parallel)
+
+    min_trace_length = sum(
+        fp.get(Outputs.MIN_TRACE_LENGTH.value, 0)
+        for fp in child_fps
+        if not fp[SKIPPABLE]
+    )
+
+    return {
+        START_ACTIVITIES: start_activities,
+        END_ACTIVITIES: end_activities,
+        ACTIVITIES: activities,
+        SKIPPABLE: skippable,
+        SEQUENCE: sequence,
+        PARALLEL: parallel,
+        ACTIVITIES_ALWAYS_HAPPENING: aah,
+        Outputs.MIN_TRACE_LENGTH.value: min_trace_length,
+    }
+
+
+###############################################################################
 # Recursive footprints function with memoization
 ###############################################################################
 
@@ -578,6 +725,10 @@ def get_footprints_powl(node: POWL, footprints_cache: Dict[POWL, Dict[str, Any]]
             fp = get_footprints_of_xor(node, footprints_cache)
         elif node.operator == Operator.LOOP:
             fp = get_footprints_of_loop(node, footprints_cache)
+        elif node.operator == Operator.SEQUENCE:
+            fp = get_footprints_of_sequence(node, footprints_cache)
+        elif node.operator == Operator.PARALLEL:
+            fp = get_footprints_of_parallel(node, footprints_cache)
         else:
             raise NotImplementedError(f"Unsupported Operator: {node.operator}")
 

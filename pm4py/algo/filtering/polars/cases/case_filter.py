@@ -231,10 +231,38 @@ def filter_case_performance(
     )
 
 
-def apply(df, parameters=None):
-    del df
-    del parameters
-    raise NotImplementedError("apply method not available for case filter")
+def apply(
+    df: pl.LazyFrame,
+    admitted_values,
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> pl.LazyFrame:
+    """
+    Filter a LazyFrame keeping only cases whose case ID is in ``admitted_values``.
+
+    Parameters
+    ----------
+    df
+        LazyFrame
+    admitted_values
+        Collection of case IDs to keep
+    parameters
+        Optional parameters dictionary.  Recognised keys:
+            Parameters.CASE_ID_KEY -> case ID column (default: ``case:concept:name``)
+
+    Returns
+    -------
+    df
+        Filtered LazyFrame containing only the admitted cases
+    """
+    if parameters is None:
+        parameters = {}
+
+    case_id_glue = exec_utils.get_param_value(
+        Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME
+    )
+
+    admitted_list = list(admitted_values) if admitted_values is not None else []
+    return df.filter(pl.col(case_id_glue).is_in(admitted_list))
 
 
 def apply_auto_filter(df, parameters=None):

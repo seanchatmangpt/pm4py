@@ -173,10 +173,46 @@ def filter_case_performance(log, inf_perf, sup_perf, parameters=None):
     )
 
 
-def apply(df, parameters=None):
-    del df
-    del parameters
-    raise NotImplementedError("apply method not available for case filter")
+def apply(
+    log,
+    admitted_values,
+    parameters=None,
+):
+    """
+    Filter an event log keeping only traces whose case name is in ``admitted_values``.
+
+    Parameters
+    ----------
+    log
+        Event log (EventLog or convertible)
+    admitted_values
+        Collection of case concept:name values to keep
+    parameters
+        Optional parameters dictionary (passed through to the log converter)
+
+    Returns
+    -------
+    filtered_log
+        Filtered EventLog containing only the admitted cases
+    """
+    if parameters is None:
+        parameters = {}
+
+    log = log_converter.apply(
+        log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters
+    )
+
+    admitted_set = set(admitted_values) if admitted_values is not None else set()
+
+    filtered_log = EventLog(
+        [trace for trace in log if trace.attributes.get("concept:name") in admitted_set],
+        attributes=log.attributes,
+        extensions=log.extensions,
+        classifiers=log.classifiers,
+        omni_present=log.omni_present,
+        properties=log.properties,
+    )
+    return filtered_log
 
 
 def apply_auto_filter(df, parameters=None):

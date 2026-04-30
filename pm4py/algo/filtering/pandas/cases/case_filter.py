@@ -199,10 +199,40 @@ def filter_case_performance(
     )
 
 
-def apply(df, parameters=None):
-    del df
-    del parameters
-    raise NotImplementedError("apply method not available for case filter")
+def apply(
+    df: pd.DataFrame,
+    admitted_values,
+    parameters: Optional[Dict[Union[str, Parameters], Any]] = None,
+) -> pd.DataFrame:
+    """
+    Filter a dataframe keeping only cases whose case ID is in ``admitted_values``.
+
+    Parameters
+    ----------
+    df
+        Dataframe
+    admitted_values
+        Collection of case IDs to keep
+    parameters
+        Optional parameters dictionary.  Recognised keys:
+            Parameters.CASE_ID_KEY -> case ID column (default: ``case:concept:name``)
+
+    Returns
+    -------
+    df
+        Filtered dataframe containing only the admitted cases
+    """
+    if parameters is None:
+        parameters = {}
+
+    case_id_glue = exec_utils.get_param_value(
+        Parameters.CASE_ID_KEY, parameters, constants.CASE_CONCEPT_NAME
+    )
+
+    admitted_set = set(admitted_values) if admitted_values is not None else set()
+    ret = df[df[case_id_glue].isin(admitted_set)]
+    ret.attrs = copy(df.attrs) if hasattr(df, "attrs") else {}
+    return ret
 
 
 def apply_auto_filter(df, parameters=None):
