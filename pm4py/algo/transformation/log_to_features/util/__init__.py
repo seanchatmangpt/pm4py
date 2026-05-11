@@ -1,3 +1,3 @@
-from pm4py.algo.transformation.log_to_features.util import (
+from pm4py.algo.transformation.trace_encodings.util import (
     locally_linear_embedding,
 )
