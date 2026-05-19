@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 from pm4py.objects.ocel.obj import OCEL
+from pm4py.objects.ocel.util import compression
 from pm4py.util.rustxes_utils import import_rustxes_backend
 
 
@@ -24,4 +25,5 @@ def apply(file_path: str, parameters: Optional[Dict[Any, Any]] = None) -> OCEL:
 
     rustxes_backend, _ = import_rustxes_backend()
 
-    return rustxes_backend.import_ocel_json_pm4py(file_path)
+    with compression.decompressed_path(file_path) as path:
+        return rustxes_backend.import_ocel_json_pm4py(path)
