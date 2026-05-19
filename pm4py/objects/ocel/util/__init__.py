@@ -1,6 +1,7 @@
 from pm4py.objects.ocel.util import (
     attributes_names,
     attributes_per_type,
+    compression,
     convergence_divergence_diagnostics,
     e2o_qualification,
     ev_att_to_obj_type,
