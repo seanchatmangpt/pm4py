@@ -59,6 +59,7 @@ from pm4py.algo.discovery.split_miner.dfg_discovery.classic import (
 from pm4py.algo.discovery.split_miner.dtypes.concurrency import (
     ConcurrencyResult,
 )
+from pm4py.objects.bpmn.util import reduction
 from pm4py.algo.discovery.split_miner.dtypes.dfg import DFG
 from pm4py.algo.discovery.split_miner.dtypes.filtering import FilterResult
 from pm4py.algo.discovery.split_miner.dtypes.log import (
@@ -238,7 +239,8 @@ class SplitMinerFramework(ABC):
         wg: WorkingGraph,
         parameters: Optional[Dict[str, Any]] = None,
     ) -> BPMN:
-        return ClassicBPMNExporter.apply(wg, parameters)
+        bpmn = ClassicBPMNExporter.apply(wg, parameters)
+        return  reduction.apply(bpmn)
 
     # ------------------------------------------------------------------
     # Pipeline driver
