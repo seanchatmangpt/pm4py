@@ -246,10 +246,17 @@ class SplitMinerFramework(ABC):
 
     def apply(
         self,
-        log: Union[EventLog, EventStream, pd.DataFrame, DFG],
+        log: Union[EventLog, EventStream, pd.DataFrame, DFG, str],
         parameters: Optional[Dict[str, Any]] = None,
     ) -> BPMN:
         parameters = parameters or {}
+
+        if isinstance(log, str):
+            # A file path was supplied directly — read it via pm4py so
+            # both ``classic`` and ``sm2`` variants accept paths.
+            from pm4py.objects.log.importer.xes import importer as xes_importer
+
+            log = xes_importer.apply(log)
 
         if isinstance(log, dict):
             # Pre-computed DFG path — phases 0 and 1 are bypassed.

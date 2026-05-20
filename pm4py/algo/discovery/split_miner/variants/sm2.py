@@ -73,6 +73,7 @@ from pm4py.algo.discovery.split_miner.variants.abc import (
 from pm4py.objects.bpmn.obj import BPMN
 from pm4py.objects.conversion.log import converter as log_conversion
 from pm4py.objects.log.obj import EventLog, EventStream
+from pm4py.objects.log.util import interval_lifecycle
 from pm4py.util import constants, exec_utils
 from pm4py.util import xes_constants as xes_util
 
@@ -83,13 +84,6 @@ class Parameters(Enum):
     OR_MINIMISE = FrameworkParameters.OR_MINIMISE.value
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
     TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
-
-
-# Lifecycle attribute values that map to an instantaneous (``complete``)
-# event.  These are emitted as a synthetic ``start`` then ``end`` pair at
-# the same timestamp so the refined DFG and the lifecycle-overlap oracle
-# stay well-defined even when the log lacks explicit start events.
-_END_LIFECYCLES = ("end", "complete", "close", "ate_abort", "abort_activity")
 
 
 class SM2SplitMiner(SplitMinerFramework):
@@ -115,7 +109,7 @@ class SM2SplitMiner(SplitMinerFramework):
             parameters,
             xes_util.DEFAULT_TIMESTAMP_KEY,
         )
-        lifecycle_key = xes_util.DEFAULT_TRANSITION_KEY
+        start_timestamp_key = xes_util.DEFAULT_START_TIMESTAMP_KEY
 
         event_log = (
             log
@@ -125,26 +119,30 @@ class SM2SplitMiner(SplitMinerFramework):
             )
         )
 
+        # Delegate the standard XES lifecycle handling to pm4py: this
+        # pairs ``start``/``complete`` events into interval events that
+        # expose both a ``start_timestamp`` and a ``time:timestamp``,
+        # short-circuits when the log is already in interval form, and
+        # honours the same parameter conventions as the rest of pm4py.
+        interval_log = interval_lifecycle.to_interval(
+            event_log, parameters=parameters
+        )
+
         traces: List[RefinedTrace] = []
-        for trace in event_log:
-            events: List[RefinedEvent] = []
-            for ev in trace:
-                if activity_key not in ev:
-                    continue
-                label = str(ev[activity_key])
-                ts = ev.get(timestamp_key)
-                raw_lc = str(ev.get(lifecycle_key, "complete")).lower()
-                if raw_lc == "start":
-                    events.append((label, "start", ts))
-                elif raw_lc in _END_LIFECYCLES:
-                    # ``complete`` events are instantaneous: emit a start
-                    # and an end at the same timestamp so the refined
-                    # pipeline can still pair them into intervals.
-                    if raw_lc == "complete":
-                        events.append((label, "start", ts))
-                    events.append((label, "end", ts))
-            # Stable sort on timestamp keeps the synthesised start before
-            # its matching end on ties.
+        for raw_trace, conv_trace in zip(event_log, interval_log):
+            events: List[RefinedEvent] = self._refined_from_interval(
+                conv_trace, activity_key, start_timestamp_key, timestamp_key
+            )
+            if not events:
+                # Fall back to the raw trace and treat every event as
+                # instantaneous — SM 2.0 then degenerates to the classic
+                # pipeline rather than crashing on the empty log.
+                events = self._refined_from_raw(
+                    raw_trace, activity_key, timestamp_key
+                )
+
+            # Stable sort keeps the synthesised start before its matching
+            # end when both share a timestamp.
             events_idx = sorted(
                 enumerate(events),
                 key=lambda p: (p[1][2] if p[1][2] is not None else 0, p[0]),
@@ -160,6 +158,42 @@ class SM2SplitMiner(SplitMinerFramework):
                 ]
                 traces.append(wrapped)
         return traces
+
+    @staticmethod
+    def _refined_from_interval(
+        trace,
+        activity_key: str,
+        start_timestamp_key: str,
+        timestamp_key: str,
+    ) -> List[RefinedEvent]:
+        """Convert a pm4py interval-format trace into refined events."""
+        events: List[RefinedEvent] = []
+        for ev in trace:
+            if activity_key not in ev:
+                continue
+            label = str(ev[activity_key])
+            end_ts = ev.get(timestamp_key)
+            start_ts = ev.get(start_timestamp_key, end_ts)
+            events.append((label, "start", start_ts))
+            events.append((label, "end", end_ts))
+        return events
+
+    @staticmethod
+    def _refined_from_raw(
+        trace,
+        activity_key: str,
+        timestamp_key: str,
+    ) -> List[RefinedEvent]:
+        """Fallback: every raw event becomes an instantaneous interval."""
+        events: List[RefinedEvent] = []
+        for ev in trace:
+            if activity_key not in ev:
+                continue
+            label = str(ev[activity_key])
+            ts = ev.get(timestamp_key)
+            events.append((label, "start", ts))
+            events.append((label, "end", ts))
+        return events
 
     # ------------------------------------------------------------------
     # Phase 1 — refined DFG
