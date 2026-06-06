@@ -247,8 +247,8 @@ def extract_features_dataframe(
     parameters["add_case_identifier_column"] = include_case_id
     parameters["count_occurrences"] = count_occurrences
 
-    from pm4py.algo.transformation.log_to_features import (
-        algorithm as log_to_features,
+    from pm4py.algo.transformation.trace_encodings import (
+        algorithm as trace_encodings,
     )
 
     if check_is_pandas_dataframe(log):
@@ -259,7 +259,7 @@ def extract_features_dataframe(
             timestamp_key=timestamp_key,
         )
 
-    data, feature_names = log_to_features.apply(log, parameters=parameters)
+    data, feature_names = trace_encodings.apply(log, parameters=parameters)
     if is_polars_lazyframe(data):
         return data
 
@@ -411,9 +411,9 @@ def extract_temporal_features_dataframe(
     parameters["pm4py:param:resource_key"] = resource_key
 
     if is_polars_lazyframe(log):
-        from pm4py.algo.transformation.log_to_features.variants import temporal_lazy as temporal
+        from pm4py.algo.transformation.trace_encodings.variants import temporal_lazy as temporal
     else:
-        from pm4py.algo.transformation.log_to_features.variants import temporal
+        from pm4py.algo.transformation.trace_encodings.variants import temporal
 
     return temporal.apply(log, parameters=parameters)
 
