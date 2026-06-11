@@ -24,9 +24,11 @@ Contact: info@processintelligence.solutions
 Two variants are exposed:
 
 * :data:`CLASSIC` — the classic Split Miner pipeline.
-* :data:`SM2` — Split Miner 2.0, with a lifecycle-aware refined DFG,
-  a lifecycle-overlap concurrency oracle, and two heuristics for
-  improper-completion repair and OR-split identification.
+* :data:`SM2` — Split Miner 2.0: the same machinery driven by a
+  lifecycle-aware ``complete``-event DFG, an overlap-based concurrency
+  oracle for genuine lifecycle logs, a fixed frequency threshold
+  (``eta = 1.0``), inclusive joins left in place (``replaceIORs = false``)
+  plus the OR-split heuristic, and compact (marked) self-loops.
 
 Both variants return a :class:`pm4py.objects.bpmn.obj.BPMN`.
 """
@@ -69,8 +71,11 @@ def apply(
         or a precomputed DFG (only accepted by the classic variant).
     parameters
         Variant-specific parameters; see ``classic.Parameters`` and
-        ``sm2.Parameters`` for the supported keys (``EPSILON``, ``ETA``,
-        ``OR_MINIMISE``, ``ACTIVITY_KEY``, …).
+        ``sm2.Parameters`` for the supported keys. The classic variant
+        honors ``EPSILON``, ``ETA``, ``OR_MINIMISE`` and
+        ``ACTIVITY_KEY``; the SM2 variant honors ``EPSILON``,
+        ``ACTIVITY_KEY`` and ``TIMESTAMP_KEY`` and ignores ``ETA`` and
+        ``OR_MINIMISE`` (pinned to the reference tool's fixed values).
     variant
         Either :data:`CLASSIC` (default) or :data:`SM2`.
     """
