@@ -406,7 +406,7 @@ def write_ocel2(
 ) -> None:
     """
     Writes an OCEL2.0 object to disk in various formats.
-    Supported formats include JSON-OCEL, XML-OCEL, their GZIP-compressed variants, and SQLite.
+    Supported formats include CSV, JSON-OCEL, XML-OCEL, their GZIP-compressed variants, and SQLite.
 
     :param ocel: OCEL object.
     :param file_path: Target file path to write the OCEL2.0 object to.
@@ -422,12 +422,44 @@ def write_ocel2(
 
     if file_path.lower().endswith("sqlite"):
         write_ocel2_sqlite(ocel, file_path, encoding=encoding)
+    elif file_path.lower().endswith("csv"):
+        write_ocel2_csv(ocel, file_path, encoding=encoding)
     elif _matches_extension(file_path, ("xml", "xmlocel")):
         write_ocel2_xml(ocel, file_path, encoding=encoding)
     elif _matches_extension(file_path, ("json", "jsonocel")):
         write_ocel2_json(ocel, file_path, encoding=encoding)
     else:
         raise Exception("Unsupported file format for OCEL2.0 export.")
+
+
+def write_ocel2_csv(
+    ocel: OCEL, file_path: str, encoding: str = constants.DEFAULT_ENCODING
+) -> None:
+    """
+    Writes an OCEL2.0 object to disk in the compact CSV file format.
+
+    :param ocel: OCEL object.
+    :param file_path: Target file path to the CSV file.
+    :param encoding: The encoding to be used (default: utf-8).
+
+    .. code-block:: python3
+
+        import pm4py
+
+        pm4py.write_ocel2_csv(ocel, '<path_to_export_to>')
+    """
+    file_path = str(file_path)
+    if not file_path.lower().endswith("csv"):
+        file_path = file_path + ".csv"
+
+    from pm4py.objects.ocel.exporter.csv import exporter as csv_exporter
+
+    csv_exporter.apply(
+        ocel,
+        file_path,
+        variant=csv_exporter.Variants.OCEL20,
+        parameters={"encoding": encoding},
+    )
 
 
 def write_ocel2_json(
