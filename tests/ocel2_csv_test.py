@@ -95,6 +95,177 @@ class Ocel2CsvTest(unittest.TestCase):
                 if os.path.exists(path):
                     os.remove(path)
 
+    def test_ocel2_csv_revised_constraints(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_revised_constraints.csv")
+        exported = os.path.join(OUTPUT_DIR, "ocel2_revised_constraints_exported.csv")
+
+        dataframe = pd.DataFrame(
+            [
+                {
+                    "id": " create_o1 ",
+                    "activity": " create order ",
+                    "timestamp": " 2024-01-01T10:00:00+0000 ",
+                    "cost": "5",
+                    "ot:items": " i1 # ordered item ",
+                    "ot:orders": ' o1 # ordered {"priority":"high"} ',
+                },
+                {
+                    "id": "",
+                    "activity": "",
+                    "timestamp": "",
+                    "cost": "",
+                    "ot:items": 'i2{"price":"7"}',
+                    "ot:orders": "",
+                },
+                {
+                    "id": "o1",
+                    "activity": "O2O",
+                    "timestamp": "2024-01-02T10:00:00+0000",
+                    "cost": "",
+                    "ot:items": 'i2#contains{"price":"9"}',
+                    "ot:orders": "",
+                },
+                {
+                    "id": "",
+                    "activity": "",
+                    "timestamp": "2024-01-03T10:00:00+0000",
+                    "cost": "",
+                    "ot:items": 'i1{"price":"11"}',
+                    "ot:orders": "",
+                },
+            ]
+        )
+
+        try:
+            dataframe.to_csv(source, index=False)
+
+            ocel = pm4py.read_ocel2_csv(source)
+
+            self.assertEqual(len(ocel.events), 1)
+            self.assertEqual(len(ocel.objects), 3)
+            self.assertEqual(len(ocel.relations), 2)
+            self.assertEqual(len(ocel.o2o), 1)
+            self.assertEqual(len(ocel.object_changes), 1)
+            self.assertIn("o1", set(ocel.objects[ocel.object_id_column]))
+            self.assertIn("i2", set(ocel.objects[ocel.object_id_column]))
+            self.assertEqual(
+                ocel.events.iloc[0][ocel.event_id_column],
+                "create_o1",
+            )
+            self.assertEqual(
+                ocel.events.iloc[0][ocel.event_activity],
+                "create order",
+            )
+            self.assertEqual(
+                set(ocel.objects[ocel.object_type_column].unique()),
+                {"items", "orders"},
+            )
+
+            pm4py.write_ocel2_csv(ocel, exported)
+            exported_dataframe = pd.read_csv(exported, dtype=str).fillna("")
+            declaration_rows = exported_dataframe[
+                (exported_dataframe["id"] == "")
+                & (exported_dataframe["activity"] == "")
+                & (exported_dataframe["timestamp"] == "")
+            ]
+            self.assertEqual(len(declaration_rows), 1)
+            self.assertIn('i2{"price":7}', set(declaration_rows["ot:items"]))
+
+            imported = pm4py.read_ocel2_csv(exported)
+            self.assertEqual(len(imported.events), len(ocel.events))
+            self.assertEqual(len(imported.objects), len(ocel.objects))
+            self.assertEqual(len(imported.relations), len(ocel.relations))
+            self.assertEqual(len(imported.o2o), len(ocel.o2o))
+            self.assertEqual(len(imported.object_changes), len(ocel.object_changes))
+
+            ocel.events[ocel.event_timestamp] = ocel.events[
+                ocel.event_timestamp
+            ].dt.tz_localize(None)
+            ocel.relations[ocel.event_timestamp] = ocel.relations[
+                ocel.event_timestamp
+            ].dt.tz_localize(None)
+            ocel.object_changes[ocel.event_timestamp] = ocel.object_changes[
+                ocel.event_timestamp
+            ].dt.tz_localize(None)
+            pm4py.write_ocel2_csv(ocel, exported)
+            imported = pm4py.read_ocel2_csv(exported)
+            self.assertEqual(len(imported.events), len(ocel.events))
+        finally:
+            for path in (source, exported):
+                if os.path.exists(path):
+                    os.remove(path)
+
+    def test_ocel2_csv_rejects_undeclared_o2o_source(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_undeclared_o2o.csv")
+        dataframe = pd.DataFrame(
+            [
+                {
+                    "id": "o1",
+                    "activity": "o2o",
+                    "timestamp": "",
+                    "ot:items": "i1#contains",
+                },
+            ]
+        )
+
+        try:
+            dataframe.to_csv(source, index=False)
+            with self.assertRaises(ValueError):
+                pm4py.read_ocel2_csv(source)
+        finally:
+            if os.path.exists(source):
+                os.remove(source)
+
+    def test_ocel2_csv_rejects_o2o_attributes_without_timestamp(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_o2o_attrs_without_timestamp.csv")
+        dataframe = pd.DataFrame(
+            [
+                {
+                    "id": "",
+                    "activity": "",
+                    "timestamp": "",
+                    "ot:orders": "o1",
+                    "ot:items": "",
+                },
+                {
+                    "id": "o1",
+                    "activity": "o2o",
+                    "timestamp": "",
+                    "ot:orders": "",
+                    "ot:items": 'i1#contains{"weight":2}',
+                },
+            ]
+        )
+
+        try:
+            dataframe.to_csv(source, index=False)
+            with self.assertRaises(ValueError):
+                pm4py.read_ocel2_csv(source)
+        finally:
+            if os.path.exists(source):
+                os.remove(source)
+
+    def test_ocel2_csv_rejects_timestamp_without_timezone(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_timestamp_without_timezone.csv")
+        dataframe = pd.DataFrame(
+            [
+                {
+                    "id": "e1",
+                    "activity": "a",
+                    "timestamp": "2024-01-01T10:00:00",
+                    "ot:orders": "o1",
+                },
+            ]
+        )
+
+        try:
+            dataframe.to_csv(source, index=False)
+            with self.assertRaises(ValueError):
+                pm4py.read_ocel2_csv(source)
+        finally:
+            if os.path.exists(source):
+                os.remove(source)
+
     @unittest.skipUnless(
         os.path.exists(EXAMPLE_CSV) and os.path.exists(EXAMPLE_XML),
         "OCEL2 CSV/XML example files are not available",

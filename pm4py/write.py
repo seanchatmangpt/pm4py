@@ -439,7 +439,7 @@ def write_ocel2_csv(
     Writes an OCEL2.0 object to disk in the compact CSV file format.
 
     :param ocel: OCEL object.
-    :param file_path: Target file path to the CSV file.
+    :param file_path: Target file path to the OCEL 2.0 CSV file.
     :param encoding: The encoding to be used (default: utf-8).
 
     .. code-block:: python3
@@ -450,7 +450,7 @@ def write_ocel2_csv(
     """
     file_path = str(file_path)
     if not file_path.lower().endswith("csv"):
-        file_path = file_path + ".csv"
+        file_path = file_path + ".ocel.csv"
 
     from pm4py.objects.ocel.exporter.csv import exporter as csv_exporter
 
