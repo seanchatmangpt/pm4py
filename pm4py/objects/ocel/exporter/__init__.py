@@ -1,4 +1,4 @@
-from pm4py.objects.ocel.exporter import util, csv, jsonocel
+from pm4py.objects.ocel.exporter import bundled, util, csv, jsonocel
 import importlib.util
 
 if importlib.util.find_spec("lxml"):
