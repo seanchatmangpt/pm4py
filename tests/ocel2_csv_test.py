@@ -1,5 +1,8 @@
+import json
 import os
+import shutil
 import unittest
+import zipfile
 
 import pandas as pd
 
@@ -14,6 +17,65 @@ EXAMPLE_XML = os.path.join(REPO_DIR, "Order Management OCEL.xml.gz")
 
 
 class Ocel2CsvTest(unittest.TestCase):
+    def _build_bundled_ocel(self, source):
+        dataframe = pd.DataFrame(
+            [
+                {
+                    "id": "create_o1",
+                    "activity": "create order",
+                    "timestamp": "2024-01-01T10:00:00+0000",
+                    "cost": "5",
+                    "ot:orders": 'o1#order{"amount":10}',
+                    "ot:sales person": 'Alice#seller{"role":"manager"}',
+                },
+                {
+                    "id": "pay_o1",
+                    "activity": "pay/order",
+                    "timestamp": "2024-01-02T10:00:00+0000",
+                    "cost": "7",
+                    "ot:orders": "o1#order",
+                    "ot:sales person": "Alice#seller",
+                },
+                {
+                    "id": "o1",
+                    "activity": "o2o",
+                    "timestamp": "",
+                    "cost": "",
+                    "ot:orders": "",
+                    "ot:sales person": "Alice#accountable",
+                },
+                {
+                    "id": "",
+                    "activity": "",
+                    "timestamp": "",
+                    "cost": "",
+                    "ot:orders": "o2",
+                    "ot:sales person": "",
+                },
+                {
+                    "id": "",
+                    "activity": "",
+                    "timestamp": "2024-01-03T10:00:00+0000",
+                    "cost": "",
+                    "ot:orders": "",
+                    "ot:sales person": 'Alice{"role":"lead"}',
+                },
+            ]
+        )
+        dataframe.to_csv(source, index=False)
+        return pm4py.read_ocel2_csv(source)
+
+    def _assert_same_counts(self, imported, ocel):
+        self.assertEqual(len(imported.events), len(ocel.events))
+        self.assertEqual(len(imported.objects), len(ocel.objects))
+        self.assertEqual(len(imported.relations), len(ocel.relations))
+        self.assertEqual(len(imported.o2o), len(ocel.o2o))
+        self.assertEqual(len(imported.object_changes), len(ocel.object_changes))
+        self.assertEqual(
+            set(imported.objects[imported.object_id_column]),
+            set(ocel.objects[ocel.object_id_column]),
+        )
+
     def test_ocel2_csv_import_export_roundtrip(self):
         source = os.path.join(OUTPUT_DIR, "ocel2_compact_source.csv")
         exported = os.path.join(OUTPUT_DIR, "ocel2_compact_exported.csv")
@@ -300,6 +362,67 @@ class Ocel2CsvTest(unittest.TestCase):
         finally:
             if os.path.exists(output_path):
                 os.remove(output_path)
+
+    def test_ocel2_bundled_parquet_archive_roundtrip(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_bundle_source.csv")
+        output_path = os.path.join(OUTPUT_DIR, "ocel2_bundle_export.ocel.zip")
+
+        try:
+            ocel = self._build_bundled_ocel(source)
+            pm4py.write_ocel2(ocel, output_path)
+
+            with zipfile.ZipFile(output_path, "r") as archive:
+                names = set(archive.namelist())
+                meta = json.loads(archive.read("ocel-meta.json").decode("utf-8"))
+
+            self.assertEqual(meta["storageFormat"], "parquet")
+            self.assertEqual(meta["eventTypes"]["create order"]["file"], "events/event_create%20order.parquet")
+            self.assertEqual(meta["eventTypes"]["pay/order"]["file"], "events/event_pay%2Forder.parquet")
+            self.assertEqual(meta["objectTypes"]["sales person"]["file"], "objects/object_sales%20person.parquet")
+            self.assertIn("attributes", meta["eventTypes"]["create order"])
+            self.assertIn("object_changes/object_changes_orders.parquet", names)
+            self.assertFalse(any(name.endswith(".csv") for name in names))
+
+            imported = pm4py.read_ocel2(output_path)
+            self._assert_same_counts(imported, ocel)
+        finally:
+            for path in (source, output_path):
+                if os.path.exists(path):
+                    os.remove(path)
+
+    def test_ocel2_bundled_csv_directory_roundtrip(self):
+        source = os.path.join(OUTPUT_DIR, "ocel2_bundle_csv_source.csv")
+        output_dir = os.path.join(OUTPUT_DIR, "ocel2_bundle_csv_dir")
+
+        try:
+            ocel = self._build_bundled_ocel(source)
+            pm4py.write_ocel2_bundle(ocel, output_dir, storage_format="csv")
+
+            with open(os.path.join(output_dir, "ocel-meta.json"), "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            self.assertEqual(meta["storageFormat"], "csv")
+            self.assertTrue(os.path.exists(os.path.join(output_dir, "events", "event_pay%2Forder.csv")))
+            self.assertFalse(
+                any(
+                    filename.endswith(".parquet")
+                    for root, _, filenames in os.walk(output_dir)
+                    for filename in filenames
+                )
+            )
+
+            empty_changes = pd.read_csv(
+                os.path.join(output_dir, "object_changes", "object_changes_orders.csv")
+            )
+            self.assertEqual(len(empty_changes), 0)
+            self.assertIn("amount", empty_changes.columns)
+
+            imported = pm4py.read_ocel2(output_dir)
+            self._assert_same_counts(imported, ocel)
+        finally:
+            if os.path.exists(source):
+                os.remove(source)
+            if os.path.isdir(output_dir):
+                shutil.rmtree(output_dir)
 
 
 if __name__ == "__main__":

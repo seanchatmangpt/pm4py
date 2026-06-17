@@ -439,6 +439,7 @@ def read_ocel2(
     :rtype: `OCEL`
 
     Supported file formats based on extension:
+        - `.ocel.zip` – bundled CSV/Parquet archive,
         - `.sqlite` – SQLite database,
         - `.csv` – compact OCEL 2.0 CSV file,
         - `.xml`, `.xmlocel`, `.xml.gz`, or `.xmlocel.gz` – XML file,
@@ -453,6 +454,15 @@ def read_ocel2(
     local_path = _resolve_path(file_path)
     extension_path = str(file_path)
 
+    if (
+        extension_path.lower().endswith(".ocel.zip")
+        or local_path.lower().endswith(".ocel.zip")
+        or (
+            os.path.isdir(local_path)
+            and os.path.exists(os.path.join(local_path, "ocel-meta.json"))
+        )
+    ):
+        return read_ocel2_bundle(local_path, encoding=encoding)
     if extension_path.lower().endswith("sqlite") or local_path.lower().endswith(
         "sqlite"
     ):
@@ -474,6 +484,31 @@ def read_ocel2(
             local_path, encoding=encoding
         )
     raise Exception("Unsupported file format for OCEL 2.0")
+
+
+def read_ocel2_bundle(
+    file_path: str,
+    encoding: str = constants.DEFAULT_ENCODING,
+) -> OCEL:
+    """
+    Reads an OCEL 2.0 event log from the bundled CSV/Parquet format.
+
+    The input can be a ``.ocel.zip`` archive or an uncompressed bundle directory
+    containing ``ocel-meta.json``.
+
+    :param file_path: Path/URI to the bundled OCEL 2.0 archive or directory.
+    :param encoding: Encoding to be used for metadata and CSV files (default: `utf-8`).
+    :rtype: `OCEL`
+
+    .. code-block:: python3
+
+        import pm4py
+
+        ocel = pm4py.read_ocel2_bundle("<path_to_bundle.ocel.zip>")
+    """
+    from pm4py.objects.ocel.importer.bundled import importer as bundled_importer
+
+    return bundled_importer.apply(file_path, parameters={"encoding": encoding})
 
 
 def read_ocel2_csv(
