@@ -402,15 +402,20 @@ def write_ocel_sqlite(
 
 
 def write_ocel2(
-    ocel: OCEL, file_path: str, encoding: str = constants.DEFAULT_ENCODING
+    ocel: OCEL,
+    file_path: str,
+    encoding: str = constants.DEFAULT_ENCODING,
+    storage_format: str = "parquet",
 ) -> None:
     """
     Writes an OCEL2.0 object to disk in various formats.
-    Supported formats include CSV, JSON-OCEL, XML-OCEL, their GZIP-compressed variants, and SQLite.
+    Supported formats include CSV, JSON-OCEL, XML-OCEL, their GZIP-compressed variants, SQLite,
+    and bundled CSV/Parquet archives.
 
     :param ocel: OCEL object.
     :param file_path: Target file path to write the OCEL2.0 object to.
     :param encoding: The encoding to be used (default: utf-8).
+    :param storage_format: Storage format for bundled exports: ``parquet`` (default) or ``csv``.
 
     .. code-block:: python3
 
@@ -420,7 +425,11 @@ def write_ocel2(
     """
     file_path = str(file_path)
 
-    if file_path.lower().endswith("sqlite"):
+    if file_path.lower().endswith(".ocel.zip"):
+        write_ocel2_bundle(
+            ocel, file_path, encoding=encoding, storage_format=storage_format
+        )
+    elif file_path.lower().endswith("sqlite"):
         write_ocel2_sqlite(ocel, file_path, encoding=encoding)
     elif file_path.lower().endswith("csv"):
         write_ocel2_csv(ocel, file_path, encoding=encoding)
@@ -430,6 +439,38 @@ def write_ocel2(
         write_ocel2_json(ocel, file_path, encoding=encoding)
     else:
         raise Exception("Unsupported file format for OCEL2.0 export.")
+
+
+def write_ocel2_bundle(
+    ocel: OCEL,
+    file_path: str,
+    encoding: str = constants.DEFAULT_ENCODING,
+    storage_format: str = "parquet",
+) -> None:
+    """
+    Writes an OCEL2.0 object to disk in the bundled CSV/Parquet format.
+
+    ``.ocel.zip`` targets are written as ZIP archives. Other target paths are
+    written as uncompressed bundle directories.
+
+    :param ocel: OCEL object.
+    :param file_path: Target archive path or directory path.
+    :param encoding: Encoding used for metadata and CSV files (default: utf-8).
+    :param storage_format: ``parquet`` (default) or ``csv``.
+
+    .. code-block:: python3
+
+        import pm4py
+
+        pm4py.write_ocel2_bundle(ocel, '<path_to_export_to.ocel.zip>')
+    """
+    from pm4py.objects.ocel.exporter.bundled import exporter as bundled_exporter
+
+    bundled_exporter.apply(
+        ocel,
+        str(file_path),
+        parameters={"encoding": encoding, "storage_format": storage_format},
+    )
 
 
 def write_ocel2_csv(
