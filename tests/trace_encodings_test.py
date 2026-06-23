@@ -1,7 +1,10 @@
 import importlib.util
+import math
 import os
 import unittest
 import warnings
+
+import pandas as pd
 
 from pm4py.algo.transformation.trace_encodings import algorithm as trace_encodings
 from pm4py.objects.log.importer.xes import importer as xes_importer
@@ -51,6 +54,25 @@ class TraceEncodingsTest(unittest.TestCase):
 
         return log, net, initial_marking, final_marking
 
+    def _numeric_feature_dataframe(self):
+        return pd.DataFrame(
+            {
+                "case:concept:name": ["c1", "c1", "c1", "c2", "c2"],
+                "concept:name": ["A", "B", "C", "A", "B"],
+                "time:timestamp": pd.to_datetime(
+                    [
+                        "2020-01-01 00:00:00",
+                        "2020-01-01 00:01:00",
+                        "2020-01-01 00:02:00",
+                        "2020-01-02 00:00:00",
+                        "2020-01-02 00:01:00",
+                    ],
+                    utc=True,
+                ),
+                "cost": [1.0, 3.0, 5.0, 10.0, None],
+            }
+        )
+
     def test_trace_based_new_package(self):
         log = self._read_log()
         data, feature_names = trace_encodings.apply(
@@ -66,6 +88,110 @@ class TraceEncodingsTest(unittest.TestCase):
 
         self.assertEqual(len(log), len(data))
         self.assertTrue(feature_names)
+
+    def test_pandas_numeric_attribute_statistics(self):
+        import pm4py
+
+        df = self._numeric_feature_dataframe()
+        default_features = pm4py.extract_features_dataframe(
+            df,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost"],
+            include_case_id=True,
+        )
+        self.assertIn("cost", default_features.columns)
+        self.assertNotIn("cost_LAST", default_features.columns)
+
+        features = pm4py.extract_features_dataframe(
+            df,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost"],
+            include_case_id=True,
+            enable_numeric_attribute_statistics=True,
+        )
+
+        expected_columns = [
+            "case:concept:name",
+            "cost_LAST",
+            "cost_FIRST",
+            "cost_MIN",
+            "cost_MAX",
+            "cost_MEAN",
+            "cost_STDEV",
+        ]
+        self.assertEqual(expected_columns, list(features.columns))
+        self.assertNotIn("cost", features.columns)
+
+        by_case = features.set_index("case:concept:name")
+        self.assertEqual(5.0, by_case.loc["c1", "cost_LAST"])
+        self.assertEqual(1.0, by_case.loc["c1", "cost_FIRST"])
+        self.assertEqual(1.0, by_case.loc["c1", "cost_MIN"])
+        self.assertEqual(5.0, by_case.loc["c1", "cost_MAX"])
+        self.assertEqual(3.0, by_case.loc["c1", "cost_MEAN"])
+        self.assertAlmostEqual(
+            math.sqrt(8.0 / 3.0), by_case.loc["c1", "cost_STDEV"], places=6
+        )
+        self.assertEqual(10.0, by_case.loc["c2", "cost_LAST"])
+        self.assertEqual(0.0, by_case.loc["c2", "cost_STDEV"])
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("polars"), "polars is not installed"
+    )
+    def test_polars_numeric_attribute_statistics(self):
+        import pm4py
+        import polars as pl
+
+        lf = pl.LazyFrame(self._numeric_feature_dataframe())
+        default_features = pm4py.extract_features_dataframe(
+            lf,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost"],
+            include_case_id=True,
+        ).collect()
+        self.assertIn("cost", default_features.columns)
+        self.assertNotIn("cost_LAST", default_features.columns)
+
+        features = pm4py.extract_features_dataframe(
+            lf,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost"],
+            include_case_id=True,
+            enable_numeric_attribute_statistics=True,
+        ).collect()
+
+        expected_columns = [
+            "case:concept:name",
+            "cost_LAST",
+            "cost_FIRST",
+            "cost_MIN",
+            "cost_MAX",
+            "cost_MEAN",
+            "cost_STDEV",
+        ]
+        self.assertEqual(expected_columns, features.columns)
+        self.assertNotIn("cost", features.columns)
+
+        by_case = {
+            row["case:concept:name"]: row for row in features.to_dicts()
+        }
+        self.assertEqual(5.0, by_case["c1"]["cost_LAST"])
+        self.assertEqual(1.0, by_case["c1"]["cost_FIRST"])
+        self.assertEqual(1.0, by_case["c1"]["cost_MIN"])
+        self.assertEqual(5.0, by_case["c1"]["cost_MAX"])
+        self.assertEqual(3.0, by_case["c1"]["cost_MEAN"])
+        self.assertAlmostEqual(
+            math.sqrt(8.0 / 3.0), by_case["c1"]["cost_STDEV"], places=6
+        )
+        self.assertEqual(10.0, by_case["c2"]["cost_LAST"])
+        self.assertEqual(0.0, by_case["c2"]["cost_STDEV"])
 
     @unittest.skipUnless(
         importlib.util.find_spec("sklearn"), "scikit-learn is not installed"

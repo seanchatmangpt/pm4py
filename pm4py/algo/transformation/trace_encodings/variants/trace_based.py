@@ -43,6 +43,7 @@ class Parameters(Enum):
     ENABLE_MAX_CONCURRENT_EVENTS_PER_ACTIVITY = (
         "enable_max_concurrent_events_per_activity"
     )
+    ENABLE_NUMERIC_ATTRIBUTE_STATISTICS = "enable_numeric_attribute_statistics"
     CASE_ATTRIBUTE_PREFIX = constants.CASE_ATTRIBUTE_PREFIX
 
 
@@ -1390,6 +1391,8 @@ def apply(
         - ENABLE_TIMES_FROM_FIRST_OCCURRENCE => enables the addition of the times from start of the case, to the end
         of the case, from the first occurrence of an activity of a case
         - ADD_CASE_IDENTIFIER_COLUMN => adds the case identifier (string) as column of the feature table (default: False)
+        - ENABLE_NUMERIC_ATTRIBUTE_STATISTICS => for dataframe inputs, expands numeric attributes to LAST, FIRST,
+        MIN, MAX, MEAN, and STDEV columns
         - ENABLE_TIMES_FROM_LAST_OCCURRENCE => enables the addition of the times from start of the case, to the end
         of the case, from the last occurrence of an activity of a case
         - ENABLE_DIRECT_PATHS_TIMES_LAST_OCC => add the duration of the last occurrence of a directed (i, i+1) path
