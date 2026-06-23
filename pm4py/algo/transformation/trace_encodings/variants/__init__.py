@@ -1,0 +1,17 @@
+from pm4py.algo.transformation.trace_encodings.variants import (
+    alignments,
+    bert,
+    cases_transformers,
+    count2vec,
+    doc2vec,
+    event_based,
+    events_transformers,
+    n_grams,
+    one_hot,
+    temporal,
+    temporal_lazy,
+    tf_idf,
+    token_replay,
+    trace_based,
+    word2vec,
+)
