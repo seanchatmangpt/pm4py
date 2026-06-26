@@ -32,6 +32,11 @@ Contact: info@processintelligence.solutions
 
 The inclusive joins are subsequently replaced by the OR-join
 minimisation step.
+
+This is a faithful port of the reference ``generateSESEjoins`` /
+``generateInnerJoins``, validated to be byte-identical to
+``splitminer.jar`` on the SM-Experiment logs (see ``..algorithm`` for
+the validation summary).
 """
 from typing import Any, Dict, List, Optional, Set, Tuple
 

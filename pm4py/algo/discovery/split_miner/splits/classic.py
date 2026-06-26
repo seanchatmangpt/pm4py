@@ -36,6 +36,13 @@ The resulting item tree is rendered into XOR/AND gateways. A persistent
 identical sub-structures across *different* split-tasks share a single
 gateway, which is how Split Miner already materialises some joins during
 split discovery ("JOINs generated due to shared future").
+
+This is a faithful port of the reference Oracle split discovery,
+validated to be byte-identical to ``splitminer.jar`` on the
+SM-Experiment logs (see ``..algorithm``). Because it matches the *tool*
+and not the idealised paper figures, it can yield more gateways than a
+hand drawing — e.g. two AND-splits on the Augusto et al. (2019) running
+example rather than the single one in Fig. 3c.
 """
 from typing import Any, Dict, List, Optional, Set, Tuple
 

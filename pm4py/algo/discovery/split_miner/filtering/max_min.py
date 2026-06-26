@@ -32,6 +32,13 @@ This reproduces the reference Split Miner ``filterWithGuarantees`` (the
    frequency reaches the threshold; the remaining edges are dropped, but
    never the sole incoming edge of a node nor the sole outgoing edge of a
    node (the connectedness guard).
+
+This is a faithful port of the Java ``filterWithGuarantees``, validated
+to produce the same pruned DFG as ``splitminer.jar`` on the
+SM-Experiment logs (see ``..algorithm`` for the validation summary). The
+max-capacity backbone plus the connectedness guard frequently make the
+result insensitive to ``eta`` — a high threshold still keeps the
+backbone — which mirrors the reference tool and is not a bug.
 """
 import math
 from collections import deque
