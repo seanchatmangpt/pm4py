@@ -24,14 +24,15 @@ if _REPO_ROOT not in sys.path:
 import pandas as pd
 
 import pm4py
+import networkx as nx
 from pm4py.algo.discovery.split_miner.variants.classic import (
     ClassicSplitMiner,
 )
+from pm4py.objects.bpmn.obj import BPMN
 from pm4py.algo.discovery.split_miner.variants.sm2 import SM2SplitMiner
 from pm4py.algo.discovery.split_miner.filtering.max_min import (
     Parameters as FilterParameters,
 )
-from tests.sm_struct_compare import py_graph, wl
 
 assert pm4py.__file__.startswith(_REPO_ROOT)
 
@@ -56,8 +57,32 @@ def _mklog(variants, lifecycle=False):
     return pd.DataFrame(rows)
 
 
+def _node_label(node):
+    if isinstance(node, BPMN.Task):
+        return "task:" + node.get_name()
+    if isinstance(node, BPMN.StartEvent):
+        return "start"
+    if isinstance(node, BPMN.EndEvent):
+        return "end"
+    if isinstance(node, BPMN.ParallelGateway):
+        return "and"
+    if isinstance(node, BPMN.ExclusiveGateway):
+        return "xor"
+    if isinstance(node, BPMN.InclusiveGateway):
+        return "or"
+    return type(node).__name__
+
+
 def _h(bpmn):
-    return wl(py_graph(bpmn))
+    """Structural Weisfeiler-Lehman fingerprint of a BPMN, independent of
+    node identity: two models with the same hash are isomorphic with
+    matching node labels. Inlined so the test has no external helper."""
+    g = nx.DiGraph()
+    for node in bpmn.get_nodes():
+        g.add_node(id(node), lab=_node_label(node))
+    for flow in bpmn.get_flows():
+        g.add_edge(id(flow.get_source()), id(flow.get_target()))
+    return nx.weisfeiler_lehman_graph_hash(g, node_attr="lab")
 
 
 # A "grid" / rigid structure: classic leaves OR-joins unless they are
