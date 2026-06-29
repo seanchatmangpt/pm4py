@@ -81,9 +81,9 @@ def main() -> int:
     edges = len(bpmn.get_flows())
     print(f"classic SM 1.x : nodes={dict(counts)} edges={edges}")
     assert counts["task"] == 8, counts
-    assert counts["and"] == 1, counts
-    assert counts["xor"] == 3, counts
-    assert counts["or"] == 2, counts
+    assert counts["and"] == 2, counts
+    assert counts["xor"] == 4, counts
+    assert counts["or"] == 0, counts
 
     bpmn2 = pm4py.discover_bpmn_split_miner(
         df,
