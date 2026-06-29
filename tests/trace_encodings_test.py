@@ -71,6 +71,7 @@ class TraceEncodingsTest(unittest.TestCase):
                     utc=True,
                 ),
                 "cost": [1.0, 3.0, 5.0, 10.0, None, None],
+                "@@event_index": [1.0, 2.0, 3.0, 10.0, None, None],
             }
         )
 
@@ -159,6 +160,24 @@ class TraceEncodingsTest(unittest.TestCase):
             list(custom_features.columns),
         )
 
+        internal_features = pm4py.extract_features_dataframe(
+            df,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost", "@@event_index"],
+            include_case_id=True,
+            enable_numeric_attribute_statistics=True,
+        )
+        self.assertIn("cost_SUM", internal_features.columns)
+        self.assertIn("@@event_index", internal_features.columns)
+        self.assertNotIn("@@event_index_LAST", internal_features.columns)
+        self.assertNotIn("@@event_index_SUM", internal_features.columns)
+        internal_by_case = internal_features.set_index("case:concept:name")
+        self.assertEqual(3.0, internal_by_case.loc["c1", "@@event_index"])
+        self.assertEqual(10.0, internal_by_case.loc["c2", "@@event_index"])
+        self.assertTrue(pd.isna(internal_by_case.loc["c3", "@@event_index"]))
+
     @unittest.skipUnless(
         importlib.util.find_spec("polars"), "polars is not installed"
     )
@@ -233,6 +252,26 @@ class TraceEncodingsTest(unittest.TestCase):
             ["case:concept:name", "cost_SUM", "cost_MEDIAN"],
             custom_features.columns,
         )
+
+        internal_features = pm4py.extract_features_dataframe(
+            lf,
+            str_tr_attr=[],
+            num_tr_attr=[],
+            str_ev_attr=[],
+            num_ev_attr=["cost", "@@event_index"],
+            include_case_id=True,
+            enable_numeric_attribute_statistics=True,
+        ).collect()
+        self.assertIn("cost_SUM", internal_features.columns)
+        self.assertIn("@@event_index", internal_features.columns)
+        self.assertNotIn("@@event_index_LAST", internal_features.columns)
+        self.assertNotIn("@@event_index_SUM", internal_features.columns)
+        internal_by_case = {
+            row["case:concept:name"]: row for row in internal_features.to_dicts()
+        }
+        self.assertEqual(3.0, internal_by_case["c1"]["@@event_index"])
+        self.assertEqual(10.0, internal_by_case["c2"]["@@event_index"])
+        self.assertIsNone(internal_by_case["c3"]["@@event_index"])
 
         direct_features, direct_feature_names = trace_encodings.apply(
             lf,

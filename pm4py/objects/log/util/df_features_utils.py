@@ -63,6 +63,10 @@ _NUMERIC_ATTRIBUTE_AGGREGATION_ALIASES = {
 }
 
 
+def _is_internal_attribute(column: str) -> bool:
+    return str(column).startswith("@@")
+
+
 def _normalize_numeric_attribute_aggregations(
     aggregations: Optional[Collection[str]],
 ) -> List[str]:
@@ -123,11 +127,21 @@ def _get_numeric_features_df(
     numeric_attribute_aggregations = _normalize_numeric_attribute_aggregations(
         numeric_attribute_aggregations
     )
-    if not numeric_attribute_aggregations:
+    non_internal_columns = [
+        col for col in numeric_columns if not _is_internal_attribute(col)
+    ]
+    internal_columns = [
+        col for col in numeric_columns if _is_internal_attribute(col)
+    ]
+    if not numeric_attribute_aggregations and not internal_columns:
         return df[[case_id_key]].drop_duplicates().reset_index(drop=True)
 
     aggregations = {}
     for col in numeric_columns:
+        if _is_internal_attribute(col):
+            aggregations[col] = pd.NamedAgg(column=col, aggfunc="last")
+            continue
+
         aggregation_functions = {
             "last": "last",
             "first": "first",
@@ -145,7 +159,7 @@ def _get_numeric_features_df(
             )
 
     return (
-        df[[case_id_key] + numeric_columns]
+        df[[case_id_key] + internal_columns + non_internal_columns]
         .copy()
         .groupby(case_id_key)
         .agg(**aggregations)
@@ -166,11 +180,16 @@ def _get_numeric_feature_columns(
     numeric_attribute_aggregations = _normalize_numeric_attribute_aggregations(
         numeric_attribute_aggregations
     )
-    return [
-        f"{col}_{_NUMERIC_ATTRIBUTE_AGGREGATION_SUFFIXES[aggregation]}"
-        for col in numeric_columns
-        for aggregation in numeric_attribute_aggregations
-    ]
+    feature_columns = []
+    for col in numeric_columns:
+        if _is_internal_attribute(col):
+            feature_columns.append(col)
+        else:
+            feature_columns.extend(
+                f"{col}_{_NUMERIC_ATTRIBUTE_AGGREGATION_SUFFIXES[aggregation]}"
+                for aggregation in numeric_attribute_aggregations
+            )
+    return feature_columns
 
 
 def automatic_feature_selection_df(df, parameters=None):
@@ -284,7 +303,8 @@ def select_number_column(
         If True, extract numeric aggregation columns.
     numeric_attribute_aggregations
         Aggregations to compute for numeric attributes. Supported values are
-        last, first, min, max, mean, median, stdev, and sum.
+        last, first, min, max, mean, median, stdev, and sum. Applied only to
+        attributes whose names do not start with @@.
 
     Returns
     --------------
@@ -434,6 +454,7 @@ def get_features_df(
         - Parameters.COUNT_OCCURRENCES: if True, count occurrences of string attributes instead of binary encoding
         - Parameters.ENABLE_NUMERIC_ATTRIBUTE_STATISTICS: if True, extract aggregation statistics for numeric attributes
         - Parameters.NUMERIC_ATTRIBUTE_AGGREGATIONS: collection of aggregations to compute for numeric attributes
+          whose names do not start with @@
 
     Returns
     ---------------

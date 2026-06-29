@@ -65,6 +65,10 @@ _NUMERIC_ATTRIBUTE_AGGREGATION_ALIASES = {
 }
 
 
+def _is_internal_attribute(column: str) -> bool:
+    return str(column).startswith("@@")
+
+
 def _normalize_numeric_attribute_aggregations(
     aggregations: Optional[Collection[str]],
 ) -> List[str]:
@@ -116,11 +120,16 @@ def _get_numeric_feature_columns(
     numeric_attribute_aggregations = _normalize_numeric_attribute_aggregations(
         numeric_attribute_aggregations
     )
-    return [
-        f"{col}_{_NUMERIC_ATTRIBUTE_AGGREGATION_SUFFIXES[aggregation]}"
-        for col in numeric_columns
-        for aggregation in numeric_attribute_aggregations
-    ]
+    feature_columns = []
+    for col in numeric_columns:
+        if _is_internal_attribute(col):
+            feature_columns.append(col)
+        else:
+            feature_columns.extend(
+                f"{col}_{_NUMERIC_ATTRIBUTE_AGGREGATION_SUFFIXES[aggregation]}"
+                for aggregation in numeric_attribute_aggregations
+            )
+    return feature_columns
 
 
 def _scalar_from_lazy(lf: pl.LazyFrame, expr: pl.Expr) -> Any:
@@ -365,7 +374,7 @@ def select_number_columns(
         feature_dtype = _numeric_feature_dtype(df_schema[col])
         ordered_values = pl.col(col).sort_by(pl.col(row_nr_col)).drop_nulls()
 
-        if compute_statistics:
+        if compute_statistics and not _is_internal_attribute(col):
             float_values = pl.col(col).cast(pl.Float64)
             aggregation_exprs = {
                 "last": ordered_values.last().cast(feature_dtype),

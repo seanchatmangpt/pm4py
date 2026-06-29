@@ -221,7 +221,8 @@ def extract_features_dataframe(
                                                 defaults to False.
     :param numeric_attribute_aggregations: Optional collection of numeric aggregations to compute. Supported values are
                                            ``last``, ``first``, ``min``, ``max``, ``mean``, ``median``, ``stdev``,
-                                           and ``sum``.
+                                           and ``sum``. Applied only to numeric attributes whose names do not start
+                                           with ``@@``.
     :param \**kwargs: Additional keyword arguments to pass to the feature extraction algorithm.
     :return: A Pandas DataFrame containing the extracted features for each case.
     :rtype: ``pd.DataFrame``

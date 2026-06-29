@@ -1393,8 +1393,8 @@ def apply(
         of the case, from the first occurrence of an activity of a case
         - ADD_CASE_IDENTIFIER_COLUMN => adds the case identifier (string) as column of the feature table (default: False)
         - ENABLE_NUMERIC_ATTRIBUTE_STATISTICS => for dataframe inputs, expands numeric attributes to aggregation columns
-        - NUMERIC_ATTRIBUTE_AGGREGATIONS => collection of numeric aggregations to compute: last, first, min, max,
-        mean, median, stdev, and sum
+        - NUMERIC_ATTRIBUTE_AGGREGATIONS => collection of numeric aggregations to compute for attributes whose names
+        do not start with @@: last, first, min, max, mean, median, stdev, and sum
         - ENABLE_TIMES_FROM_LAST_OCCURRENCE => enables the addition of the times from start of the case, to the end
         of the case, from the last occurrence of an activity of a case
         - ENABLE_DIRECT_PATHS_TIMES_LAST_OCC => add the duration of the last occurrence of a directed (i, i+1) path
