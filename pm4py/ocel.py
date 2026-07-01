@@ -320,6 +320,10 @@ def discover_ocdfg(
 def discover_oc_petri_net(
     ocel: OCEL,
     inductive_miner_variant: str = "im",
+    noise_threshold: float = 0.0,
+    multi_processing: bool = constants.ENABLE_MULTIPROCESSING_DEFAULT,
+    disable_fallthroughs: bool = True,
+    disable_strict_sequence_cut: bool = True,
     diagnostics_with_tbr: bool = False,
 ) -> OCPetriNet:
     """
@@ -330,8 +334,16 @@ def discover_oc_petri_net(
 
     :param ocel: Object-centric event log.
     :type ocel: OCEL
-    :param inductive_miner_variant: Variant of the inductive miner to use ("im" for traditional; "imd" for the faster inductive miner directly-follows).
+    :param inductive_miner_variant: Variant of the inductive miner to use ("im" for traditional, "imf" for infrequent, or "imd" for the faster inductive miner directly-follows).
     :type inductive_miner_variant: str
+    :param noise_threshold: Noise threshold for the inductive miner (default: 0.0).
+    :type noise_threshold: float
+    :param multi_processing: Enables or disables multiprocessing in the inductive miner.
+    :type multi_processing: bool
+    :param disable_fallthroughs: Disables the inductive miner fall-throughs.
+    :type disable_fallthroughs: bool
+    :param disable_strict_sequence_cut: Disables the strict sequence cut in the inductive miner.
+    :type disable_strict_sequence_cut: bool
     :param diagnostics_with_tbr: Enable the computation of diagnostics using token-based replay if set to True.
     :type diagnostics_with_tbr: bool
     :return: Discovered object-centric Petri net.
@@ -347,6 +359,10 @@ def discover_oc_petri_net(
 
     parameters = {
         "inductive_miner_variant": inductive_miner_variant,
+        "noise_threshold": noise_threshold,
+        "multiprocessing": multi_processing,
+        "disable_fallthroughs": disable_fallthroughs,
+        "disable_strict_sequence_cut": disable_strict_sequence_cut,
         "diagnostics_with_token_based_replay": diagnostics_with_tbr,
     }
 
