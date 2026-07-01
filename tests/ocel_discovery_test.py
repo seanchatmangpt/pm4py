@@ -1,6 +1,7 @@
 import pm4py
 import os
 import unittest
+import unittest.mock
 from pm4py.objects.ocpn.obj import OCPetriNet
 
 
@@ -96,6 +97,32 @@ class OcelDiscoveryTest(unittest.TestCase):
         self.assertTrue(ocpn["activities"])
         self.assertIn("petri_nets", ocpn)
         self.assertEqual(ocpn.get("petri_nets"), ocpn["petri_nets"])
+
+    def test_discovery_ocpn_forwards_inductive_miner_parameters(self):
+        from pm4py.algo.discovery.inductive import algorithm as inductive_miner
+
+        ocel = pm4py.read_ocel(os.path.join("input_data", "ocel", "example_log.jsonocel"))
+
+        with unittest.mock.patch.object(
+            inductive_miner, "apply", wraps=inductive_miner.apply
+        ) as miner_apply:
+            pm4py.discover_oc_petri_net(
+                ocel,
+                inductive_miner_variant="im",
+                noise_threshold=0.2,
+                multi_processing=False,
+                disable_fallthroughs=False,
+                disable_strict_sequence_cut=False,
+            )
+
+        self.assertTrue(miner_apply.call_args_list)
+        for call in miner_apply.call_args_list:
+            parameters = call.kwargs["parameters"]
+            self.assertEqual(0.2, parameters["noise_threshold"])
+            self.assertFalse(parameters["multiprocessing"])
+            self.assertFalse(parameters["disable_fallthroughs"])
+            self.assertFalse(parameters["disable_strict_sequence_cut"])
+            self.assertEqual(inductive_miner.Variants.IMf, call.kwargs["variant"])
 
     def test_discovery_ocpn_imd(self):
         ocel = pm4py.read_ocel(os.path.join("input_data", "ocel", "example_log.jsonocel"))
