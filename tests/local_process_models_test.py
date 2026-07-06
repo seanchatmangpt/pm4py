@@ -29,11 +29,11 @@ class LocalProcessModelsTest(unittest.TestCase):
                                                          selected_activities=None,
                                                          parameters=parameters)
 
-        self.assertEquals(len(local_process_models), 15)
+        self.assertEqual(len(local_process_models), 15)
         tree, metrics = local_process_models[0]
-        self.assertEquals(tree, ProcessTree(None, None, [], "register request"))
-        self.assertEquals(metrics.confidence, 1)
-        self.assertEquals(metrics.frequency, 6)
+        self.assertEqual(tree, ProcessTree(None, None, [], "register request"))
+        self.assertEqual(metrics.confidence, 1)
+        self.assertEqual(metrics.frequency, 6)
 
         del log
 
