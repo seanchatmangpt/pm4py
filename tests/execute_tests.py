@@ -35,7 +35,7 @@ enabled_tests = [
     "DataframePrefilteringTest", "StatisticsLogTest", "StatisticsDfTest", "TransitionSystemTest",
     "ImpExpFromString", "WoflanTest", "OcelFilteringTest", "OcelDiscoveryTest", "LlmTest",
     "OcCausalNetSemanticsTest", "OcCausalNetSimulationTest", "OcCausalNetTest",
-    "OcpnSemanticsTest", "OcpnSimulationTest", "OcpnTest"
+    "OcpnSemanticsTest", "OcpnSimulationTest", "OcpnTest", "LocalProcessModelsTest"
 ]
 
 if importlib.util.find_spec("polars"):
@@ -156,6 +156,14 @@ if "InductiveMinerTreeTest" in enabled_tests:
         suite.addTests(loader.loadTestsFromTestCase(InductiveMinerTreeTest))
     except:
         print("InductiveMinerTreeTest import failed!")
+        failed += 1
+
+if "LocalProcessModelsTest" in enabled_tests:
+    try:
+        from tests.local_process_models_test import LocalProcessModelsTest
+        suite.addTests(loader.loadTestsFromTestCase(LocalProcessModelsTest))
+    except:
+        print("LocalProcessModelsTest import failed!")
         failed += 1
 
 if "AlignmentTest" in enabled_tests:
