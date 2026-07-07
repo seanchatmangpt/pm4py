@@ -231,7 +231,8 @@ def apply_log(
         :class:`dict` parameters of the algorithm:
 
         Parameters.UNPACK_VARIANT_ALIGNMENTS ->
-            If true, return an alignment for each individual trace in the log.
+            If true, return an alignment for each individual trace in the log. If the log contains few variants with many traces each, unpacking the alignments
+            will worsen the performance of the algorithm, since a python data structure is created for each trace.
             If false, for each variant a tuple of alignment and number of traces in the variant is returned.
             Default is true.
 
@@ -387,7 +388,8 @@ def apply_multiprocessing(
         :class:`dict` parameters of the algorithm:
 
         Parameters.UNPACK_VARIANT_ALIGNMENTS ->
-            If true, return an alignment for each individual trace in the log.
+            If true, return an alignment for each individual trace in the log. If the log contains few variants with many traces each, unpacking the alignments
+            will worsen the performance of the algorithm, since a python data structure is created for each trace.
             If false, for each variant a tuple of alignment and number of traces in the variant is returned.
             Default is true.
 
