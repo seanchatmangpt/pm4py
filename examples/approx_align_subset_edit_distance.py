@@ -1,32 +1,40 @@
-"""Approximate log alignments using subset selection and edit distance.
+"""Align all of ``receipt.xes`` by subset selection and edit distance.
 
-Run this example from the ``examples`` directory:
+Run from the ``examples`` directory with:
 
     python approx_align_subset_edit_distance.py
 
-Only representative trace variants are aligned through the Petri-net state
-space.  Every other variant is mapped to its nearest representative with
-insertion/deletion edit distance.  The result includes a concrete executable
-alignment as well as lower and upper fitness bounds for every trace.
+The Petri net is discovered from the complete receipt log with Inductive
+Miner at noise 0.0.  A small set of frequent variants is aligned through the
+model, while the remaining variants are approximated from their nearest
+representative.  Unlike the trace-oriented examples, this method efficiently
+processes all 1,434 cases in the demonstration.
 """
 
 import os
 
+import pm4py
 from pm4py.algo.conformance.alignments.edit_distance import (
     algorithm as edit_distance_alignments,
 )
 from pm4py.objects.log.importer.xes import importer as xes_importer
-from pm4py.objects.petri_net.importer import importer as petri_importer
 from pm4py.objects.petri_net.utils.align_utils import pretty_print_alignments
 
 
-def execute_script():
+def load_log_and_discover_model():
     examples_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(examples_dir, "..", "tests", "input_data")
-    log = xes_importer.apply(os.path.join(data_dir, "running-example.xes"))
-    net, initial_marking, final_marking = petri_importer.apply(
-        os.path.join(data_dir, "running-example.pnml")
+    log_path = os.path.join(
+        examples_dir, "..", "tests", "input_data", "receipt.xes"
     )
+    log = xes_importer.apply(log_path)
+    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(
+        log, noise_threshold=0.0
+    )
+    return log, net, initial_marking, final_marking
+
+
+def execute_script():
+    log, net, initial_marking, final_marking = load_log_and_discover_model()
 
     summary = edit_distance_alignments.apply_approximation_with_summary(
         log,
@@ -34,46 +42,47 @@ def execute_script():
         initial_marking,
         final_marking,
         parameters={
-            # Select the two most frequent variants and align those exactly.
-            # Alternatives are ``random``, ``k_medoids``, and ``simulation``.
+            # The ten most frequent variants are exact representatives.  Try
+            # ``k_medoids`` when coverage of diverse behavior is preferred.
             "selection_method": "frequency",
-            "subset_size": 2,
-            "max_align_time_trace": 30,
+            "subset_size": 10,
+            "max_align_time_trace": 60,
             "max_expansions": 100000,
         },
     )
-
     results = summary["alignments"]
-    print("Traces aligned:", len(results))
+
+    print("Receipt cases aligned:", len(results))
+    print("Discovered places / transitions:", len(net.places), len(net.transitions))
+    print("Valid complete alignments:", sum(result["is_valid"] for result in results))
+    print(
+        "Cases belonging to exactly aligned representative variants:",
+        sum(result["selected_exact"] for result in results),
+    )
     print(
         "Approximate log fitness and bounds: "
         f"{summary['log_fitness']:.3f} "
         f"[{summary['fitness_lower_bound']:.3f}, "
         f"{summary['fitness_upper_bound']:.3f}]"
     )
-    print("Aggregate deviations:", summary["deviation_counts"])
+    print("Aggregate deviation counts:", summary["deviation_counts"])
 
-    for index, (trace, result) in enumerate(zip(log, results), start=1):
-        activities = [event["concept:name"] for event in trace]
-        print("\nTrace", index, activities)
-        print("  selected and aligned exactly:", result["selected_exact"])
-        print("  representative model trace:", result["representative_variant"])
-        print("  valid complete alignment:", result["is_valid"])
-        print(
-            "  fitness estimate and bounds: "
-            f"{result['approximated_fitness']:.3f} "
-            f"[{result['fitness_lower_bound']:.3f}, "
-            f"{result['fitness_upper_bound']:.3f}]"
+    if results:
+        # Prefer a non-representative case so the edit-distance approximation
+        # is visible in the printed alignment.
+        example = next(
+            (result for result in results if not result["selected_exact"]),
+            results[0],
         )
-
-    # Print one non-representative alignment, when available, to make the edit
-    # distance materialization visible.  ``>>`` denotes a log or model move.
-    example = next(
-        (result for result in results if not result["selected_exact"]),
-        results[0],
-    )
-    print("\nExample alignment (top: log, bottom: model):")
-    pretty_print_alignments(example)
+        print("\nExample selected exactly:", example["selected_exact"])
+        print("Representative model trace:", example["representative_variant"])
+        print(
+            "Fitness estimate and bounds: "
+            f"{example['approximated_fitness']:.3f} "
+            f"[{example['fitness_lower_bound']:.3f}, "
+            f"{example['fitness_upper_bound']:.3f}]"
+        )
+        pretty_print_alignments(example)
 
 
 if __name__ == "__main__":

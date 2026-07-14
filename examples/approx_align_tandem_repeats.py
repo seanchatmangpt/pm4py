@@ -1,84 +1,105 @@
-"""Approximate a long, repetitive trace by compressing tandem repeats.
+"""Apply tandem-repeat alignment to repetitive variants of ``receipt.xes``.
 
-Run this example from the ``examples`` directory:
+Run from the ``examples`` directory with:
 
     python approx_align_tandem_repeats.py
 
-The model below contains the loop A -> B.  The observed trace executes that
-loop six times before taking C to the final marking.  The tandem-repeat
-variant aligns only the first and last copies of the repeated block and then
-expands the executable model loop in the returned alignment.
+The Petri net is discovered from the complete receipt log with Inductive
+Miner and no noise filtering.  To keep the example focused and quick, the
+alignment batch contains one trace for every log variant in which the tandem
+repeat reduction can actually remove events.
 """
 
+import os
+
+import pm4py
 from pm4py.algo.conformance.alignments.petri_net import algorithm as alignments
-from pm4py.objects.log.obj import Event, Trace
-from pm4py.objects.petri_net.obj import Marking, PetriNet
-from pm4py.objects.petri_net.utils import petri_utils
+from pm4py.algo.conformance.alignments.petri_net.variants.approx_tandem_repeats import (
+    reduce_tandem_repeats,
+)
+from pm4py.objects.log.importer.xes import importer as xes_importer
+from pm4py.objects.log.obj import EventLog
 from pm4py.objects.petri_net.utils.align_utils import pretty_print_alignments
+from pm4py.statistics.variants.log import get as variants_get
 
 
-def create_loop_model():
-    """Create an accepting Petri net for (A, B)* followed by C."""
-    net = PetriNet("tandem-repeat example")
-    start = PetriNet.Place("start")
-    between_a_and_b = PetriNet.Place("between A and B")
-    end = PetriNet.Place("end")
-    net.places.update({start, between_a_and_b, end})
+def load_log_and_discover_model():
+    """Load the complete log and discover its zero-noise accepting net."""
+    examples_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(
+        examples_dir, "..", "tests", "input_data", "receipt.xes"
+    )
+    log = xes_importer.apply(log_path)
 
-    transition_a = PetriNet.Transition("do A", "A")
-    transition_b = PetriNet.Transition("do B", "B")
-    transition_c = PetriNet.Transition("finish with C", "C")
-    net.transitions.update({transition_a, transition_b, transition_c})
+    # A threshold of 0.0 tells Inductive Miner not to filter infrequent
+    # behavior.  The returned markings make the Petri net accepting.
+    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(
+        log, noise_threshold=0.0
+    )
+    return log, net, initial_marking, final_marking
 
-    petri_utils.add_arc_from_to(start, transition_a, net)
-    petri_utils.add_arc_from_to(transition_a, between_a_and_b, net)
-    petri_utils.add_arc_from_to(between_a_and_b, transition_b, net)
-    petri_utils.add_arc_from_to(transition_b, start, net)
-    petri_utils.add_arc_from_to(start, transition_c, net)
-    petri_utils.add_arc_from_to(transition_c, end, net)
 
-    return net, Marking({start: 1}), Marking({end: 1})
+def select_repetitive_variants(log):
+    """Return one receipt trace for each compressible log variant."""
+    representatives = []
+    for traces in variants_get.get_variants(log).values():
+        trace = traces[0]
+        labels = [event["concept:name"] for event in trace]
+        _reduced, _kept_indices, repeats = reduce_tandem_repeats(labels)
+        if repeats:
+            representatives.append(trace)
+    return EventLog(representatives)
 
 
 def execute_script():
-    net, initial_marking, final_marking = create_loop_model()
+    log, net, initial_marking, final_marking = load_log_and_discover_model()
+    repetitive_log = select_repetitive_variants(log)
 
-    # Six consecutive copies of (A, B) form one tandem repeat.  The algorithm
-    # keeps two copies during its search, so it aligns A, B, A, B, C instead of
-    # all thirteen events.  At least three copies are needed for compression.
-    activities = ["A", "B"] * 6 + ["C"]
-    trace = Trace([Event({"concept:name": activity}) for activity in activities])
-
-    result = alignments.apply(
-        trace,
+    results = alignments.apply(
+        repetitive_log,
         net,
         initial_marking,
         final_marking,
         variant=alignments.Variants.APPROX_TANDEM_REPEATS,
         parameters={
-            # Skip the optional best-worst-cost calculation in this example;
-            # it is only needed when normalized alignment fitness is required.
-            "enable_best_worst_cost": False,
-            # Bound the underlying state-space search for production use.
-            "max_align_time_trace": 30,
+            "max_align_time": 60,
+            "max_align_time_trace": 10,
             "max_expansions": 100000,
+            "show_progress_bar": False,
+            # Computing best-worst cost is optional and would run an extra
+            # alignment solely to normalize fitness.
+            "enable_best_worst_cost": False,
         },
     )
 
-    if result is None:
-        print("No alignment was found within the configured resource limits.")
-        return
+    completed = [result for result in results if result is not None]
+    valid = sum(result["is_valid"] for result in completed)
+    print("Receipt cases used to discover the model:", len(log))
+    print("Discovered places / transitions:", len(net.places), len(net.transitions))
+    print("Compressible receipt variants aligned:", len(repetitive_log))
+    print("Valid complete alignments:", valid, "/", len(completed))
+    print(
+        "Events removed during all reductions:",
+        sum(result["removed_events"] for result in completed),
+    )
+    print(
+        "Model-loop copies restored during expansion:",
+        sum(result["model_loop_expansions"] for result in completed),
+    )
 
-    print("Observed trace:", activities)
-    print("Original trace length:", result["original_trace_length"])
-    print("Reduced trace length:", result["reduced_trace_length"])
-    print("Detected tandem repeats:", result["tandem_repeats"])
-    print("Temporarily removed events:", result["removed_events"])
-    print("Expanded model-loop copies:", result["model_loop_expansions"])
-    print("Valid complete alignment:", result["is_valid"])
-    print("Alignment cost / upper bound:", result["upper_bound"])
-    print("Alignment (top: log, bottom: model):")
-    pretty_print_alignments(result)
+    if completed:
+        # Show the trace on which compression removed the largest number of
+        # events.  The printed result is the expanded, executable alignment.
+        example = max(completed, key=lambda result: result["removed_events"])
+        print("\nMost compressed example:")
+        print(
+            "Original / reduced length:",
+            example["original_trace_length"],
+            "/",
+            example["reduced_trace_length"],
+        )
+        print("Cost / upper bound:", example["upper_bound"])
+        pretty_print_alignments(example)
 
 
 if __name__ == "__main__":

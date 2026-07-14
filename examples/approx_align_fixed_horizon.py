@@ -1,73 +1,101 @@
-"""Compute a sequential fixed-horizon approximate alignment.
+"""Apply sequential fixed-horizon alignment to ``receipt.xes`` variants.
 
-Run this example from the ``examples`` directory:
+Run from the ``examples`` directory with:
 
     python approx_align_fixed_horizon.py
 
-At every iteration the algorithm searches an executable prefix of at most
-``horizon`` product-net moves, estimates the remaining suffix with an integer
-marking equation, and commits the best prefix.  This bounds the amount of the
-synchronous product considered at once.
+The accepting Petri net is discovered from the complete receipt log using
+Inductive Miner at noise 0.0.  Fixed-horizon alignment solves many integer
+tail estimates, so this runnable example uses the five most frequent variants.
+Increase ``NUMBER_OF_VARIANTS`` when a larger benchmark is desired.
 """
 
 import os
 
+import pm4py
 from pm4py.algo.conformance.alignments.petri_net import algorithm as alignments
 from pm4py.objects.log.importer.xes import importer as xes_importer
-from pm4py.objects.petri_net.importer import importer as petri_importer
+from pm4py.objects.log.obj import EventLog
 from pm4py.objects.petri_net.utils.align_utils import pretty_print_alignments
+from pm4py.statistics.variants.log import get as variants_get
+
+
+NUMBER_OF_VARIANTS = 5
+
+
+def load_log_and_discover_model():
+    examples_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(
+        examples_dir, "..", "tests", "input_data", "receipt.xes"
+    )
+    log = xes_importer.apply(log_path)
+    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(
+        log, noise_threshold=0.0
+    )
+    return log, net, initial_marking, final_marking
+
+
+def most_frequent_variant_representatives(log, limit):
+    groups = sorted(
+        variants_get.get_variants(log).values(),
+        key=len,
+        reverse=True,
+    )[:limit]
+    return EventLog([traces[0] for traces in groups]), sum(map(len, groups))
 
 
 def execute_script():
-    examples_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.join(examples_dir, "..", "tests", "input_data")
-    log = xes_importer.apply(os.path.join(data_dir, "running-example.xes"))
-    net, initial_marking, final_marking = petri_importer.apply(
-        os.path.join(data_dir, "running-example.pnml")
+    log, net, initial_marking, final_marking = load_log_and_discover_model()
+    alignment_log, covered_cases = most_frequent_variant_representatives(
+        log, NUMBER_OF_VARIANTS
     )
 
-    trace = log[0]
-    activities = [event["concept:name"] for event in trace]
-
-    result = alignments.apply(
-        trace,
+    results = alignments.apply(
+        alignment_log,
         net,
         initial_marking,
         final_marking,
         variant=alignments.Variants.APPROX_FIXED_HORIZON,
         parameters={
-            # Search at most four synchronous-product moves before deciding
-            # which prefix to commit.
-            "horizon": 4,
-            # Require a committed prefix to consume at least one log event.
+            # Search and commit short executable prefixes.  Increasing the
+            # horizon usually improves quality at greater computational cost.
+            "horizon": 3,
             "min_progress": 1,
-            # The algorithm may enlarge its horizon when the tail estimate
-            # indicates that a short commitment would be poor.
-            "max_horizon": 10,
-            "max_prefix_states": 20000,
+            "max_horizon": 6,
+            "max_prefix_states": 3000,
             "max_iterations": 100,
-            "max_align_time_trace": 30,
+            "max_align_time": 60,
+            "max_align_time_trace": 10,
+            "show_progress_bar": False,
             "enable_best_worst_cost": False,
         },
     )
 
-    if result is None:
-        print("No alignment was found within the configured resource limits.")
-        return
+    completed = [result for result in results if result is not None]
+    valid = sum(result["is_valid"] for result in completed)
+    print("Receipt cases used to discover the model:", len(log))
+    print("Discovered places / transitions:", len(net.places), len(net.transitions))
+    print("Representative variants aligned:", len(alignment_log))
+    print("Cases represented by those variants:", covered_cases)
+    print("Valid complete alignments:", valid, "/", len(completed))
+    print(
+        "Integer tail problems solved:",
+        sum(result["lp_solved"] for result in completed),
+    )
+    print(
+        "Alignments requiring exact-search fallback:",
+        sum(result["fallback_used"] for result in completed),
+    )
 
-    print("Observed trace:", activities)
-    print("Initial horizon:", result["horizon"])
-    print("Horizons used for committed prefixes:", result["committed_horizons"])
-    print("Integer tail problems solved:", result["lp_solved"])
-    print("Exact-search fallback used:", result["fallback_used"])
-    if result["fallback_reason"] is not None:
-        # For example, this can say ``no_lp_solver`` when no supported LP/ILP
-        # backend is installed.  The fallback still returns a valid result.
-        print("Fallback reason:", result["fallback_reason"])
-    print("Valid complete alignment:", result["is_valid"])
-    print("Alignment cost / upper bound:", result["upper_bound"])
-    print("Alignment (top: log, bottom: model):")
-    pretty_print_alignments(result)
+    if completed:
+        example = max(completed, key=lambda result: len(result["alignment"]))
+        print("\nCommitted horizons:", example["committed_horizons"])
+        if example["fallback_reason"] is not None:
+            # No supported LP solver is one possible reason.  The variant
+            # falls back to direct search rather than returning an invalid path.
+            print("Fallback reason:", example["fallback_reason"])
+        print("Cost / upper bound:", example["upper_bound"])
+        pretty_print_alignments(example)
 
 
 if __name__ == "__main__":
