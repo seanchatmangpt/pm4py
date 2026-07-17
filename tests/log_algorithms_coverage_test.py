@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest import mock
@@ -182,8 +183,9 @@ class LogAlgorithmsCoverageTest(unittest.TestCase):
             temporal_lazy._freq_to_polars_duration("17")
         with self.assertRaises(ValueError):
             temporal_lazy._freq_to_polars_duration("fortnight")
-        with self.assertRaises(TypeError):
-            temporal_lazy.apply(dataframe)
+        if importlib.util.find_spec("polars") is not None:
+            with self.assertRaises(TypeError):
+                temporal_lazy.apply(dataframe)
 
     def test_chaotic_activity_metrics(self):
         traces = [["A", "B", "C"], ["A", "C"], ["B", "A", "B"]]

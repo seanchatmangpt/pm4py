@@ -1,6 +1,7 @@
 import datetime
 import gzip
 import importlib
+import importlib.util
 import os
 import random
 import tempfile
@@ -391,6 +392,9 @@ class IoFilteringEdgeCoverageTest(unittest.TestCase):
         )
         self.assertEqual(0, empty_graph.number_of_edges())
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("polars"), "polars is not installed"
+    )
     def test_clean_dfg_polars_rework_passed_time_and_alignment_decoration(self):
         import polars as pl
         from pm4py.algo.discovery.dfg.variants import clean, clean_polars

@@ -7,7 +7,6 @@ import pandas as pd
 
 import pm4py
 from pm4py.algo.conformance.alignments.process_tree import algorithm as pt_alignments
-from pm4py.algo.decision_mining import algorithm as decision_mining
 from pm4py.algo.simulation.playout.declare import algorithm as declare_playout
 from pm4py.algo.simulation.playout.declare.variants import classic as declare_classic
 from pm4py.objects.bpmn.layout import layouter as bpmn_layouter
@@ -170,7 +169,12 @@ class AdditionalCoverageTest(unittest.TestCase):
         self.assertEqual(2, len(deserialized))
         self.assertIn("concept:name", log[0][0])
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("sklearn"), "scikit-learn is not installed"
+    )
     def test_decision_mining_table_and_classifier(self):
+        from pm4py.algo.decision_mining import algorithm as decision_mining
+
         net = PetriNet("choice")
         p0, p1, p2 = (PetriNet.Place(name) for name in ("p0", "choice", "p2"))
         t_a = PetriNet.Transition("t_a", "A")

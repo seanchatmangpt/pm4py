@@ -121,15 +121,20 @@ class ConnectorsCoverageTest(unittest.TestCase):
             {"event": "ignored"},
         ]
         responses = [_Response([issue]), _Response(timeline), _Response([])]
-        with mock.patch.object(github_repo.importlib.util, "find_spec", return_value=None), mock.patch.object(
-            github_repo.time, "sleep"
-        ), mock.patch("requests.get", side_effect=responses) as request:
+        requests_module = types.ModuleType("requests")
+        requests_module.get = mock.Mock(side_effect=responses)
+        with mock.patch.dict(sys.modules, {"requests": requests_module}), mock.patch.object(
+            github_repo.importlib.util, "find_spec", return_value=None
+        ), mock.patch.object(github_repo.time, "sleep"):
             dataframe = github_repo.apply(
                 {"owner": "owner", "repository": "repo", "auth_token": "secret"}
             )
         self.assertEqual(2, len(dataframe))
         self.assertEqual({"created", "closed"}, set(dataframe["concept:name"]))
-        self.assertEqual("Bearer secret", request.call_args_list[0].kwargs["headers"]["Authorization"])
+        self.assertEqual(
+            "Bearer secret",
+            requests_module.get.call_args_list[0].kwargs["headers"]["Authorization"],
+        )
 
     def test_outlook_calendar_and_mail_connectors(self):
         now = datetime.now(timezone.utc) - timedelta(days=1)

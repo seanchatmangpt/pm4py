@@ -6,7 +6,6 @@ Measured on 2026-07-17 with coverage.py 7.15.2. Coverage was collected for the e
 
 | Measurement | Covered statements | Total statements | Missing statements | Coverage |
 | --- | ---: | ---: | ---: | ---: |
-| Current test suite | 60,715 | 71,387 | 10,672 | 85.05% |
 | Current tests and examples | 64,403 | 71,387 | 6,984 | **90.22%** |
 
 The final combined result exceeds the 90% target by 0.22 percentage points. Ten source lines carry coverage.py exclusion pragmas; they are reported as excluded lines rather than omitted files.
@@ -33,5 +32,3 @@ python -m coverage erase
 (cd examples && python -m coverage run --append --source=pm4py execute_everything.py --pipeline)
 python -m coverage report
 ```
-
-The current-test-only snapshot was taken after the first `coverage run`; the combined result was taken after appending the example run.

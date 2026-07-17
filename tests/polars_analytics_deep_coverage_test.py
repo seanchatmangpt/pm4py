@@ -1,26 +1,31 @@
 import datetime
+import importlib.util
 import unittest
 from unittest import mock
 
 import pandas as pd
-import polars as pl
 
-from pm4py.algo.discovery.dfg.adapters.polars import df_statistics
-from pm4py.algo.discovery.dfg.variants import case_attributes
-from pm4py.algo.discovery.performance_spectrum.variants import (
-    lazyframe,
-    lazyframe_disconnected,
-)
-from pm4py.algo.filtering.pandas.activity_split import activity_split_filter
-from pm4py.algo.filtering.polars.attributes import attributes_filter
-from pm4py.algo.filtering.polars.ltl import ltl_checker
-from pm4py.algo.filtering.polars.variants import variants_filter
-from pm4py.objects.log.obj import Event, EventLog, Trace
-from pm4py.statistics.attributes.polars import get as attributes_get
-from pm4py.statistics.process_cube.polars.variants import classic as process_cube
-from pm4py.util import constants
+POLARS_AVAILABLE = importlib.util.find_spec("polars") is not None
+if POLARS_AVAILABLE:
+    import polars as pl
+
+    from pm4py.algo.discovery.dfg.adapters.polars import df_statistics
+    from pm4py.algo.discovery.dfg.variants import case_attributes
+    from pm4py.algo.discovery.performance_spectrum.variants import (
+        lazyframe,
+        lazyframe_disconnected,
+    )
+    from pm4py.algo.filtering.pandas.activity_split import activity_split_filter
+    from pm4py.algo.filtering.polars.attributes import attributes_filter
+    from pm4py.algo.filtering.polars.ltl import ltl_checker
+    from pm4py.algo.filtering.polars.variants import variants_filter
+    from pm4py.objects.log.obj import Event, EventLog, Trace
+    from pm4py.statistics.attributes.polars import get as attributes_get
+    from pm4py.statistics.process_cube.polars.variants import classic as process_cube
+    from pm4py.util import constants
 
 
+@unittest.skipUnless(POLARS_AVAILABLE, "polars is not installed")
 class PolarsAnalyticsDeepCoverageTest(unittest.TestCase):
     def setUp(self):
         base = datetime.datetime(2024, 1, 1, 8, tzinfo=datetime.timezone.utc)

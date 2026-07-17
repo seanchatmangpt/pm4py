@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 import io
+import importlib.util
 import os
 import sys
 import tempfile
@@ -198,6 +199,9 @@ class RemainingAlgorithmsCoverageTest(unittest.TestCase):
         self.assertNotIn("customer", promoted[0][0])
         self.assertIn("customer", log[0][0])
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("sklearn"), "scikit-learn is not installed"
+    )
     def test_visualization_serialization_and_decision_tree_text(self):
         from graphviz import Digraph
         from sklearn.tree import DecisionTreeClassifier
@@ -419,6 +423,9 @@ class RemainingAlgorithmsCoverageTest(unittest.TestCase):
         self.assertTrue(result)
         self.assertIn(wf.Outputs.DIAGNOSTIC_MESSAGES, diagnostics)
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("pulp"), "pulp is not installed"
+    )
     def test_process_tree_alignment_entry_points_and_boundaries(self):
         import pm4py
         from pm4py.algo.conformance.alignments.process_tree.variants import milp, search_graph_pt

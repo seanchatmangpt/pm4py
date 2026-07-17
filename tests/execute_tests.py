@@ -48,12 +48,13 @@ enabled_tests = [
     "ProcessTreePetriDeepCoverageTest", "ConformanceDecisionDeepCoverageTest",
     "MiscSubsystemsCoverageTest", "VisualizationFacadeDeepCoverageTest",
     "SerializationLogUtilsCoverageTest", "PetriStochasticSerializationCoverageTest",
-    "PolarsAnalyticsDeepCoverageTest", "PowlTreeGenerationDeepCoverageTest",
+    "PowlTreeGenerationDeepCoverageTest",
     "RemainingAlgorithmsCoverageTest", "IoFilteringEdgeCoverageTest",
     "FinalBufferCoverageTest"
 ]
 
 if importlib.util.find_spec("polars"):
+    enabled_tests.append("PolarsAnalyticsDeepCoverageTest")
     enabled_tests.append("TestPolarsFilteringSimplified")
     enabled_tests.append("TestPolarsFiltering")
     enabled_tests.append("TestPolarsStatistics")

@@ -1,4 +1,5 @@
 import copy
+import importlib.util
 import queue
 import unittest
 from unittest import mock
@@ -10,7 +11,6 @@ from pm4py.algo.conformance.alignments.dfg import algorithm as dfg_alignments
 from pm4py.algo.conformance.alignments.dfg.variants import classic as dfg_classic
 from pm4py.algo.conformance.alignments.petri_net import algorithm as pn_alignments
 from pm4py.algo.conformance.tokenreplay.variants import token_replay
-from pm4py.algo.decision_mining import algorithm as decision_mining
 from pm4py.objects.log.obj import Event, EventLog, Trace
 from pm4py.objects.petri_net.obj import Marking, PetriNet
 from pm4py.objects.petri_net.utils import petri_utils
@@ -249,7 +249,12 @@ class ConformanceDecisionDeepCoverageTest(unittest.TestCase):
             )
         return log, net, Marking({p0: 1}), Marking({p2: 1}), choice, (a, b, c)
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("sklearn"), "scikit-learn is not installed"
+    )
     def test_decision_mining_trace_attributes_validation_and_extractors(self):
+        from pm4py.algo.decision_mining import algorithm as decision_mining
+
         log, net, initial, final, choice, transitions = self._decision_fixture()
         self.assertEqual({"choice"}, set(decision_mining.get_decision_points(net)))
         self.assertEqual({"B", "C"}, set(decision_mining.get_decision_points(net, labels=True)["choice"]))

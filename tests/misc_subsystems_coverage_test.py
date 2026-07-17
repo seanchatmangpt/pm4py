@@ -1,5 +1,6 @@
 import datetime
 import importlib
+import importlib.util
 import importlib.machinery
 import os
 import sys
@@ -26,7 +27,6 @@ from pm4py.algo.discovery.split_miner.or_min import or_split
 from pm4py.algo.querying.llm.utils import sql_utils
 from pm4py.algo.simulation.playout.dfg.variants import performance
 from pm4py.objects.log.obj import Event, EventLog, Trace
-from pm4py.objects.log.util import pl_lazy_extra_utils
 from pm4py.streaming.algo.conformance.temporal.variants import classic as streaming_temporal
 
 
@@ -166,7 +166,13 @@ class MiscSubsystemsCoverageTest(unittest.TestCase):
         self.assertIn('1', result)
         self.assertEqual(2, len(result['1']))
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("sklearn") and importlib.util.find_spec("polars"),
+        "scikit-learn and polars are required",
+    )
     def test_dfg_performance_playout_profiles_sql_and_polars_enrichment(self):
+        from pm4py.objects.log.util import pl_lazy_extra_utils
+
         dfg = {('A', 'B'): 4, ('A', 'C'): 1, ('B', 'D'): 4, ('C', 'D'): 1}
         perf = {
             ('A', 'B'): {'mean': 2.0}, ('A', 'C'): 1.0,

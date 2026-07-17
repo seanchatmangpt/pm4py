@@ -1,4 +1,5 @@
 import datetime
+import importlib.util
 import os
 import sys
 import types
@@ -113,6 +114,9 @@ class FinalBufferCoverageTest(unittest.TestCase):
             )
         pyodbc.connect.assert_called_once_with("dsn=test")
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("sklearn"), "scikit-learn is not installed"
+    )
     def test_text_encoders_vectorizers_and_model_resolution(self):
         from pm4py.algo.transformation.trace_encodings.util import petri_net as petri_encoding
         from pm4py.algo.transformation.trace_encodings.util import sklearn_vectorization
@@ -462,6 +466,9 @@ class FinalBufferCoverageTest(unittest.TestCase):
         dictionary.flushall()
         self.assertEqual(1, connection.flushall_calls)
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("polars"), "polars is not installed"
+    )
     def test_polars_service_time_and_log_regex_helpers(self):
         import polars as pl
         from pm4py.objects.log.util import log_regex
@@ -564,6 +571,9 @@ class FinalBufferCoverageTest(unittest.TestCase):
         self.assertTrue(paths_filter.get_paths_from_log(log))
         self.assertEqual("A,B", paths_filter.get_sorted_paths_list({"A,B": 2})[0][0])
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("polars"), "polars is not installed"
+    )
     def test_dotted_chart_dataframe_and_polars_facade(self):
         import polars as pl
         from pm4py.visualization.dotted_chart import visualizer

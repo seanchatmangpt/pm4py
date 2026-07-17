@@ -1,5 +1,8 @@
+import contextlib
 import os
+import sys
 import tempfile
+import types
 import unittest
 from datetime import datetime, timedelta, timezone
 from unittest import mock
@@ -20,6 +23,15 @@ class _Response:
 
 
 class LlmCoverageTest(unittest.TestCase):
+    @staticmethod
+    @contextlib.contextmanager
+    def _mock_requests_post(return_value):
+        """Provide the lazily imported requests module without requiring it."""
+        requests_module = types.ModuleType("requests")
+        requests_module.post = mock.Mock(return_value=return_value)
+        with mock.patch.dict(sys.modules, {"requests": requests_module}):
+            yield requests_module.post
+
     @staticmethod
     def _input_path(*parts):
         return os.path.join(os.path.dirname(__file__), "input_data", *parts)
@@ -43,7 +55,7 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertTrue(openai.encode_image(image.name))
 
             chat = _Response({"choices": [{"message": {"content": "chat answer"}}]})
-            with mock.patch("requests.post", return_value=chat) as request:
+            with self._mock_requests_post(chat) as request:
                 answer = openai.apply(
                     "prompt",
                     parameters={
@@ -61,7 +73,7 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertEqual(0, request.call_args.kwargs["json"]["temperature"])
 
             responses = _Response({"output": [{"content": [{"text": "response answer"}]}]})
-            with mock.patch("requests.post", return_value=responses) as request:
+            with self._mock_requests_post(responses) as request:
                 answer = openai.apply(
                     "prompt",
                     parameters={"api_url": "https://api.openai.com/v1/", "use_responses_api": True},
@@ -69,7 +81,7 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertEqual("response answer", answer)
             self.assertTrue(request.call_args.args[0].endswith("responses"))
 
-            with mock.patch("requests.post", return_value=_Response({"error": {"message": "bad"}})):
+            with self._mock_requests_post(_Response({"error": {"message": "bad"}})):
                 with self.assertRaisesRegex(Exception, "bad"):
                     openai.apply("prompt", parameters={"use_responses_api": True})
 
@@ -80,9 +92,8 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertTrue(google.encode_image(image.name))
             self.assertTrue(anthropic.encode_image(image.name))
 
-            with mock.patch(
-                "requests.post",
-                return_value=_Response(
+            with self._mock_requests_post(
+                _Response(
                     {"candidates": [{"content": {"parts": [{"text": "google answer"}]}}]}
                 ),
             ) as request:
@@ -98,13 +109,14 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertEqual("google answer", answer)
             self.assertIn("model:generateContent", request.call_args.args[0])
 
-            with mock.patch("requests.post", return_value=_Response({"error": {"message": "google bad"}})):
+            with self._mock_requests_post(
+                _Response({"error": {"message": "google bad"}})
+            ):
                 with self.assertRaisesRegex(Exception, "google bad"):
                     google.apply("prompt", parameters={"api_key": "key"})
 
-            with mock.patch(
-                "requests.post",
-                return_value=_Response({"content": [{"text": "anthropic answer"}]}),
+            with self._mock_requests_post(
+                _Response({"content": [{"text": "anthropic answer"}]}),
             ) as request:
                 answer = anthropic.apply(
                     "prompt",
@@ -122,7 +134,9 @@ class LlmCoverageTest(unittest.TestCase):
             self.assertEqual(128000, request.call_args.kwargs["json"]["max_tokens"])
             self.assertIn("anthropic-beta", request.call_args.kwargs["headers"])
 
-            with mock.patch("requests.post", return_value=_Response({"error": {"message": "anthropic bad"}})):
+            with self._mock_requests_post(
+                _Response({"error": {"message": "anthropic bad"}})
+            ):
                 with self.assertRaisesRegex(Exception, "anthropic bad"):
                     anthropic.apply("prompt")
 
@@ -203,9 +217,11 @@ class LlmCoverageTest(unittest.TestCase):
         self.assertIn("database query", llm.nlp_to_log_query(dataframe, "all rows", obtain_query=False))
         self.assertIn("filter all the events", llm.nlp_to_log_filter(dataframe, "activity A", obtain_query=False))
 
-        hypothesis_prompt = llm.automated_hypotheses_formulation(
-            dataframe, obtain_query=False, max_len=3000
-        )
+        duckdb_module = types.ModuleType("duckdb")
+        with mock.patch.dict(sys.modules, {"duckdb": duckdb_module}):
+            hypothesis_prompt = llm.automated_hypotheses_formulation(
+                dataframe, obtain_query=False, max_len=3000
+            )
         self.assertIn("hypotheses", hypothesis_prompt)
 
         def saver(value, path, **kwargs):

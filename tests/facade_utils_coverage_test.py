@@ -1,4 +1,5 @@
 import datetime
+import importlib.util
 import os
 import unittest
 import warnings
@@ -18,7 +19,9 @@ class FacadeUtilsCoverageTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.dataframe = pm4py.read_xes(cls._path("running-example.xes"))
+        cls.dataframe = pm4py.read_xes(
+            cls._path("running-example.xes"), variant="iterparse"
+        )
         cls.log = pm4py.convert_to_event_log(cls.dataframe)
 
     def test_filtering_facade_for_dataframe_and_legacy_log(self):
@@ -197,6 +200,9 @@ class FacadeUtilsCoverageTest(unittest.TestCase):
         self.assertEqual(1, len(pm4py.sample_events(pm4py.convert_to_event_stream(df), 1)))
         self.assertEqual(1, len(pm4py.sample_events(df, 1)))
 
+    @unittest.skipUnless(
+        importlib.util.find_spec("polars"), "polars is not installed"
+    )
     def test_polars_formatting_and_projection(self):
         import polars as pl
 
@@ -225,9 +231,9 @@ class FacadeUtilsCoverageTest(unittest.TestCase):
         ocel = pm4py.read_ocel2_json(
             self._path("ocel", "ocel20_example.jsonocel")
         )
-        ocel.events[ocel.event_timestamp] = ocel.events[
-            ocel.event_timestamp
-        ].dt.tz_localize("UTC")
+        ocel.events[ocel.event_timestamp] = pd.to_datetime(
+            ocel.events[ocel.event_timestamp], utc=True
+        )
         event_id = ocel.events.iloc[0][ocel.event_id_column]
         activity = ocel.events.iloc[0][ocel.event_activity]
         object_id = ocel.objects.iloc[0][ocel.object_id_column]
