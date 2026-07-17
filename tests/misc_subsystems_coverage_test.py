@@ -352,7 +352,10 @@ class MiscSubsystemsCoverageTest(unittest.TestCase):
         gw.getActiveWindow = lambda: window
         win32process = types.ModuleType('win32process')
         win32process.GetWindowThreadProcessId = lambda hwnd: (1, os.getpid())
-        for module in (pynput, keyboard, mouse, gw, win32process):
+        psutil = types.ModuleType('psutil')
+        psutil.NoSuchProcess = type('NoSuchProcess', (Exception,), {})
+        psutil.Process = lambda pid: types.SimpleNamespace(name=lambda: 'python')
+        for module in (pynput, keyboard, mouse, gw, win32process, psutil):
             module.__spec__ = importlib.machinery.ModuleSpec(module.__name__, loader=None)
 
         with mock.patch.dict(sys.modules, {
@@ -361,6 +364,7 @@ class MiscSubsystemsCoverageTest(unittest.TestCase):
             'pynput.mouse': mouse,
             'pygetwindow': gw,
             'win32process': win32process,
+            'psutil': psutil,
         }):
             sys.modules.pop('pm4py.streaming.connectors.windows.click_key_logger', None)
             module = importlib.import_module('pm4py.streaming.connectors.windows.click_key_logger')
