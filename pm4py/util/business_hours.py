@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from functools import lru_cache
 from typing import List, Tuple
 
@@ -42,6 +42,16 @@ def _seconds_from_week_start(dt):
     )
 
 
+def _seconds_from_day_start(dt):
+    """Return wall-clock seconds since 00:00 without temporaries."""
+    return (
+        dt.hour * 60 * 60
+        + dt.minute * 60
+        + dt.second
+        + dt.microsecond / 1000000
+    )
+
+
 def _business_seconds_from_week_start(dt, business_hour_slots):
     seconds_since_week_start = _seconds_from_week_start(dt)
     total = 0.0
@@ -53,7 +63,11 @@ def _business_seconds_from_week_start(dt, business_hour_slots):
 
 
 def _get_business_seconds(
-    datetime1, datetime2, business_hour_slots, total_seconds_per_week
+    datetime1,
+    datetime2,
+    business_hour_slots,
+    total_seconds_per_week,
+    work_calendar=None,
 ):
     if datetime2 <= datetime1:
         return 0.0
@@ -70,9 +84,68 @@ def _get_business_seconds(
     seconds2 = _business_seconds_from_week_start(
         datetime2, business_hour_slots
     )
-    return (
+    total = (
         total_seconds_per_week * number_of_weeks + seconds2 - seconds1
     )
+    if work_calendar is None or total == 0:
+        return total
+
+    return total - _get_non_working_seconds(
+        datetime1, datetime2, business_hour_slots, work_calendar
+    )
+
+
+@lru_cache(maxsize=512)
+def _split_business_hour_slots_by_weekday(business_hour_slots):
+    """Split weekly slots into per-day wall-clock intervals."""
+    daily_slots = [[] for _ in range(7)]
+    for start, end in business_hour_slots:
+        for weekday in range(7):
+            day_start = weekday * _SECONDS_PER_DAY
+            slot_start = max(start, day_start)
+            slot_end = min(end, day_start + _SECONDS_PER_DAY)
+            if slot_end > slot_start:
+                daily_slots[weekday].append(
+                    (slot_start - day_start, slot_end - day_start)
+                )
+    return tuple(tuple(slots) for slots in daily_slots)
+
+
+def _get_non_working_seconds(
+    datetime1, datetime2, business_hour_slots, work_calendar
+):
+    """Return scheduled seconds on dates rejected by ``work_calendar``."""
+    immutable_slots = tuple(
+        (start, end) for start, end in business_hour_slots
+    )
+    daily_slots = _split_business_hour_slots_by_weekday(immutable_slots)
+    start_ordinal = datetime1.toordinal()
+    end_ordinal = datetime2.toordinal()
+    start_seconds = _seconds_from_day_start(datetime1)
+    end_seconds = _seconds_from_day_start(datetime2)
+    last_ordinal = end_ordinal if end_seconds > 0 else end_ordinal - 1
+    non_working_seconds = 0.0
+
+    weekday = datetime1.weekday()
+    for ordinal in range(start_ordinal, last_ordinal + 1):
+        slots = daily_slots[weekday]
+        if slots and not work_calendar.is_working_day(
+            date.fromordinal(ordinal)
+        ):
+            lower_bound = start_seconds if ordinal == start_ordinal else 0
+            upper_bound = (
+                end_seconds
+                if ordinal == end_ordinal
+                else _SECONDS_PER_DAY
+            )
+            for start, end in slots:
+                non_working_seconds += max(
+                    0,
+                    min(upper_bound, end) - max(lower_bound, start),
+                )
+        weekday = (weekday + 1) % 7
+
+    return non_working_seconds
 
 
 class BusinessHours:
@@ -103,12 +176,25 @@ class BusinessHours:
         self.business_hour_slots_unified = [
             list(slot) for slot in unified_slots
         ]
-        # Work calendar (unused in this implementation)
+        # ``workcalendar`` is the spelling used by the public APIs and older
+        # versions; ``work_calendar`` was introduced with weekly slots.
         self.work_calendar = (
             kwargs["work_calendar"]
             if "work_calendar" in kwargs
-            else constants.DEFAULT_BUSINESS_HOURS_WORKCALENDAR
+            else kwargs.get(
+                "workcalendar",
+                constants.DEFAULT_BUSINESS_HOURS_WORKCALENDAR,
+            )
         )
+
+    @property
+    def workcalendar(self):
+        """Legacy alias for :attr:`work_calendar`."""
+        return self.work_calendar
+
+    @workcalendar.setter
+    def workcalendar(self, value):
+        self.work_calendar = value
 
     def business_seconds_from_week_start(self, dt):
         """Calculate business seconds from the week start to ``dt``."""
@@ -127,6 +213,7 @@ class BusinessHours:
             self.datetime2,
             self.business_hour_slots_unified,
             total_seconds_per_week,
+            self.work_calendar,
         )
 
 
@@ -148,7 +235,8 @@ def soj_time_business_hours_diff(
     business_hour_slots : List[Tuple[int]]
         Work schedule as list of tuples (start, end) in seconds since week start
     work_calendar
-        Work calendar (unused in this implementation)
+        Calendar exposing ``is_working_day(day)``. Dates rejected by the
+        calendar are excluded from the result.
 
     Returns
     -------
@@ -162,4 +250,6 @@ def soj_time_business_hours_diff(
     slots, total_seconds_per_week = _get_prepared_business_hour_slots(
         business_hour_slots
     )
-    return _get_business_seconds(st, et, slots, total_seconds_per_week)
+    return _get_business_seconds(
+        st, et, slots, total_seconds_per_week, work_calendar
+    )
