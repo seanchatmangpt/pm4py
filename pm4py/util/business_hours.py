@@ -111,6 +111,30 @@ def _split_business_hour_slots_by_weekday(business_hour_slots):
     return tuple(tuple(slots) for slots in daily_slots)
 
 
+@lru_cache(maxsize=512)
+def _get_business_day_seconds(slots) -> float:
+    daily_slots = _split_business_hour_slots_by_weekday(slots)
+    daily_seconds = [
+        sum(end - start for start, end in slots)
+        for slots in daily_slots
+        if slots
+    ]
+    if not daily_seconds:
+        return float(_SECONDS_PER_DAY)
+    return sum(daily_seconds) / len(daily_seconds)
+
+
+def get_business_day_seconds(business_hour_slots) -> float:
+    """Return the average duration of a configured working day.
+
+    Only weekdays containing at least one business-hour interval contribute
+    to the average. Overlapping slots are unified before the duration is
+    calculated. An empty schedule falls back to a 24-hour calendar day.
+    """
+    slots, _ = _get_prepared_business_hour_slots(business_hour_slots)
+    return _get_business_day_seconds(slots)
+
+
 def _get_non_working_seconds(
     datetime1, datetime2, business_hour_slots, work_calendar
 ):

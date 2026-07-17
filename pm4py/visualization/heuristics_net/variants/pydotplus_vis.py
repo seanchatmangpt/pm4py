@@ -9,7 +9,10 @@ from graphviz import Digraph
 
 from pm4py.objects.heuristics_net.obj import HeuristicsNet
 from pm4py.util import constants, exec_utils
-from pm4py.util.vis_utils import human_readable_stat
+from pm4py.util.vis_utils import (
+    get_business_hour_slots,
+    human_readable_stat,
+)
 
 
 class Parameters(Enum):
@@ -17,6 +20,7 @@ class Parameters(Enum):
     BGCOLOR = "bgcolor"
     ENABLE_GRAPH_TITLE = "enable_graph_title"
     GRAPH_TITLE = "graph_title"
+    BUSINESS_HOUR_SLOTS = "business_hour_slots"
 
 
 def get_corr_hex(num):
@@ -127,6 +131,8 @@ def get_graph(
     if parameters is None:
         parameters = {}
 
+    business_hour_slots = get_business_hour_slots(parameters)
+
     enable_graph_title = exec_utils.get_param_value(
         Parameters.ENABLE_GRAPH_TITLE,
         parameters,
@@ -190,7 +196,10 @@ def get_graph(
                 node_label = f"{node_name} ({node_occ})"
             else:
                 sojourn = (
-                    human_readable_stat(heu_net.sojourn_times[node_name])
+                    human_readable_stat(
+                        heu_net.sojourn_times[node_name],
+                        business_hour_slots=business_hour_slots,
+                    )
                     if node_name in heu_net.sojourn_times
                     else "0s"
                 )
@@ -232,15 +241,22 @@ def get_graph(
                         if node.node_type == "frequency":
                             label = f"{edge.net_name} ({repr_value})"
                         else:
+                            readable_value = human_readable_stat(
+                                repr_value,
+                                business_hour_slots=business_hour_slots,
+                            )
                             label = (
                                 f"{edge.net_name} "
-                                f"({human_readable_stat(repr_value)})"
+                                f"({readable_value})"
                             )
                     else:
                         if node.node_type == "frequency":
                             label = repr_value
                         else:
-                            label = human_readable_stat(repr_value)
+                            label = human_readable_stat(
+                                repr_value,
+                                business_hour_slots=business_hour_slots,
+                            )
                     graph.edge(
                         corr_nodes[node], corr_nodes[other_node], label=label, **edge_kwargs
                     )

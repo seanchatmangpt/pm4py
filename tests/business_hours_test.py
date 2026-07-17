@@ -4,9 +4,11 @@ from datetime import date, datetime, timedelta, timezone
 
 from pm4py.util.business_hours import (
     BusinessHours,
+    get_business_day_seconds,
     soj_time_business_hours_diff,
 )
 from pm4py.util.constants import DEFAULT_BUSINESS_HOUR_SLOTS
+from pm4py.util.vis_utils import human_readable_stat
 
 
 class HolidayCalendar:
@@ -30,6 +32,42 @@ def weekday_slots(start_hour=8, end_hour=17):
 
 
 class BusinessHoursTest(unittest.TestCase):
+    def test_business_day_duration_is_derived_from_weekly_slots(self):
+        slots = weekday_slots(8, 16)
+
+        self.assertEqual(8 * 60 * 60, get_business_day_seconds(slots))
+        self.assertEqual(
+            "4D",
+            human_readable_stat(
+                4 * 8 * 60 * 60, business_hour_slots=slots
+            ),
+        )
+        self.assertEqual("1D", human_readable_stat(4 * 8 * 60 * 60))
+
+    def test_performance_dfg_uses_business_days_in_labels(self):
+        from pm4py.visualization.dfg.variants import performance
+
+        duration = 4 * 8 * 60 * 60
+        slots = weekday_slots(8, 16)
+        graph = performance.apply(
+            {("A", "B"): duration},
+            activities_count={"A": 1, "B": 1},
+            serv_time={"A": -1, "B": -1},
+            parameters={"business_hour_slots": slots},
+        )
+
+        self.assertIn('label="4D"', graph.source)
+
+    def test_variant_duration_uses_configured_working_day(self):
+        from pm4py.visualization.variants_duration.variants.classic import (
+            _format_duration,
+        )
+
+        duration = 4 * 8 * 60 * 60
+
+        self.assertEqual("4.0d", _format_duration(duration, 8 * 60 * 60))
+        self.assertEqual("1.3d", _format_duration(duration))
+
     def test_default_schedule_across_multiple_weeks(self):
         start = datetime(2024, 1, 1, 8, 30)
         end = datetime(2024, 1, 16, 10, 0)
