@@ -21,6 +21,7 @@ class Parameters(Enum):
     PERFORMANCE_AGGREGATION_MEASURE = "aggregationMeasure"
     ENABLE_GRAPH_TITLE = "enable_graph_title"
     GRAPH_TITLE = "graph_title"
+    BUSINESS_HOUR_SLOTS = "business_hour_slots"
 
 
 def ot_to_color(ot: str) -> str:
@@ -76,7 +77,15 @@ def add_frequency_edge(
 
 
 def add_performance_edge(
-    G: Digraph, ot, act1, act2, perf, edge_prefix, nodes, aggregation_measure
+    G: Digraph,
+    ot,
+    act1,
+    act2,
+    perf,
+    edge_prefix,
+    nodes,
+    aggregation_measure,
+    business_hour_slots=None,
 ):
     """
     Adds an edge (performance annotation)
@@ -99,7 +108,12 @@ def add_performance_edge(
     G.edge(
         act_uuid1,
         act_uuid2,
-        label=ot + " " + edge_prefix + vis_utils.human_readable_stat(perf),
+        label=ot
+        + " "
+        + edge_prefix
+        + vis_utils.human_readable_stat(
+            perf, business_hour_slots=business_hour_slots
+        ),
         fontsize="8",
         color=otc,
         fontcolor=otc,
@@ -260,6 +274,7 @@ def apply(
     performance_aggregation_measure = exec_utils.get_param_value(
         Parameters.PERFORMANCE_AGGREGATION_MEASURE, parameters, "mean"
     )
+    business_hour_slots = vis_utils.get_business_hour_slots(parameters)
     enable_graph_title = exec_utils.get_param_value(
         Parameters.ENABLE_GRAPH_TITLE,
         parameters,
@@ -389,6 +404,7 @@ def apply(
                             edge_prefix,
                             nodes,
                             performance_aggregation_measure,
+                            business_hour_slots,
                         )
 
     for ot in sa_count:
