@@ -1,6 +1,7 @@
 import random
 import unittest
 from datetime import date, datetime, timedelta, timezone
+from unittest.mock import patch
 
 from pm4py.util.business_hours import (
     BusinessHours,
@@ -56,6 +57,49 @@ class BusinessHoursTest(unittest.TestCase):
             parameters={"business_hour_slots": slots},
         )
 
+        self.assertIn('label="4D"', graph.source)
+
+    def test_discovered_performance_dfg_retains_business_hour_slots(self):
+        import pm4py
+        from pm4py.discovery import discover_performance_dfg
+        from pm4py.objects.log.obj import Event, EventLog, Trace
+
+        slots = weekday_slots(8, 16)
+        trace = Trace(
+            [
+                Event(
+                    {
+                        "concept:name": "start",
+                        "time:timestamp": datetime(2025, 1, 7, 8),
+                    }
+                ),
+                Event(
+                    {
+                        "concept:name": "finish",
+                        "time:timestamp": datetime(2025, 1, 10, 16),
+                    }
+                ),
+            ]
+        )
+
+        dfg, start_activities, end_activities = discover_performance_dfg(
+            EventLog([trace]),
+            business_hours=True,
+            business_hour_slots=slots,
+            perf_aggregation_key="median",
+        )
+        with patch("pm4py.visualization.dfg.visualizer.view") as view:
+            pm4py.view_performance_dfg(
+                dfg,
+                start_activities,
+                end_activities,
+                aggregation_measure="median",
+            )
+        graph = view.call_args.args[0]
+
+        self.assertIsInstance(dfg, dict)
+        self.assertEqual(4 * 8 * 60 * 60, dfg[("start", "finish")])
+        self.assertEqual(tuple(slots), dfg.business_hour_slots)
         self.assertIn('label="4D"', graph.source)
 
     def test_variant_duration_uses_configured_working_day(self):
