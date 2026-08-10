@@ -2,6 +2,7 @@ import json
 import importlib.util
 import os
 import shutil
+import sqlite3
 import unittest
 import zipfile
 
@@ -807,6 +808,66 @@ class Ocel2CsvTest(unittest.TestCase):
                 os.remove(source)
             if os.path.isdir(output_dir):
                 shutil.rmtree(output_dir)
+
+    def test_ocel2_sqlite_type_mapping_is_injective(self):
+        output_path = os.path.join(OUTPUT_DIR, "ocel2_type_collision.sqlite")
+        timestamp = pd.Timestamp("2024-01-01T10:00:00Z")
+        event_types = [
+            "ST CHANGE OVERSTOCK to NORMAL",
+            "ST CHANGE Overstock to Normal",
+        ]
+        ocel = OCEL(
+            events=pd.DataFrame(
+                [
+                    {
+                        "ocel:eid": "e1",
+                        "ocel:activity": event_types[0],
+                        "ocel:timestamp": timestamp,
+                    },
+                    {
+                        "ocel:eid": "e2",
+                        "ocel:activity": event_types[1],
+                        "ocel:timestamp": timestamp,
+                    },
+                ]
+            ),
+            objects=pd.DataFrame(
+                [{"ocel:oid": "o1", "ocel:type": "Order"}]
+            ),
+            relations=pd.DataFrame(
+                [
+                    {
+                        "ocel:eid": "e1",
+                        "ocel:activity": event_types[0],
+                        "ocel:timestamp": timestamp,
+                        "ocel:oid": "o1",
+                        "ocel:type": "Order",
+                        "ocel:qualifier": "",
+                    },
+                    {
+                        "ocel:eid": "e2",
+                        "ocel:activity": event_types[1],
+                        "ocel:timestamp": timestamp,
+                        "ocel:oid": "o1",
+                        "ocel:type": "Order",
+                        "ocel:qualifier": "",
+                    },
+                ]
+            ),
+        )
+        try:
+            pm4py.write_ocel2_sqlite(ocel, output_path)
+            with sqlite3.connect(output_path) as connection:
+                mappings = connection.execute(
+                    "SELECT ocel_type, ocel_type_map FROM event_map_type"
+                ).fetchall()
+            self.assertEqual(len(mappings), 2)
+            self.assertEqual(len({mapping.casefold() for _, mapping in mappings}), 2)
+            imported = pm4py.read_ocel2_sqlite(output_path)
+            self.assertEqual(set(imported.events[imported.event_activity]), set(event_types))
+        finally:
+            if os.path.exists(output_path):
+                os.remove(output_path)
 
 
 if __name__ == "__main__":
