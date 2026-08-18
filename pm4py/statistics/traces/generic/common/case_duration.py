@@ -9,6 +9,7 @@ from enum import Enum
 class Parameters(Enum):
     GRAPH_POINTS = "graph_points"
     POINT_TO_SAMPLE = "points_to_sample"
+    BW_METHOD = "bw_method"
 
 
 def get_kde_caseduration(duration_values, parameters=None):
@@ -22,6 +23,7 @@ def get_kde_caseduration(duration_values, parameters=None):
     parameters
         Possible parameters of the algorithm, including:
             graph_points -> number of points to include in the graph
+            bw_method -> bandwidth method passed to scipy.stats.gaussian_kde
 
     Returns
     --------------
@@ -39,6 +41,9 @@ def get_kde_caseduration(duration_values, parameters=None):
         graph_points = exec_utils.get_param_value(
             Parameters.GRAPH_POINTS, parameters, 200
         )
+        bw_method = exec_utils.get_param_value(
+            Parameters.BW_METHOD, parameters, None
+        )
         duration_values = sorted(duration_values)
 
         # Check if we have enough data points for KDE
@@ -51,7 +56,7 @@ def get_kde_caseduration(duration_values, parameters=None):
                 single_val = duration_values[0]
                 return [[single_val], [1.0]]
 
-        density = gaussian_kde(duration_values)
+        density = gaussian_kde(duration_values, bw_method=bw_method)
         xs1 = list(
             np.linspace(
                 min(duration_values),
@@ -87,6 +92,7 @@ def get_kde_caseduration_json(duration_values, parameters=None):
     parameters
         Possible parameters of the algorithm, including:
             graph_points: number of points to include in the graph
+            bw_method: bandwidth method passed to scipy.stats.gaussian_kde
 
     Returns
     --------------
