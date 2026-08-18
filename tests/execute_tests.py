@@ -14,6 +14,7 @@ sys.path.insert(0, parent_dir)
 
 EXECUTE_TESTS = True
 
+import pm4py_hiperf
 import pm4py
 import numpy
 import pandas
