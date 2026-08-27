@@ -1,0 +1,12 @@
+@prefix paas: <https://ggen.dev/paas#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+paas:AnalysisReceipt a paas:Receipt ;
+  paas:requiresField paas:exactSubject,
+                     paas:adapterIdentity,
+                     paas:inputDigest,
+                     paas:resultDigest,
+                     paas:standing,
+                     paas:replayCommand ;
+  dct:description "Receipt contract for governed PM4Py analysis." .
