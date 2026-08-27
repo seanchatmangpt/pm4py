@@ -1,0 +1,7 @@
+@prefix paas: <https://ggen.dev/paas#> .
+
+paas:ProcessIntelligenceFence a paas:OwnershipRule ;
+  paas:exclusiveAlgorithmOwner "wasm4pm/wasm4pm-compat" ;
+  paas:consumerRole "adapter" ;
+  paas:copiedAlgorithmAllowed false ;
+  paas:integrationAllowed true .
