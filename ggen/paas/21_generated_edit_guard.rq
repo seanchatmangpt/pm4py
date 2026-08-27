@@ -1,0 +1,4 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?artifact WHERE {
+  ?artifact a paas:GeneratedArtifact ; paas:editedDirectly true .
+}
