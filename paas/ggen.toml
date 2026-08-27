@@ -1,0 +1,50 @@
+[project]
+name = "pm4py-paas"
+version = "26.8.26"
+description = "Deterministic ggen manufacturing contract for the PM4Py Ash process-mining PaaS"
+
+[ontology]
+source = "ontology/pm4py-paas.ttl"
+base_iri = "urn:pm4py-paas:"
+
+[ontology.prefixes]
+prov = "http://www.w3.org/ns/prov#"
+dcterms = "http://purl.org/dc/terms/"
+skos = "http://www.w3.org/2004/02/skos/core#"
+dcat = "http://www.w3.org/ns/dcat#"
+odrl = "http://www.w3.org/ns/odrl/2/"
+dqv = "http://www.w3.org/ns/dqv#"
+
+[inference]
+
+[[inference.rules]]
+name = "admitted-operation-plans"
+construct = """
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+CONSTRUCT {
+  ?plan a prov:Plan ; dcterms:identifier ?id ; skos:prefLabel ?label ; dcterms:description ?description .
+}
+WHERE {
+  ?plan a prov:Plan ; dcterms:identifier ?id ; skos:prefLabel ?label ; dcterms:description ?description .
+}
+"""
+
+[generation]
+output_dir = "."
+
+[[generation.rules]]
+name = "operation-catalog"
+query = { inline = """
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+SELECT ?id ?label ?description WHERE {
+  ?plan a prov:Plan ; dcterms:identifier ?id ; skos:prefLabel ?label ; dcterms:description ?description .
+}
+ORDER BY ?id
+""" }
+template = { file = "templates/operations.json.tera" }
+output_file = "generated/operations.json"
+mode = "Overwrite"
