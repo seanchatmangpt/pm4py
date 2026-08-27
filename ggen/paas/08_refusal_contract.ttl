@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+
+paas:MissingExactSubject a paas:TypedRefusal .
+paas:MissingInputDigest a paas:TypedRefusal .
+paas:MissingAdapterIdentity a paas:TypedRefusal .
+paas:UnreceiptedActuation a paas:TypedRefusal .
+paas:ReplayMismatch a paas:TypedRefusal .
+paas:ProcessAlgorithmCopy a paas:TypedRefusal .

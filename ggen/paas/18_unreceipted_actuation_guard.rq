@@ -1,0 +1,5 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?intent WHERE {
+  ?intent a paas:AnalysisIntent ; paas:actuated true .
+  FILTER NOT EXISTS { ?receipt a paas:AnalysisReceipt ; paas:forIntent ?intent . }
+}

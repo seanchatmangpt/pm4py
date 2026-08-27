@@ -1,0 +1,6 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?component WHERE {
+  ?component a paas:ProcessAlgorithm ;
+    paas:repository "pm4py" .
+  FILTER NOT EXISTS { ?component paas:owner "wasm4pm/wasm4pm-compat" . }
+}

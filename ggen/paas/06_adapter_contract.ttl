@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+
+paas:PM4PyAdapter a paas:Adapter ;
+  paas:accepts paas:AnalysisIntent ;
+  paas:emits paas:AnalysisReceipt ;
+  paas:mustNotGrantAmbientAuthority true ;
+  paas:mustPreserveInputIdentity true ;
+  paas:mustPreserveResultIdentity true .

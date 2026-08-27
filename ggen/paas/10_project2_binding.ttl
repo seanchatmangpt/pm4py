@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+paas:Project2Binding a paas:DispatchBinding ;
+  paas:projectNumber 2 ;
+  paas:requiresDispatchIdentity true ;
+  paas:requiresExactSubject true ;
+  dct:description "Implementation work must bind to Project #2 dispatch identity without inventing ledger state." .

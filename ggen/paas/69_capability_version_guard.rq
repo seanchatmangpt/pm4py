@@ -1,0 +1,5 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?intent WHERE {
+  ?intent a paas:DispatchIntent .
+  FILTER NOT EXISTS { ?intent paas:capabilityVersion ?version }
+}

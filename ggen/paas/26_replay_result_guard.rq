@@ -1,0 +1,5 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?receipt WHERE {
+  ?receipt a paas:AnalysisReceipt ; paas:resultDigest ?result ; paas:replayResultDigest ?replay .
+  FILTER (?result != ?replay)
+}

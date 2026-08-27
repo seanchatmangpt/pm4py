@@ -1,0 +1,10 @@
+@prefix paas: <https://ggen.dev/paas#> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+
+paas:PM4PyAuthorityPolicy a odrl:Policy ;
+  odrl:permission [ odrl:action odrl:read ] ;
+  odrl:prohibition [ odrl:action odrl:execute ] .
+
+paas:AnalysisIntent a paas:ConstructOnlyIntent ;
+  paas:requiresReceipt true ;
+  paas:ambientExecutionAuthority false .

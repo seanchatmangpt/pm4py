@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+
+paas:SourceOwnership a paas:OwnershipRule ;
+  paas:sourceRoot "ggen/" ;
+  paas:generatedRoot "generated/" ;
+  paas:generatedEditable false ;
+  dct:description "Generated artifacts are projections; semantic changes originate in admitted GGen source." .

@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+
+paas:ReplayContract a paas:VerificationRule ;
+  paas:requiresSameExactSubject true ;
+  paas:requiresSameInputDigest true ;
+  paas:requiresSameAdapterIdentity true ;
+  paas:compares paas:resultDigest ;
+  paas:onMismatch paas:RefuseReplay .

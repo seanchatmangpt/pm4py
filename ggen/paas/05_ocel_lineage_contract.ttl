@@ -1,0 +1,8 @@
+@prefix paas: <https://ggen.dev/paas#> .
+@prefix ocel: <https://ggen.dev/ocel#> .
+
+paas:OCELLineage a paas:EvidenceLineage ;
+  paas:canonicalPath "ggen/ecosystem/ocel/current" ;
+  paas:requiresEvent ocel:Admit, ocel:Construct, ocel:Receipt ;
+  paas:requiresExactSubject true ;
+  paas:requiresReplay true .
