@@ -1,0 +1,4 @@
+PREFIX paas: <https://ggen.dev/paas#>
+SELECT ?intent WHERE {
+  ?intent a paas:AnalysisIntent ; paas:ambientExecutionAuthority true .
+}
