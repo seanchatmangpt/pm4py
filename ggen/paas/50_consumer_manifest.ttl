@@ -1,0 +1,11 @@
+@prefix paas: <https://ggen.dev/paas#> .
+
+paas:PM4PyConsumerManifest a paas:ConsumerManifest ;
+  paas:projectNumber 2 ;
+  paas:capability paas:PM4PyCapability ;
+  paas:adapter paas:PM4PyAdapter ;
+  paas:receiptType paas:AnalysisReceipt ;
+  paas:ocelPath "ggen/ecosystem/ocel/current" ;
+  paas:processIntelligenceOwner "wasm4pm/wasm4pm-compat" ;
+  paas:generatedArtifactsAreProjections true ;
+  paas:ambientExecutionAuthority false .
