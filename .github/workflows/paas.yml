@@ -1,0 +1,119 @@
+name: PM4Py Ash PaaS
+
+on:
+  pull_request:
+    paths:
+      - "paas/**"
+      - "deploy/docker-compose.yml"
+      - ".github/workflows/paas.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Admit exact subject
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected" || { echo "REFUSED_INEXACT_SUBJECT expected=$expected actual=$actual" >&2; exit 70; }
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "27.3"
+
+      - name: Verify Ash, AshR2RML, and Reactor control plane
+        working-directory: paas
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix format --check-formatted
+          mix compile --warnings-as-errors
+          mix test
+
+      - name: Verify public ontology profile
+        run: |
+          python -m pip install --disable-pip-version-check rdflib
+          python - <<'PY'
+          from rdflib import Graph, Namespace, RDF
+          g = Graph().parse('paas/ontology/pm4py-paas.ttl', format='turtle')
+          PROV = Namespace('http://www.w3.org/ns/prov#')
+          DCT = Namespace('http://purl.org/dc/terms/')
+          plans = sorted(str(g.value(p, DCT.identifier)) for p in g.subjects(RDF.type, PROV.Plan))
+          assert plans == ['discover_dfg', 'read_xes_summary'], plans
+          print('PUBLIC_ONTOLOGY_ALIVE plans=' + ','.join(plans))
+          PY
+
+      - name: Manufacture deterministic ggen projection
+        working-directory: paas
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=/tmp/ggen-x86_64-unknown-linux-gnu.tar.gz
+          expected=affa9d12c2691858ef44b9a2c93533ba6787df7fa88f46c870f84ed7a2ee1d5f
+          curl -fsSL https://github.com/seanchatmangpt/ggen/releases/download/v26.8.25/ggen-x86_64-unknown-linux-gnu.tar.gz -o "$archive"
+          printf '%s  %s\n' "$expected" "$archive" | sha256sum -c -
+          mkdir -p /tmp/ggen-bin
+          tar -xzf "$archive" -C /tmp/ggen-bin
+          ggen="$(find /tmp/ggen-bin -type f -name ggen -perm -u+x | head -n1)"
+          test -n "$ggen" || { echo 'REFUSED_GGEN_BINARY_NOT_FOUND' >&2; exit 69; }
+          "$ggen" sync run
+          test -f generated/operations.json
+          sha256sum generated/operations.json > /tmp/operations.sha256
+          "$ggen" sync run
+          sha256sum -c /tmp/operations.sha256
+          test -d .ggen/receipts
+          find .ggen/receipts -type f -maxdepth 2 -print -quit | grep -q .
+          python - <<'PY'
+          import json
+          operations=json.load(open('generated/operations.json'))
+          ids=[entry['id'] for entry in operations['operations']]
+          assert ids == ['discover_dfg', 'read_xes_summary'], ids
+          print('GGEN_PROJECTION_ALIVE operations=' + ','.join(ids))
+          PY
+
+      - name: Execute PM4Py worker and deterministic replay
+        run: |
+          python -m pip install --disable-pip-version-check -e .
+          mkdir -p /tmp/pm4py-paas/input
+          cat > /tmp/pm4py-paas/input/minimal.xes <<'XES'
+          <?xml version="1.0" encoding="UTF-8" ?>
+          <log xes.version="1.0" xmlns="http://www.xes-standard.org/">
+            <trace><string key="concept:name" value="case-1"/>
+              <event><string key="concept:name" value="A"/><date key="time:timestamp" value="2026-08-26T00:00:00.000+00:00"/></event>
+              <event><string key="concept:name" value="B"/><date key="time:timestamp" value="2026-08-26T00:01:00.000+00:00"/></event>
+            </trace>
+          </log>
+          XES
+          export PM4PY_DATA_ROOT=/tmp/pm4py-paas
+          export PM4PY_SOURCE_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          request='{"run_id":"ci-dfg","input_path":"input/minimal.xes","operation":"discover_dfg"}'
+          encoded="$(printf '%s' "$request" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+          first="$(python paas/priv/pm4py_worker.py --request-base64 "$encoded")"
+          second="$(python paas/priv/pm4py_worker.py --request-base64 "$encoded")"
+          FIRST="$first" SECOND="$second" python - <<'PY'
+          import json, os
+          first=json.loads(os.environ['FIRST']); second=json.loads(os.environ['SECOND'])
+          assert first['status']=='ALIVE' and first['replay'] is False
+          assert second['status']=='ALIVE' and second['replay'] is True
+          assert first['receipt']==second['receipt']
+          assert first['result']==second['result']
+          assert first['result']['edges']==[{'count':1,'source':'A','target':'B'}]
+          print('PM4PY_SUBJECT_ALIVE receipt=' + first['receipt']['result_sha256'])
+          PY
+
+      - name: Build production PaaS image
+        run: docker build -f paas/Dockerfile -t pm4py-paas:${{ github.event.pull_request.head.sha || github.sha }} .

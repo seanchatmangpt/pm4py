@@ -1,0 +1,42 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dqv: <http://www.w3.org/ns/dqv#> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:pm4py-paas:service> a dcat:DataService ;
+  dcterms:title "PM4Py Process Mining PaaS" ;
+  dcterms:description "Ash-governed process-mining control plane with bounded PM4Py execution, Reactor orchestration, AshR2RML semantic projection, ggen manufacture, and digest-bound receipts." ;
+  dcterms:conformsTo <https://www.w3.org/TR/vocab-dcat-3/> ,
+                     <https://www.w3.org/TR/prov-o/> ,
+                     <https://www.w3.org/TR/odrl-model/> ,
+                     <https://www.w3.org/TR/vocab-dqv/> ,
+                     <https://www.w3.org/TR/r2rml/> ,
+                     <https://ocel-standard.org/2.0/> ;
+  dcat:endpointURL <http://localhost:8000/v1/runs> ;
+  prov:hadPlan <urn:pm4py-paas:plan:read_xes_summary> , <urn:pm4py-paas:plan:discover_dfg> .
+
+<urn:pm4py-paas:plan:read_xes_summary> a prov:Plan, skos:Concept ;
+  dcterms:identifier "read_xes_summary" ;
+  skos:prefLabel "Read XES summary" ;
+  dcterms:description "Read an admitted XES log and return trace, event, and activity counts without changing the log." .
+
+<urn:pm4py-paas:plan:discover_dfg> a prov:Plan, skos:Concept ;
+  dcterms:identifier "discover_dfg" ;
+  skos:prefLabel "Discover directly-follows graph" ;
+  dcterms:description "Invoke PM4Py's public discover_dfg API and return a canonical JSON DFG projection." .
+
+<urn:pm4py-paas:policy:execute> a odrl:Set ;
+  odrl:uid <urn:pm4py-paas:policy:execute> ;
+  odrl:permission [
+    a odrl:Permission ;
+    odrl:target <urn:pm4py-paas:service> ;
+    odrl:action odrl:use
+  ] .
+
+<urn:pm4py-paas:metric:receipt-completeness> a dqv:Metric ;
+  skos:prefLabel "Receipt completeness" ;
+  dcterms:description "Requires every successful execution capsule to expose a digest-bound result and receipt together." ;
+  dqv:expectedDataType xsd:boolean .

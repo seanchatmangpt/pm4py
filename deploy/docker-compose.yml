@@ -8,11 +8,15 @@ services:
   pm4py-api:
     build:
       context: ..
-      dockerfile: deploy/Dockerfile
+      dockerfile: paas/Dockerfile
     container_name: pm4py-api
     restart: unless-stopped
     environment:
       - PM4PY_LOG_LEVEL=INFO
+      - PM4PY_PAAS_TOKEN=${PM4PY_PAAS_TOKEN:?PM4PY_PAAS_TOKEN is required}
+      - PM4PY_DATA_ROOT=/app/data
+      - PM4PY_SOURCE_SHA=${PM4PY_SOURCE_SHA:-UNKNOWN}
+      - PM4PY_WORKER_TIMEOUT_MS=${PM4PY_WORKER_TIMEOUT_MS:-120000}
       - PM4PY_DB_HOST=postgres
       - PM4PY_DB_PORT=5432
       - PM4PY_DB_NAME=pm4py
