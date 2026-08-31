@@ -102,7 +102,7 @@ def apply(
         .agg(["mean", "std"])
         .reset_index()
         .fillna(0)
-        .to_dict("records")
+        .to_dict(orient="records")
     )
 
     temporal_profile = {

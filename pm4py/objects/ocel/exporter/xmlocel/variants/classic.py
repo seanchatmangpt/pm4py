@@ -144,7 +144,7 @@ def apply(
     events = etree.SubElement(root, "events")
     objects = etree.SubElement(root, "objects")
 
-    events_items = events_items.to_dict("records")
+    events_items = events_items.to_dict(orient="records")
     i = 0
     while i < len(events_items):
         event = etree.SubElement(events, "event")
@@ -188,7 +188,7 @@ def apply(
         i = i + 1
     del events_items
 
-    objects_items = objects_items.to_dict("records")
+    objects_items = objects_items.to_dict(orient="records")
     i = 0
     while i < len(objects_items):
         object = etree.SubElement(objects, "object")

@@ -64,7 +64,7 @@ def apply(
     events = [
         (x[start_timestamp_key].timestamp(), x[timestamp_key].timestamp())
         for x in df[list({start_timestamp_key, timestamp_key})].to_dict(
-            "records"
+            orient="records"
         )
     ]
 
