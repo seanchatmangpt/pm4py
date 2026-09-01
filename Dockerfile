@@ -26,4 +26,4 @@ RUN python3 -m pip install --upgrade pip
 #RUN cd / && git clone https://github.com/cvxopt/cvxopt.git && cd /cvxopt && sed -i 's/BUILD_GLPK = 0/BUILD_GLPK = 1/' setup.py && python3 setup.py build && python3 setup.py install
 
 COPY . /app
-RUN python3 -m pip install /app
+RUN python3 -m pip install "/app[stable]"

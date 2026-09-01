@@ -27,8 +27,7 @@ default:
     - apt-get update -y
     - apt-get install -y graphviz
     - python -m pip install --upgrade pip
-    - python -m pip install --group ci
-    - python -m pip install .
+    - python -m pip install ".[stable]"
 
 test_scripts:
   stage: test

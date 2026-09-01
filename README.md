@@ -43,6 +43,10 @@ Optional features can be installed through extras. For example:
 
 Use `pip install -U "pm4py[all]"` to install every optional feature supported on the current platform.
 
+For a reproducible installation using the exact dependency versions validated by the project, use:
+
+`pip install -U "pm4py[stable]"`
+
 PM4Py is also running on older Python environments with different requirements sets, including:
 
 - Python 3.8 (3.8.10): `third_party/old_python_deps/requirements_py38.txt`
@@ -59,6 +63,7 @@ feature in `pyproject.toml`:
 * `ocel`: jsonschema and pyarrow
 * `polars`: Polars dataframe support
 * `solvers`: cvxopt
+* `stable`: the exact dependency versions validated by the project and used by CI
 * `visualization`: pyvis
 * `windows`: pygetwindow, pynput, and pywin32 (Windows only)
 
