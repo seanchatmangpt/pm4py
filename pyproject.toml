@@ -7,7 +7,7 @@ name = "pm4py"
 dynamic = ["version"]
 description = "Process mining for Python"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
 authors = [
     { name = "Process Intelligence Solutions (PIS)", email = "info@processintelligence.solutions" },
@@ -23,8 +23,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
