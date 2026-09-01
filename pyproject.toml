@@ -30,6 +30,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+    "cvxopt; python_version < '3.15'",
     "graphviz",
     "lxml",
     "matplotlib",
