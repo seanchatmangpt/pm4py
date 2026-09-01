@@ -3,13 +3,10 @@ import networkx as nx
 import time
 import requests
 import json
-import importlib.util
-from copy import deepcopy
 from packaging.version import Version, InvalidVersion
 
 REMOVE_DEPS_AT_END = True
-UPDATE_DOCKERFILE = True
-UPDATE_OTHER_FILES = True
+UPDATE_LICENSE_FILE = True
 INCLUDE_BETAS = False
 
 
@@ -173,21 +170,7 @@ deps = []
 packages_dictio = {}
 deps, packages = get_all_third_party_dependencies("pm4py", deps, packages_dictio, include_self=False)
 
-if UPDATE_OTHER_FILES:
-    F = open("../requirements_complete.txt", "w")
-    for x in packages:
-        """if x[0] == "numpy":
-            F.write("%s<2\n" % (x[0]))
-        elif x[0] == "pandas":
-            F.write("%s<3\n" % (x[0]))
-        else:
-            F.write("%s\n" % (x[0]))"""
-        F.write("%s\n" % (x[0]))
-    F.close()
-    F = open("../requirements_stable.txt", "w")
-    for x in packages:
-        F.write("%s==%s\n" % (x[0], x[2]))
-    F.close()
+if UPDATE_LICENSE_FILE:
     F = open("LICENSES_TRANSITIVE.md", "w")
     F.write("""# PM4Py Third Party Dependencies
     
@@ -201,64 +184,3 @@ if UPDATE_OTHER_FILES:
     for x in packages:
         F.write("| %s | %s | %s | %s |\n" % (x[0].strip(), x[1].strip(), x[3].strip(), x[2].strip()))
     F.close()
-
-prev_deps = deepcopy(packages)
-
-extra_packages = ["requests", "pyvis", "jsonschema", "workalendar", "scikit-learn", "openai"]
-for ep in extra_packages:
-    if importlib.util.find_spec(ep):
-        deps, packages = get_all_third_party_dependencies(ep, deps, packages_dictio, include_self=True)
-
-first_line_packages = ["packaging", "networkx", "graphviz", "six", "python-dateutil", "pytz", "tzdata", "sortedcontainers", "wheel", "setuptools"]
-second_line_packages = ["pyparsing", "tqdm", "colorama", "cycler", "joblib", "threadpoolctl"]
-third_line_packages = ["lxml", "numpy", "pandas", "scipy"]
-
-first_packages_line = ""
-second_packages_line = ""
-third_packages_line = ""
-fourth_package_line = ""
-fifth_package_line = ""
-sixth_package_line = ""
-
-for x in packages:
-    cont = x[0] + "==" + x[2] + " "
-    if x[0] in first_line_packages:
-        first_packages_line += cont
-    elif x[0] in second_line_packages:
-        second_packages_line += cont
-    elif x[0] in third_line_packages:
-        third_packages_line += cont
-    elif x in prev_deps:
-        fourth_package_line += cont
-    elif x[0] in extra_packages:
-        sixth_package_line += cont
-    else:
-        fifth_package_line += cont
-
-F = open("../Dockerfile", "r")
-dockerfile_contents = F.readlines()
-F.close()
-
-before_lines = []
-after_lines = []
-found_line = False
-
-i = 0
-while i < len(dockerfile_contents):
-    if dockerfile_contents[i].startswith("RUN pip3 install") and not "-U" in dockerfile_contents[i]:
-        found_line = True
-    elif found_line:
-        after_lines.append(dockerfile_contents[i])
-    else:
-        before_lines.append(dockerfile_contents[i])
-    i = i + 1
-
-stru = "".join(before_lines + ["RUN pip3 install " + x + "\n" for x in [first_packages_line, second_packages_line, third_packages_line, fourth_package_line, fifth_package_line, sixth_package_line]] + after_lines)
-stru = stru.strip() + "\n"
-
-if UPDATE_DOCKERFILE:
-    F = open("../Dockerfile", "w")
-    F.write(stru)
-    F.close()
-else:
-    print(stru)
